@@ -1,6 +1,5 @@
 <?php
-require_once '../config.php';
-requireAdmin(); // Double-check security
+require_once __DIR__ . '/../core/Controller.php';
 
 $data = json_decode(file_get_contents('php://input'), true);
 $userId = $data['user_id'] ?? 0;
@@ -69,12 +68,14 @@ try {
     // All queries succeeded, commit the transaction
     $db->commit();
     
-    // Log the entire batch edit as one action
-    logActivity(
-        $adminId, 
-        'DTR Edited', 
-        "Admin edited DTR for user ID $userId. Changes: " . implode('; ', $logDetails)
-    );
+    //Log the entire batch edit as one action
+require_once __DIR__ . '/../models/ActivityLog.php'; // Ensure class is loaded
+$activityLog = new ActivityLog();
+$activityLog->log(
+    $adminId, 
+    'DTR Edited', 
+    "Admin edited DTR for user ID $userId. Changes: " . implode('; ', $logDetails)
+);
     
     jsonResponse(true, 'DTR updated successfully!');
 

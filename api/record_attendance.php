@@ -1,6 +1,5 @@
 <?php
-require_once '../config.php';
-
+require_once __DIR__ . '/../core/Controller.php';
 // Get the POSTed data (which is JSON sent from display.php)
 $data = json_decode(file_get_contents('php://input'));
 
@@ -18,11 +17,12 @@ $now = date('H:i:s');
 $status = "";
 
 // Fetch the user's details
-$user = getUser($userId);
-if (!$user) {
-    jsonResponse(false, "User not found.");
-    exit;
-}
+// Fetch the user's details using a prepared statement
+$userStmt = $db->prepare("SELECT * FROM users WHERE id = ?");
+$userStmt->bind_param("i", $userId);
+$userStmt->execute();
+$user = $userStmt->get_result()->fetch_assoc();
+$userStmt->close();
 
 // Check if an attendance record for today already exists
 $stmt = $db->prepare("SELECT id, time_in FROM attendance_records WHERE user_id = ? AND date = ?");

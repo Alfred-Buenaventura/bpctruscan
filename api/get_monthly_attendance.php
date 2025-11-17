@@ -1,6 +1,5 @@
 <?php
-require_once '../config.php';
-requireAdmin(); // Only Admins can access this
+require_once __DIR__ . '/../core/Controller.php';
 
 $userId = $_GET['user_id'] ?? 0;
 $startDate = $_GET['start_date'] ?? date('Y-m-01');
