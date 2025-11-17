@@ -1,7 +1,7 @@
 <?php
-require_once 'app/init.php'; // Loads everything
-require_once 'app/controllers/DashboardController.php';
+require_once 'app/init.php';
+require_once 'app/controllers/RegistrationController.php';
 
-$dashboard = new DashboardController();
-$dashboard->index();
+$controller = new RegistrationController();
+$controller->enroll();
 ?>
