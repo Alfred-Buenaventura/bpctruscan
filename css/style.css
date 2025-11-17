@@ -350,6 +350,7 @@ body {
     flex-shrink: 0;
     transition: padding var(--transition-medium);
     position: relative;
+    z-index: 50;
 }
 
 .user-info {
@@ -2016,59 +2017,45 @@ tbody tr:hover {
 #settings-menu {
     display: none;
     position: absolute;
-    bottom: 165px;
+    bottom: 100%; /* Push it directly above the footer */
     left: 16px;
     right: 16px;
-    background: #f9fafb;
+    margin-bottom: 10px; /* Small gap */
+    background: #ffffff; /* Ensure white background */
     color: var(--gray-800);
     border-radius: 12px;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-    padding: 10px;
-    z-index: 10;
-    animation: popUp 0.2s ease-out;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2); /* Stronger shadow */
+    padding: 8px;
+    z-index: 1000; /* High z-index to pop over everything */
+    border: 1px solid var(--gray-200);
 }
 
 #settings-menu.active {
     display: block;
+    animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .settings-menu-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px;
+    padding: 12px 16px; /* More padding */
     border-radius: 8px;
     color: var(--gray-700);
     text-decoration: none;
     font-weight: 500;
     font-size: 0.95rem;
-    white-space: nowrap;
+    transition: background-color 0.2s;
 }
 
 .settings-menu-item:hover {
-    background: var(--emerald-50);
-    color: var(--emerald-700);
-}
-
-.settings-menu-item i {
-    width: 20px;
-    text-align: center;
-    color: var(--emerald-600);
-}
-
-.settings-menu-item:hover i {
+    background-color: var(--emerald-50);
     color: var(--emerald-700);
 }
 
 @keyframes popUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 /* Settings Pop-up Menu End */
 
@@ -2404,6 +2391,19 @@ tbody tr:hover {
 /* Register Button Special Layout End */
 
 /* Logout Confirmation Modal Start */
+
+#logoutConfirmModal {
+    left: 0 !important;
+    width: 100% !important;
+    z-index: 2000 !important; /* Ensure it sits above the sidebar (z-index 20) */
+    align-items: center;
+    justify-content: center;
+}
+
+#logoutConfirmModal .modal-content {
+    max-width: 400px; /* Make it a nice compact confirmation box */
+    margin: 0 auto;
+}
 #logoutConfirmModal .modal-header {
     background-color: var(--gray-50);
 }
@@ -3676,10 +3676,16 @@ html, body {
     font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif; 
 }
 
-body.display-body {
+body.display-body, 
+html {
+    min-height: 100vh;
+    height: 100%; 
+    margin: 0;
+    font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif; 
     background: var(--gray-50, #f9fafb); 
     color: var(--gray-900, #111827);
-    overflow: hidden;
+    position: relative;
+    overflow: hidden; /* No scrolling on kiosk */
 }
 
 .display-container {
