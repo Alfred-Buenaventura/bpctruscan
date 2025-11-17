@@ -25,6 +25,10 @@
             <i class="fa-solid fa-user-plus nav-icon"></i>
             <span class="nav-text">Create Account</span>
         </a>
+        <a href="create_admin.php" class="nav-item">
+            <i class="fa-solid fa-user-shield nav-icon"></i>
+            <span class="nav-text">Create Admin</span>
+        </a>
         <a href="complete_registration.php" class="nav-item">
              <i class="fa-solid fa-fingerprint nav-icon"></i>
             <span class="nav-text">Complete Registration</span>
@@ -44,12 +48,6 @@
     <div class="sidebar-footer">
     
     <div id="settings-menu">
-        <?php if (Helper::isAdmin()): ?>
-        <a href="create_admin.php" class="settings-menu-item">
-            <i class="fa-solid fa-user-shield"></i>
-            <span>Create Admin</span>
-        </a>
-        <?php endif; ?>
         <a href="profile.php" class="settings-menu-item">
             <i class="fa-solid fa-user"></i>
             <span>My Profile</span>

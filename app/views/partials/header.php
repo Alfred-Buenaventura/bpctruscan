@@ -16,13 +16,17 @@
 
         <main class="main-content" id="mainContent">
             <header class="main-header">
+                <button type="button" class="btn-mobile-toggle" id="mobileMenuBtn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+
                 <div class="header-title">
                     <h2><?= $pageTitle ?? 'Dashboard' ?></h2>
                     <p><?= $pageSubtitle ?? 'Welcome back!' ?></p>
                 </div>
 
                 <div class="header-actions">
-                    <div id="live-time-date">
+                    <div id="live-time-date" class="hide-on-mobile">
                         <div id="live-time">--:-- --</div>
                         <div id="live-date">Loading...</div>
                     </div>
@@ -33,7 +37,7 @@
                     </div>
 
                     <?php if (Helper::isAdmin() && isset($pageTitle) && $pageTitle === 'Dashboard'): ?>
-                    <div class="header-scanner-status offline" id="scanner-status-widget">
+                    <div class="header-scanner-status offline hide-on-mobile" id="scanner-status-widget">
                         <div class="device-icon-container">
                             <i class="fa-brands fa-usb device-status-icon"></i>
                         </div>
