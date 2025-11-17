@@ -1,6 +1,8 @@
 <?php
-require_once __DIR__ . '/../core/Controller.php';
-// Get the POSTed data (which is JSON sent from display.php)
+session_start(); // Start session to access user data
+require_once __DIR__ . '/../app/init.php'; // Load .env, helpers, and constants
+
+header('Content-Type: application/json');
 $data = json_decode(file_get_contents('php://input'));
 
 if (!$data || !isset($data->user_id)) {

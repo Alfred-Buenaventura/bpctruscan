@@ -1,6 +1,8 @@
 <?php
-require_once __DIR__ . '/../core/Controller.php';
+session_start(); // Start session to access user data
+require_once __DIR__ . '/../app/init.php'; // Load .env, helpers, and constants
 
+header('Content-Type: application/json');
 $userId = $_GET['user_id'] ?? 0;
 $startDate = $_GET['start_date'] ?? date('Y-m-01');
 
