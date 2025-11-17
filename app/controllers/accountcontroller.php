@@ -98,14 +98,18 @@ class AccountController extends Controller {
             $newId = $userModel->create($userData);
             
             if ($newId) {
-                $logModel->log($_SESSION['user_id'], 'User Created', "Created user: $facultyId");
-                $notifModel->create($newId, "Welcome! Your account has been created.", 'success');
-                
-                // Send Email
-                $msg = "Welcome, {$userData['first_name']}!<br>Username: {$userData['username']}<br>Password: DefaultPass123!";
-                sendEmail($userData['email'], "Your BPC Account", $msg);
+            $logModel->log($_SESSION['user_id'], 'User Created', "Created user: $facultyId");
+            $notifModel->create($newId, "Welcome! Your account has been created.", 'success');
+    
+            // --- UPDATED EMAIL CONTENT ---
+            $msg = "Welcome {$userData['first_name']}. Your account has been successfully created. Below are your login credentials. For security, please change your password upon your first login.<br><br>";
+            $msg .= "Username: {$userData['username']}<br>";
+            $msg .= "Password: DefaultPass123!<br><br>";
+            $msg .= "Please keep these information confidential. If you encounter any issues or have questions please feel free to contact us or the admin. Welcome Aboard!";
+    
+            sendEmail($userData['email'], "Your BPC Account", $msg);
 
-                $this->setFlash("User Account for {$userData['first_name']} created!", 'success', 'create');
+            $this->setFlash("User Account for {$userData['first_name']} created!", 'success', 'create');
             }
 
         } catch (Exception $e) {

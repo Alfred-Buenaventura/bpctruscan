@@ -63,14 +63,20 @@ class RegistrationController extends Controller {
         $pendingUsers = $userModel->getPendingUsers();
         $count = 0;
         $message = "Reminder: Your account registration is incomplete. Please visit the IT office for fingerprint registration.";
+        
 
         foreach ($pendingUsers as $user) {
             // Check if notif exists logic is simplified here for brevity; assuming we just send it.
             // In a real app, you might want to check duplication like in the original code.
             $notifModel->create($user['id'], $message, 'warning');
+
+            $subject = "Pending Fingerprint Registration";
             
             $emailBody = "Hi " . htmlspecialchars($user['first_name']) . ",<br><br>" . $message;
-            sendEmail($user['email'], "Registration Reminder", $emailBody);
+            $emailBody = "Your account is currently pending fingerprint registration. To complete your setup and ensure secure access, please proceed with the biometric registration at your earliest convenience.<br><br>";
+            $emailBody .= "If you need assistance or have any questions regarding this process, our support team is ready to help.<br><br>";
+            $emailBody .= "Best Regards,<br>BPC Admin";
+            sendEmail($user['email'], "Fingerprint Registration Reminder", $emailBody);
             $count++;
         }
 

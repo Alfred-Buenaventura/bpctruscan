@@ -125,10 +125,15 @@ class AuthController extends Controller {
                 $user = $res->get_result()->fetch_assoc();
 
                 if ($user) {
-                    $otp = strtoupper(substr(md5(time()), 0, 6));
-                    $body = "Your OTP is: <strong>$otp</strong>. Valid for 5 mins.";
-                    
-                    if (sendEmail($email, 'Password Reset', $body)) {
+                $otp = strtoupper(substr(md5(time()), 0, 6));
+    
+                // --- UPDATED OTP EMAIL CONTENT ---
+                $body = "OTP for Password Reset:<br><br>";
+                $body .= "We received a request to reset your account password. To proceed, please use the One-Time Password (OTP) provided below. This code is valid for a limited time and for single use only.<br><br>";
+                $body .= "<strong>$otp</strong><br><br>"; // Keeping the OTP bold for visibility
+                $body .= "If you did not request a password reset, please disregard this message and ensure the security of your account.";
+    
+                if (sendEmail($email, 'Password Reset', $body)) {
                         $_SESSION['reset_user_id'] = $user['id'];
                         $_SESSION['reset_otp'] = $otp;
                         $_SESSION['reset_time'] = time();
