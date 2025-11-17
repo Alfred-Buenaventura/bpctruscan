@@ -1,12 +1,13 @@
 <?php
-require_once __DIR__ . '/../core/Controller.php';
+require_once __DIR__ . '/../core/controller.php'; // Lowercase
 
 class ProfileController extends Controller {
 
     public function index() {
         $this->requireLogin();
 
-        $userModel = $this->model('User');
+        // Ensure your files are renamed to user.php and activitylog.php on server!
+        $userModel = $this->model('User'); 
         $logModel = $this->model('ActivityLog');
         
         $userId = $_SESSION['user_id'];
