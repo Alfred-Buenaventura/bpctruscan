@@ -78,9 +78,10 @@ class Schedule {
                     JOIN users u ON cs.user_id = u.id 
                     WHERE cs.status = 'approved'";
         } else {
-            $sql = "SELECT *, null as first_name, null as last_name, null as faculty_id 
-                    FROM class_schedules 
-                    WHERE status = 'approved'";
+            // FIX: Added 'cs' alias here so filters using 'cs.user_id' work
+            $sql = "SELECT cs.*, null as first_name, null as last_name, null as faculty_id 
+                    FROM class_schedules cs
+                    WHERE cs.status = 'approved'";
         }
 
         $params = [];
