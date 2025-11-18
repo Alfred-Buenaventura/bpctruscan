@@ -47,6 +47,7 @@
 /* View Accounts Tab Styling End */
 
 /* Root Variables Start */
+/* Root Variables Start */
 :root {
     --emerald-50: #ecfdf5;
     --emerald-100: #d1fae5;
@@ -84,8 +85,98 @@
     --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.08);
     --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.1);
 
-    --sidebar-width: 280;
+    /* FIX: Added 'px' unit here. This was causing the layout overlap. */
+    --sidebar-width: 280px; 
     --sidebar-collapsed-width: 65px;
+}
+/* Root Variables End */
+
+/* ... (Keep existing styles until Sidebar Footer) ... */
+
+/* Sidebar Footer Start */
+.sidebar-footer {
+    padding: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+    transition: padding var(--transition-medium);
+    position: relative;
+    z-index: 50;
+}
+
+.user-info {
+    background: var(--emerald-600);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-soft);
+    transition: opacity var(--transition-medium), padding var(--transition-medium), margin var(--transition-medium);
+}
+
+/* ... */
+
+.user-details p {
+    font-size: 11px;
+    color: var(--emerald-200); /* Light green for "Logged in as" */
+}
+
+.user-name {
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* FIX: Force user name text to be white */
+    color: #ffffff !important; 
+}
+
+.user-id {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ... (Keep existing styles until Main Content Area) ... */
+
+/* Main Content Area Start */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* FIX: Ensure margin matches sidebar width so it doesn't overlap */
+    margin-left: var(--sidebar-width); 
+    /* FIX: Calculate width to fit exactly in remaining space */
+    width: calc(100% - var(--sidebar-width)); 
+    transition: margin-left var(--transition-medium), width var(--transition-medium);
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: 100vh;
+}
+/* Main Content Area End */
+
+/* ... (Keep existing styles until Mobile Responsiveness) ... */
+
+/* =========================================
+   MOBILE RESPONSIVENESS FIXES (FINAL)
+   ========================================= */
+
+@media (max-width: 768px) {
+    
+    /* 1. Fix Container Width & Remove Sidebar Gap */
+    .dashboard-container {
+        padding-left: 0 !important;
+        width: 100vw;
+        overflow-x: hidden;
+    }
+
+    .main-content {
+        width: 100%;
+        max-width: 100vw;
+        padding-top: 0; 
+        /* FIX: Reset margin on mobile so content isn't pushed off-screen */
+        margin-left: 0 !important; 
+    }
+
+    /* ... (Keep rest of mobile styles) ... */
 }
 /* Root Variables End */
 
@@ -209,7 +300,7 @@ body {
     background: var(--gray-50);
     position: relative;
     transition: padding-left var(--transition-medium);
-    padding-left: var(--sidebar-width); /* 280px */
+    /* REMOVED: padding-left: var(--sidebar-width); */ 
     overflow: hidden;
 }
 /* Dashboard Layout End */
@@ -382,17 +473,18 @@ body {
     transition: margin var(--transition-medium);
 }
 
-.user-details {
-     margin-left: 10px;
-     flex-grow: 1;
-     overflow: hidden;
-     white-space: nowrap;
-     transition: opacity 0.2s ease-in-out;
-}
-
 .user-details p {
     font-size: 11px;
-    color: var(--emerald-200);
+    color: var(--emerald-200); /* Light green for "Logged in as" */
+}
+
+.user-name {
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* FIX: Force user name text to be white */
+    color: #ffffff !important; 
 }
 
 .user-name {
@@ -404,7 +496,7 @@ body {
 
 .user-id {
     font-size: 11px;
-    color: #FFFFFF; 
+    color: rgba(255, 255, 255, 0.8); /* Slightly transparent white */
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -476,16 +568,13 @@ body {
 /* Sidebar Toggle Button End */
 
 /* Collapsed Sidebar State Start */
-.dashboard-container.sidebar-collapsed {
-    padding-left: var(--sidebar-collapsed-width); /* 70px */
-}
-
 .dashboard-container.sidebar-collapsed .sidebar {
     width: var(--sidebar-collapsed-width);
 }
 
 .dashboard-container.sidebar-collapsed .main-content {
-    margin-left: 0;
+    margin-left: var(--sidebar-collapsed-width); /* FIX: Set margin for collapsed state */
+    width: calc(100% - var(--sidebar-collapsed-width)); /* FIX: Set width for collapsed state */
 }
 
 .dashboard-container.sidebar-collapsed .sidebar-header {
@@ -560,12 +649,14 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    width: 100%;
+    /* FIX: Ensure margin matches sidebar width so it doesn't overlap */
+    margin-left: var(--sidebar-width); 
+    /* FIX: Calculate width to fit exactly in remaining space */
+    width: calc(100% - var(--sidebar-width)); 
     transition: margin-left var(--transition-medium), width var(--transition-medium);
     overflow-x: hidden;
     overflow-y: auto;
     height: 100vh;
-    margin-left: 0; /* Start with no margin */
 }
 /* Main Content Area End */
 
@@ -1355,8 +1446,12 @@ tbody tr:hover {
 
 /* Responsive Design Start */
 @media (max-width: 768px) {
+    
+    /* 1. Fix Container Width & Remove Sidebar Gap */
     .dashboard-container {
-        padding-left: 0;
+        padding-left: 0 !important;
+        width: 100vw;
+        overflow-x: hidden;
     }
     .sidebar {
         transform: translateX(-100%);
@@ -1992,6 +2087,13 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.user-info-inner .user-name { 
+    color: white !important; 
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .user-details {
@@ -3834,11 +3936,7 @@ html {
 
 /* 1. Base styles for the DTR (for Modal Preview)
       We default to a large, readable A4 size. */
-:root {
-    --gray-100: #f3f4f6;
-    --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.08);
-    --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.1);
-}
+
 * {
     margin: 0;
     padding: 0;
@@ -4238,6 +4336,8 @@ body.dtr-body .print-controls {
         width: 100%;
         max-width: 100vw;
         padding-top: 0; 
+        /* FIX: Reset margin on mobile so content isn't pushed off-screen */
+        margin-left: 0 !important; 
     }
 
     .main-body.registration-page {
