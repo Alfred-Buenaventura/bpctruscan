@@ -119,7 +119,7 @@ class ApiController extends Controller {
     }
 
     /**
-     * Marks a notification as read.
+     * Marks a single notification as read.
      * Formerly: mark_notification_read.php
      */
     public function markNotificationRead() {
@@ -135,11 +135,40 @@ class ApiController extends Controller {
         $data = json_decode(file_get_contents('php://input'), true);
         $notifId = $data['notification_id'] ?? null;
         
+        if (!$notifId) {
+            echo json_encode(['success' => false, 'message' => 'Invalid notification ID']);
+            exit;
+        }
+        
         $db = new Database();
         $db->query("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?", [$notifId, $_SESSION['user_id']], "ii");
         
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => true, 'message' => 'Notification marked as read']);
+        exit;
+    }
+
+    /**
+     * Marks ALL notifications as read for the current user
+     * NEW METHOD
+     */
+    public function markAllNotificationsRead() {
+        header('Content-Type: application/json');
+        
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        
+        if (!isset($_SESSION['user_id'])) { 
+            echo json_encode(['success'=>false, 'message' => 'Unauthorized']); 
+            exit; 
+        }
+        
+        $db = new Database();
+        $db->query(
+            "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0", 
+            [$_SESSION['user_id']], 
+            "i"
+        );
+        
+        echo json_encode(['success' => true, 'message' => 'All notifications marked as read']);
         exit;
     }
 }
-?>
