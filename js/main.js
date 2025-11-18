@@ -46,10 +46,9 @@ window.onclick = function(event) {
 
 
 /* =========================================
-   2. ROBUST EVENT HANDLERS (DELEGATION)
+   UPDATED SIDEBAR TOGGLE LOGIC
+   Replace the sidebar toggle section in js/main.js
    ========================================= */
-// We attach a single listener to the document to handle clicks.
-// This ensures buttons work even if they are added dynamically or if DOM loading is tricky.
 
 document.addEventListener('click', function(e) {
     
@@ -66,13 +65,12 @@ document.addEventListener('click', function(e) {
 
     // --- B. CLOSE SETTINGS MENU (WHEN CLICKING OUTSIDE) ---
     if (settingsMenu && settingsMenu.classList.contains('active')) {
-        // If click is NOT on the menu AND NOT on the button, close it
         if (!e.target.closest('#settings-menu') && !e.target.closest('#userSettingsBtn')) {
             settingsMenu.classList.remove('active');
         }
     }
 
-    // --- C. SIDEBAR TOGGLE (Enhanced for Mobile) ---
+    // --- C. SIDEBAR TOGGLE (Enhanced for Desktop & Mobile) ---
     const sidebarToggle = e.target.closest('#sidebarToggle');
     if (sidebarToggle) {
         const sidebar = document.getElementById('sidebar');
@@ -85,12 +83,20 @@ document.addEventListener('click', function(e) {
                 dashboardContainer.classList.toggle('sidebar-mobile-open');
             } else {
                 // Standard desktop collapse
-                sidebar.classList.toggle('collapsed');
+                const isCurrentlyCollapsed = dashboardContainer.classList.contains('sidebar-collapsed');
+                
+                // Toggle the collapsed state
                 dashboardContainer.classList.toggle('sidebar-collapsed');
                 
-                // Save desktop state
-                const isCollapsed = sidebar.classList.contains('collapsed');
-                localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+                // Save state to localStorage
+                const newState = !isCurrentlyCollapsed;
+                localStorage.setItem('sidebarCollapsed', newState ? 'true' : 'false');
+                
+                // Force a small delay to ensure CSS transitions complete
+                setTimeout(() => {
+                    // Trigger window resize event to help any charts/tables adjust
+                    window.dispatchEvent(new Event('resize'));
+                }, 300);
             }
         }
     }
@@ -100,16 +106,57 @@ document.addEventListener('click', function(e) {
         const dashboardContainer = document.getElementById('dashboardContainer');
         const sidebar = document.getElementById('sidebar');
         
-        // If the sidebar is open AND the click was NOT on the sidebar or the toggle button
         if (dashboardContainer.classList.contains('sidebar-mobile-open') && 
             !sidebar.contains(e.target) && 
-            !e.target.closest('#sidebarToggle')) {
+            !e.target.closest('#sidebarToggle') &&
+            !e.target.closest('#mobileMenuBtn')) {
             
             dashboardContainer.classList.remove('sidebar-mobile-open');
         }
     }
 });
 
+// --- MOBILE MENU BUTTON LOGIC ---
+document.addEventListener('DOMContentLoaded', function() {
+    const mobileBtn = document.getElementById('mobileMenuBtn');
+    
+    if (mobileBtn) {
+        mobileBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dbContainer = document.getElementById('dashboardContainer');
+            dbContainer.classList.toggle('sidebar-mobile-open');
+        });
+    }
+
+    // --- RESTORE SIDEBAR STATE ON PAGE LOAD ---
+    try {
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        const sidebar = document.getElementById('sidebar');
+        const dashboardContainer = document.getElementById('dashboardContainer');
+        
+        // Only apply saved state on desktop
+        if (isCollapsed && sidebar && dashboardContainer && window.innerWidth > 768) {
+            dashboardContainer.classList.add('sidebar-collapsed');
+        }
+    } catch (err) {
+        console.error("Sidebar restore error:", err);
+    }
+});
+
+// --- HANDLE WINDOW RESIZE ---
+window.addEventListener('resize', function() {
+    const dashboardContainer = document.getElementById('dashboardContainer');
+    
+    // If resizing to desktop, remove mobile class
+    if (window.innerWidth > 768) {
+        dashboardContainer.classList.remove('sidebar-mobile-open');
+    }
+    
+    // If resizing to mobile, remove collapsed class
+    if (window.innerWidth <= 768) {
+        dashboardContainer.classList.remove('sidebar-collapsed');
+    }
+});
 // --- MOBILE MENU BUTTON LOGIC ---
     const mobileBtn = document.getElementById('mobileMenuBtn');
     
@@ -233,7 +280,7 @@ function initScannerSocket(widget) {
 
     // Attempt to connect to the local WebSocket Bridge (C# App)
     try {
-        const socket = new WebSocket("wss://127.0.0.1:8080");
+        const socket = new WebSocket("ws://127.0.0.1:8080");
         
         socket.onopen = () => {
             setStatus(true);
