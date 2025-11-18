@@ -44,7 +44,7 @@
             <span class="nav-text">Schedule Management</span>
         </a>
         
-        <?php if (!Helper::isAdmin()): ?>
+        <!-- NOTIFICATIONS BUTTON -->
         <button type="button" class="nav-item nav-item-button" onclick="openModal('notificationsModal')" id="notificationsBtn">
             <i class="fa-solid fa-bell nav-icon"></i>
             <span class="nav-text">Notifications</span>
@@ -58,7 +58,6 @@
             <span class="notification-badge"><?= $unreadCount ?></span>
             <?php endif; ?>
         </button>
-        <?php endif; ?>
     </nav>
 
     <div class="sidebar-footer">
@@ -104,6 +103,7 @@
 
 </aside>
 
+<!-- NOTIFICATIONS MODAL -->
 <div id="notificationsModal" class="modal">
     <div class="modal-content modal-small">
         <div class="modal-header">
@@ -160,6 +160,11 @@
             <?php endif; ?>
         </div>
         <div class="modal-footer">
+            <?php if (!empty($notifications)): ?>
+            <button type="button" class="btn btn-primary" onclick="markAllAsRead()">
+                <i class="fa-solid fa-check-double"></i> Mark All as Read
+            </button>
+            <?php endif; ?>
             <button type="button" class="btn btn-secondary" onclick="closeModal('notificationsModal')">Close</button>
         </div>
     </div>
@@ -198,5 +203,33 @@ function markAsRead(notificationId) {
         }
     })
     .catch(err => console.error('Error marking notification as read:', err));
+}
+
+// NEW: Mark all notifications as read
+function markAllAsRead() {
+    fetch('api.php?action=mark_all_notifications_read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update all notification items in UI
+            document.querySelectorAll('.notification-item.unread').forEach(item => {
+                item.classList.remove('unread');
+                item.classList.add('read');
+                const markBtn = item.querySelector('.notification-mark-read');
+                if (markBtn) markBtn.remove();
+            });
+            
+            // Remove badge
+            const badge = document.querySelector('#notificationsBtn .notification-badge');
+            if (badge) badge.remove();
+            
+            // Close modal
+            closeModal('notificationsModal');
+        }
+    })
+    .catch(err => console.error('Error marking all as read:', err));
 }
 </script>
