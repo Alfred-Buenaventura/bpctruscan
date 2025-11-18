@@ -27,8 +27,12 @@ switch ($action) {
     
     // --- User/UI AJAX Endpoints (Login Checked in Controller) ---
     case 'mark_notification_read':
-        // Moved logic to ApiController or keep in DisplayController
         (new ApiController())->markNotificationRead();
+        break;
+    
+    // NEW: Mark all notifications as read
+    case 'mark_all_notifications_read':
+        (new ApiController())->markAllNotificationsRead();
         break;
         
     case 'notify_pending_users':
@@ -49,4 +53,3 @@ switch ($action) {
         echo json_encode(['success' => false, 'message' => 'Invalid API Action']);
         break;
 }
-?>
