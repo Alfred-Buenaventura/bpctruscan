@@ -32,6 +32,8 @@ class ScheduleController extends Controller {
         // --- POST ACTIONS ---
         try {
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                
+                // Handle Add Schedule
                 if (isset($_POST['add_schedule'])) {
                     $userId = $_POST['user_id'] ?? $_SESSION['user_id'];
                     $schedules = [];
@@ -54,9 +56,9 @@ class ScheduleController extends Controller {
                     }
                 }
                 
-                // --- NEW EDIT LOGIC ---
-                if (isset($_POST['edit_schedule'])) {
-                    $this->requireAdmin(); // Only admins can edit
+                // Handle Edit Schedule
+                elseif (isset($_POST['edit_schedule'])) {
+                    $this->requireAdmin();
                     $scheduleId = $_POST['schedule_id_edit'];
                     $userId = $_POST['user_id_edit'];
                     $day = $_POST['day_of_week_edit'];
@@ -72,9 +74,9 @@ class ScheduleController extends Controller {
                         $data['error'] = "Failed to update schedule.";
                     }
                 }
-                // --- END NEW EDIT LOGIC ---
 
-                if (isset($_POST['delete_schedule'])) {
+                // Handle Delete Schedule
+                elseif (isset($_POST['delete_schedule'])) {
                     $scheduleId = $_POST['schedule_id_delete'];
                     $userId = $_POST['user_id_delete'];
                     if ($scheduleModel->delete($scheduleId, $userId, $data['isAdmin'])) {
@@ -84,31 +86,86 @@ class ScheduleController extends Controller {
                         $data['error'] = "Failed to delete schedule.";
                     }
                 }
-                if (isset($_POST['approve_schedule'])) {
+                
+                // Handle Single Schedule Approval
+                elseif (isset($_POST['approve_schedule'])) {
                     $this->requireAdmin();
                     $scheduleId = $_POST['schedule_id'];
                     $userId = $_POST['user_id'];
                     if ($scheduleModel->updateStatus($scheduleId, 'approved')) {
-                        $data['success'] = "Schedule approved.";
+                        $data['success'] = "Schedule approved successfully.";
+                        $data['activeTab'] = 'pending'; // Stay on pending tab
                         $logModel->log($adminId, 'Schedule Approved', "Approved schedule ID $scheduleId for user $userId");
                     } else {
                         $data['error'] = "Failed to approve schedule.";
+                        $data['activeTab'] = 'pending';
                     }
                 }
-                if (isset($_POST['decline_schedule'])) {
+                
+                // Handle Single Schedule Decline
+                elseif (isset($_POST['decline_schedule'])) {
                     $this->requireAdmin();
                     $scheduleId = $_POST['schedule_id'];
                     $userId = $_POST['user_id'];
                     if ($scheduleModel->delete($scheduleId, $userId, true)) {
                         $data['success'] = "Schedule declined and removed.";
+                        $data['activeTab'] = 'pending'; // Stay on pending tab
                         $logModel->log($adminId, 'Schedule Declined', "Declined schedule ID $scheduleId for user $userId");
                     } else {
                         $data['error'] = "Failed to decline schedule.";
+                        $data['activeTab'] = 'pending';
+                    }
+                }
+                
+                // Handle Bulk Approve All for a User
+                elseif (isset($_POST['approve_all_user'])) {
+                    $this->requireAdmin();
+                    $scheduleIds = $_POST['schedule_ids'] ?? [];
+                    $userId = $_POST['user_id'];
+                    $approvedCount = 0;
+                    
+                    foreach ($scheduleIds as $scheduleId) {
+                        if ($scheduleModel->updateStatus($scheduleId, 'approved')) {
+                            $approvedCount++;
+                        }
+                    }
+                    
+                    if ($approvedCount > 0) {
+                        $data['success'] = "Successfully approved $approvedCount schedule(s).";
+                        $data['activeTab'] = 'pending'; // Stay on pending tab
+                        $logModel->log($adminId, 'Bulk Schedule Approval', "Approved $approvedCount schedules for user ID $userId");
+                    } else {
+                        $data['error'] = "Failed to approve schedules.";
+                        $data['activeTab'] = 'pending';
+                    }
+                }
+                
+                // Handle Bulk Decline All for a User
+                elseif (isset($_POST['decline_all_user'])) {
+                    $this->requireAdmin();
+                    $scheduleIds = $_POST['schedule_ids'] ?? [];
+                    $userId = $_POST['user_id'];
+                    $declinedCount = 0;
+                    
+                    foreach ($scheduleIds as $scheduleId) {
+                        if ($scheduleModel->delete($scheduleId, $userId, true)) {
+                            $declinedCount++;
+                        }
+                    }
+                    
+                    if ($declinedCount > 0) {
+                        $data['success'] = "Successfully declined $declinedCount schedule(s).";
+                        $data['activeTab'] = 'pending'; // Stay on pending tab
+                        $logModel->log($adminId, 'Bulk Schedule Decline', "Declined $declinedCount schedules for user ID $userId");
+                    } else {
+                        $data['error'] = "Failed to decline schedules.";
+                        $data['activeTab'] = 'pending';
                     }
                 }
             }
         } catch (Exception $e) {
-            $data['error'] = $e->getMessage();
+            $data['error'] = 'System error: ' . $e->getMessage();
+            error_log("Schedule Controller Error: " . $e->getMessage());
         }
 
         // --- GET DATA FOR VIEW ---
@@ -118,16 +175,13 @@ class ScheduleController extends Controller {
             $data['stats'] = $scheduleModel->getAdminStats();
             
             if (!empty($data['selectedUserId'])) {
-                // Admin is filtering by a specific user
                 $data['approvedSchedules'] = $scheduleModel->getByUser($data['selectedUserId'], 'approved');
                 $data['selectedUserInfo'] = $userModel->findById($data['selectedUserId']);
                 $data['userStats'] = $scheduleModel->getUserStats($data['selectedUserId']);
             } else {
-                // Admin is viewing all users (Accordion view)
                 $data['groupedApprovedSchedules'] = $scheduleModel->getAllApprovedGroupedByUser();
             }
         } else {
-            // Non-admin view
             $userId = $_SESSION['user_id'];
             $data['approvedSchedules'] = $scheduleModel->getByUser($userId, 'approved');
             $data['pendingSchedules'] = $scheduleModel->getByUser($userId, 'pending');
