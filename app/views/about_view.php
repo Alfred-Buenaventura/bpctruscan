@@ -1,7 +1,6 @@
 <?php
 $pageTitle = 'About Us';
 $pageSubtitle = 'Learn more about the BPC Attendance System';
-// FIX: Use __DIR__ to locate the partials folder correctly
 require_once __DIR__ . '/partials/header.php'; 
 ?>
 
@@ -10,9 +9,7 @@ require_once __DIR__ . '/partials/header.php';
     <div class="card">
         <div class="card-body" style="text-align: center; padding: 40px;">
             <div style="width: 120px; height: 120px; background: var(--emerald-500); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" style="width: 64px; height: 64px;">
-                    <path d="M12 11v.01M12 14v.01M12 17v.01M15 8.5c0-1.933-1.567-3.5-3.5-3.5S8 6.567 8 8.5V12c0 1.933 1.567 3.5 3.5 3.5S15 13.933 15 12V8.5z"/>
-                </svg>
+                <i class="fa-solid fa-fingerprint" style="font-size: 64px; color: white;"></i>
             </div>
             <h2 style="font-size: 32px; font-weight: 700; color: var(--emerald-800); margin-bottom: 8px;">BPC Attendance System</h2>
             <p style="font-size: 18px; color: var(--gray-600); margin-bottom: 24px;">Staff Attendance Monitoring System</p>
@@ -32,9 +29,7 @@ require_once __DIR__ . '/partials/header.php';
                 <div style="display: flex; flex-direction: column; gap: 16px;">
                     <div style="display: flex; gap: 12px;">
                         <div style="width: 40px; height: 40px; background: var(--emerald-100); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: var(--emerald-600);">
-                                <path d="M12 11v.01M12 14v.01M12 17v.01"/>
-                            </svg>
+                            <i class="fa-solid fa-fingerprint" style="font-size: 20px; color: var(--emerald-600);"></i>
                         </div>
                         <div>
                             <h4 style="font-weight: 600; margin-bottom: 4px;">Biometric Authentication</h4>
@@ -44,9 +39,7 @@ require_once __DIR__ . '/partials/header.php';
 
                     <div style="display: flex; gap: 12px;">
                         <div style="width: 40px; height: 40px; background: var(--emerald-100); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: var(--emerald-600);">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            </svg>
+                            <i class="fa-solid fa-file-lines" style="font-size: 20px; color: var(--emerald-600);"></i>
                         </div>
                         <div>
                             <h4 style="font-weight: 600; margin-bottom: 4px;">Comprehensive Reports</h4>
@@ -56,10 +49,7 @@ require_once __DIR__ . '/partials/header.php';
 
                     <div style="display: flex; gap: 12px;">
                         <div style="width: 40px; height: 40px; background: var(--emerald-100); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: var(--emerald-600);">
-                                <rect x="3" y="4" width="18" height="18" rx="2"/>
-                                <line x1="16" y1="2" x2="16" y2="6"/>
-                            </svg>
+                            <i class="fa-solid fa-calendar-days" style="font-size: 20px; color: var(--emerald-600);"></i>
                         </div>
                         <div>
                             <h4 style="font-weight: 600; margin-bottom: 4px;">Schedule Management</h4>
@@ -69,10 +59,7 @@ require_once __DIR__ . '/partials/header.php';
 
                     <div style="display: flex; gap: 12px;">
                         <div style="width: 40px; height: 40px; background: var(--emerald-100); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: var(--emerald-600);">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                <circle cx="9" cy="7" r="4"/>
-                            </svg>
+                            <i class="fa-solid fa-user-gear" style="font-size: 20px; color: var(--emerald-600);"></i>
                         </div>
                         <div>
                             <h4 style="font-weight: 600; margin-bottom: 4px;">User Management</h4>

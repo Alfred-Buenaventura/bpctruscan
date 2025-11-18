@@ -94,7 +94,7 @@ require_once __DIR__ . '/partials/header.php';
                     </a>
                     <a href="display.php" target="_blank" class="btn btn-primary" style="padding: 1rem; text-align: left; justify-content: flex-start; font-size: 1rem; background-color: var(--blue-600); border-color: var(--blue-600);">
                         <i class="fa-solid fa-desktop" style="width: 20px; text-align: center; margin-right: 0.75rem; font-size: 1.2rem;"></i>
-                        <span>Launch Kiosk Display</span>
+                        <span>Launch Attendance Display</span>
                     </a>
                 </div>
             </div>
@@ -102,7 +102,7 @@ require_once __DIR__ . '/partials/header.php';
     </div>
 
 <?php else: ?>
-    <!-- USER DASHBOARD (Updated) -->
+    <!-- USER DASHBOARD (Updated with Emerald Green Cards) -->
     <div class="main-body user-dashboard-body">
         
         <!-- Link to History Page -->
@@ -195,7 +195,7 @@ require_once __DIR__ . '/partials/header.php';
              </div>
         </div>
 
-        <!-- Note Container -->
+        <!-- Note Container at Bottom -->
         <div class="page-hint-card">
             <div class="page-hint-icon">
                 <i class="fa-solid fa-lightbulb"></i>
