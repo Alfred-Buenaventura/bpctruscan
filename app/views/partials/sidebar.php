@@ -44,7 +44,7 @@
             <span class="nav-text">Schedule Management</span>
         </a>
         
-        <!-- NEW: Notifications Button -->
+        <?php if (!Helper::isAdmin()): ?>
         <button type="button" class="nav-item nav-item-button" onclick="openModal('notificationsModal')" id="notificationsBtn">
             <i class="fa-solid fa-bell nav-icon"></i>
             <span class="nav-text">Notifications</span>
@@ -58,6 +58,7 @@
             <span class="notification-badge"><?= $unreadCount ?></span>
             <?php endif; ?>
         </button>
+        <?php endif; ?>
     </nav>
 
     <div class="sidebar-footer">
@@ -71,10 +72,12 @@
             <i class="fa-solid fa-circle-info"></i>
             <span>About Us</span>
         </a>
+        <?php if (!Helper::isAdmin()): ?>
         <a href="contact.php" class="settings-menu-item">
             <i class="fa-solid fa-envelope"></i>
             <span>Contact Support</span>
         </a>
+        <?php endif; ?>
     </div>
     
     <div class="user-info">
@@ -101,7 +104,6 @@
 
 </aside>
 
-<!-- Notifications Modal -->
 <div id="notificationsModal" class="modal">
     <div class="modal-content modal-small">
         <div class="modal-header">
