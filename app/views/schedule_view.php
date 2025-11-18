@@ -339,6 +339,35 @@ if (!function_exists('renderScheduleTable')) {
     </div>
 </div>
 
+<div id="addScheduleModal" class="modal">
+    <div class="modal-content modal-lg">
+        <form method="POST">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-calendar-plus"></i> Add Schedule</h3>
+                <button type="button" class="modal-close" onclick="closeModal('addScheduleModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="margin-top: 0; margin-bottom: 1rem; padding: 0.75rem; font-size: 0.9rem;">
+                    <i class="fa-solid fa-circle-info"></i> You can add multiple subjects at once.
+                </div>
+                
+                <div id="schedule-entry-list">
+                    </div>
+                
+                <button type="button" class="btn btn-secondary btn-sm" onclick="addScheduleRow()" style="margin-top: 1rem;">
+                    <i class="fa-solid fa-plus"></i> Add Another Subject
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addScheduleModal')">Cancel</button>
+                <button type="submit" name="add_schedule" class="btn btn-primary">
+                    <i class="fa-solid fa-paper-plane"></i> Submit for Approval
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="bulkApproveModal" class="modal">
     <div class="modal-content modal-small">
         <div class="modal-header">
@@ -359,7 +388,7 @@ if (!function_exists('renderScheduleTable')) {
 <div id="deleteScheduleModal" class="modal">
     <div class="modal-content modal-small">
         <form method="POST">
-            <div class="modal-header">
+            <div class="modal-header danger">
                 <h3><i class="fa-solid fa-trash"></i> Delete?</h3>
                 <button type="button" class="modal-close" onclick="closeModal('deleteScheduleModal')">&times;</button>
             </div>
@@ -407,19 +436,6 @@ if (!function_exists('renderScheduleTable')) {
                 <button type="button" class="btn btn-secondary" onclick="closeModal('editScheduleModal')">Cancel</button>
                 <button type="submit" name="edit_schedule" class="btn btn-primary">Save Changes</button>
             </div>
-        </form>
-    </div>
-</div>
-
-<div id="deleteScheduleModal" class="modal">
-    <div class="modal-content modal-small">
-        <form method="POST">
-            <div class="modal-header danger"><h3>Delete?</h3><button type="button" class="modal-close" onclick="closeModal('deleteScheduleModal')">&times;</button></div>
-            <div class="modal-body"><p>Are you sure you want to delete this schedule?</p>
-                <input type="hidden" name="schedule_id_delete" id="deleteScheduleId">
-                <input type="hidden" name="user_id_delete" id="deleteUserId">
-            </div>
-            <div class="modal-footer"><button type="submit" name="delete_schedule" class="btn btn-danger">Delete</button></div>
         </form>
     </div>
 </div>
