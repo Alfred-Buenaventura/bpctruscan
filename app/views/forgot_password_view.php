@@ -6,6 +6,33 @@
     <title>Forgot Password - BPC Attendance</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Styles for Password Toggles */
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-wrapper input {
+            padding-right: 40px !important; /* Make room for the icon */
+        }
+        .toggle-password-btn {
+            position: absolute;
+            right: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 1rem;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+        .toggle-password-btn:hover {
+            color: var(--emerald-600, #059669);
+        }
+    </style>
 </head>
 <body class="login-page">
     
@@ -76,11 +103,21 @@
                 <form method="POST">
                     <div class="form-group">
                         <label>New Password</label>
-                        <input type="password" name="new_password" class="form-control" placeholder="Minimum 8 characters" required>
+                        <div class="password-wrapper">
+                            <input type="password" name="new_password" id="new_password" class="form-control" placeholder="Minimum 8 characters" required>
+                            <button type="button" class="toggle-password-btn" onclick="togglePass('new_password', this)">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Confirm Password</label>
-                        <input type="password" name="confirm_password" class="form-control" placeholder="Re-enter new password" required>
+                        <div class="password-wrapper">
+                            <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="Re-enter new password" required>
+                            <button type="button" class="toggle-password-btn" onclick="togglePass('confirm_password', this)">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
                     </div>
                     <button type="submit" name="reset_password" class="btn btn-primary btn-full-width" style="margin-top: 1rem;">
                         Reset Password
@@ -106,5 +143,21 @@
         </div>
     </div>
 
+    <script>
+        function togglePass(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = "password";
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    </script>
 </body>
 </html>

@@ -123,9 +123,25 @@ $currentYear = date("Y");
             scanName.textContent = data.name;
             scanStatus.textContent = data.status;
             
-            const scanTimeObj = new Date(data.full_timestamp);
-            scanTime.textContent = scanTimeObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-            scanDate.textContent = scanTimeObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            // --- FAIL-SAFE DATE LOGIC ---
+            // Instead of trying to parse the server date, we just use the Browser's Current Time.
+            // This guarantees a valid date/time is always shown.
+            let scanTimeObj = new Date(); 
+            
+            // Format Time (e.g., 08:45 AM)
+            scanTime.textContent = scanTimeObj.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit', 
+                hour12: true 
+            });
+
+            // Format Date (e.g., Nov 19, 2025)
+            scanDate.textContent = scanTimeObj.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
+            // --- END FAIL-SAFE LOGIC ---
 
             if (data.status.toLowerCase().includes('time in')) {
                 scanIcon.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i>';
@@ -171,9 +187,7 @@ $currentYear = date("Y");
                     showScanEvent({
                         name: "System Error",
                         status: data.message || "Contact Admin",
-                        full_timestamp: now.toISOString(),
-                        time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-                        date: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                        // Removed timestamp dependency
                     });
                 }
             })
@@ -183,9 +197,7 @@ $currentYear = date("Y");
                 showScanEvent({
                     name: "Network Error",
                     status: "Check Connection",
-                    full_timestamp: now.toISOString(),
-                    time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-                    date: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                    // Removed timestamp dependency
                 });
             });
         }
@@ -220,13 +232,10 @@ $currentYear = date("Y");
                     }
                     else if (data.type === "verification_fail") {
                         console.warn("❌ Verification failed:", data.message);
-                        const now = new Date();
                         showScanEvent({
                             name: "Scan Failed",
                             status: "Finger not recognized",
-                            full_timestamp: now.toISOString(),
-                            time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-                            date: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                            // Removed timestamp dependency
                         });
                     }
                     else if (data.status === "info") {

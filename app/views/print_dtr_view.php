@@ -12,9 +12,9 @@ $year = $start->format('Y');
 $daysInMonth = (int)$start->format('t');
 
 if ($start->format('Y-m') != $end->format('Y-m')) {
-    $monthName = $start->format('F Y') . ' - ' . $end->format('F Y');
+    $monthLabel = $start->format('F Y') . ' - ' . $end->format('F Y');
 } else {
-    $monthName = $monthName . " " . $year;
+    $monthLabel = $monthName . " " . $year;
 }
 ?>
 <!DOCTYPE html>
@@ -29,7 +29,7 @@ if ($start->format('Y-m') != $end->format('Y-m')) {
     <style>
         /* Ensure DTR specific styles are applied if they were inline or specific to this page */
         .dtr-day-disabled { background: #eee; height: 100%; width: 100%; color: #999; display: flex; align-items: center; justify-content: center;}
-        .time-val { font-family: 'Courier New', Courier, monospace; font-weight: 600; }
+        .time-val { font-family: 'Courier New', Courier, monospace; font-weight: 600; font-size: 0.9rem; }
     </style>
 </head>
 <body class="dtr-body"> 
@@ -63,15 +63,11 @@ if ($start->format('Y-m') != $end->format('Y-m')) {
                 </tr>
                 <tr>
                     <td class="label">For the month of</td>
-                    <td class="value"><?= htmlspecialchars($monthName) ?></td>
+                    <td class="value"><?= htmlspecialchars($monthLabel) ?></td>
                 </tr>
                 <tr>
                     <td class="label">Faculty ID</td>
                     <td class="value"><?= htmlspecialchars($facultyId) ?></td>
-                </tr>
-                <tr>
-                    <td class="label">Office Hours (regular days)</td>
-                    <td class="value">8:00 AM - 5:00 PM (1hr break)</td>
                 </tr>
             </table>
 
@@ -102,45 +98,26 @@ if ($start->format('Y-m') != $end->format('Y-m')) {
                         $am_out = '';
                         $pm_in = '';
                         $pm_out = '';
-                        $day_hours = '';
-                        $day_minutes = '';
+                        $day_hours = 0;   // Changed to integer 0 for logic check
+                        $day_minutes = 0; // Changed to integer 0 for logic check
                         
                         // Check if day is valid for this month
                         if ($day > $daysInMonth) {
-                            $am_in = '<div class="dtr-day-disabled">-</div>';
-                            $am_out = '<div class="dtr-day-disabled">-</div>';
-                            $pm_in = '<div class="dtr-day-disabled">-</div>';
-                            $pm_out = '<div class="dtr-day-disabled">-</div>';
+                            $am_in = $am_out = $pm_in = $pm_out = '<div class="dtr-day-disabled">-</div>';
                         } else {
-                            // Check if we have a record for this day in the passed data
+                            // Check if we have a record for this day
                             if (isset($dtrRecords[$day])) {
                                 $rec = $dtrRecords[$day];
                                 
-                                // Parse Time In
-                                if (!empty($rec['time_in'])) {
-                                    $time_in_ts = strtotime($rec['time_in']);
-                                    // Simple logic: if before 12PM, it's AM Arrival. Else PM Arrival.
-                                    if ($time_in_ts < strtotime('12:00:00')) {
-                                        $am_in = date('g:i', $time_in_ts);
-                                    } else {
-                                        $pm_in = date('g:i', $time_in_ts);
-                                    }
-                                }
+                                // Use specific AM/PM buckets provided by controller
+                                if (!empty($rec['am_in'])) $am_in = date('H:i', strtotime($rec['am_in']));
+                                if (!empty($rec['am_out'])) $am_out = date('H:i', strtotime($rec['am_out']));
+                                if (!empty($rec['pm_in'])) $pm_in = date('H:i', strtotime($rec['pm_in']));
+                                if (!empty($rec['pm_out'])) $pm_out = date('H:i', strtotime($rec['pm_out']));
 
-                                // Parse Time Out
-                                if (!empty($rec['time_out'])) {
-                                    $time_out_ts = strtotime($rec['time_out']);
-                                    // Simple logic: if after 1PM, it's PM Departure. Else AM Departure.
-                                    if ($time_out_ts > strtotime('13:00:00')) {
-                                        $pm_out = date('g:i', $time_out_ts);
-                                    } else {
-                                        $am_out = date('g:i', $time_out_ts);
-                                    }
-                                }
-
-                                // Calculate Hours (using the pre-calculated working_hours column if available, or raw math)
-                                if (!empty($rec['working_hours'])) {
-                                    $wh = floatval($rec['working_hours']);
+                                // Calculate Totals using the pre-summed 'total_hours'
+                                if (!empty($rec['total_hours']) && $rec['total_hours'] > 0) {
+                                    $wh = floatval($rec['total_hours']);
                                     $day_hours = floor($wh);
                                     $day_minutes = round(($wh - $day_hours) * 60);
                                     
@@ -156,8 +133,8 @@ if ($start->format('Y-m') != $end->format('Y-m')) {
                         <td class="time-val"><?= $am_out ?></td>
                         <td class="time-val"><?= $pm_in ?></td>
                         <td class="time-val"><?= $pm_out ?></td>
-                        <td><?= $day_hours ?></td>
-                        <td><?= $day_minutes ?></td>
+                        <td><?= ($day_hours > 0) ? $day_hours : '' ?></td>
+                        <td><?= ($day_minutes > 0) ? $day_minutes : '' ?></td>
                     </tr>
                     <?php endfor; ?>
 
