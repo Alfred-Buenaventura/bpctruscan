@@ -5,7 +5,7 @@ class Attendance {
     private $db;
 
     public function __construct() {
-        $this->db = new Database();
+        $this->db = Database::getInstance();
     }
 
     // --- DASHBOARD METHODS ---
@@ -23,7 +23,6 @@ class Attendance {
     }
 
     // --- ATTENDANCE REPORTS METHODS ---
-    
     public function getRecords($filters) {
         $sql = "SELECT ar.*, u.faculty_id, u.first_name, u.last_name, u.role
                 FROM attendance_records ar
@@ -55,7 +54,6 @@ class Attendance {
             $types .= "ss";
         }
 
-        // --- NEW: Filter by Status for History Page ---
         if (!empty($filters['status_type'])) {
             if ($filters['status_type'] === 'Late') {
                 $sql .= " AND ar.status LIKE '%Late%'";
@@ -71,7 +69,6 @@ class Attendance {
         return $this->db->query($sql, $params, $types)->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    // --- NEW: Get History Stats for Cards ---
     public function getHistoryStats($filters) {
         $sql = "SELECT 
                     COUNT(*) as total,
@@ -100,7 +97,6 @@ class Attendance {
         return $this->db->query($sql, $params, $types)->get_result()->fetch_assoc();
     }
 
-    // Get Stats for the Cards (Existing Method)
     public function getStats($userId = null) {
         $today = date('Y-m-d');
         $stats = [];
@@ -121,6 +117,70 @@ class Attendance {
             $stats['present_total'] = $this->db->query($sqlPresent, [$today], "s")->get_result()->fetch_assoc()['c'] ?? 0;
         }
         return $stats;
+    }
+
+    // --- HYBRID DYNAMIC HOLIDAY GENERATOR ---
+    public function getHolidaysInRange($startDate, $endDate) {
+        $holidays = [];
+        
+        $startYear = (int)date('Y', strtotime($startDate));
+        $endYear = (int)date('Y', strtotime($endDate));
+
+        for ($year = $startYear; $year <= $endYear; $year++) {
+            // A. FIXED DATE HOLIDAYS (Regular & Special)
+            $fixedHolidays = [
+                "$year-01-01" => "New Year's Day",
+                "$year-02-25" => "EDSA Revolution Anniversary", // Special
+                "$year-04-09" => "Araw ng Kagitingan",
+                "$year-05-01" => "Labor Day",
+                "$year-06-12" => "Independence Day",
+                "$year-08-21" => "Ninoy Aquino Day", // Special
+                "$year-11-01" => "All Saints' Day", // Special
+                "$year-11-02" => "All Souls' Day", // Special
+                "$year-11-30" => "Bonifacio Day",
+                "$year-12-08" => "Immaculate Conception", // Special
+                "$year-12-24" => "Christmas Eve", // Special
+                "$year-12-25" => "Christmas Day",
+                "$year-12-30" => "Rizal Day",
+                "$year-12-31" => "Last Day of the Year" // Special
+            ];
+
+            // B. MOVABLE HOLIDAYS (Calculated via PHP)
+            
+            // 1. Holy Week (Based on Easter Sunday)
+            $daysToEaster = easter_days($year);
+            $easterDate = new DateTime("$year-03-21 +$daysToEaster days");
+            
+            $maundyThursday = clone $easterDate; $maundyThursday->modify('-3 days');
+            $goodFriday = clone $easterDate; $goodFriday->modify('-2 days');
+            $blackSaturday = clone $easterDate; $blackSaturday->modify('-1 days');
+
+            $fixedHolidays[$maundyThursday->format('Y-m-d')] = "Maundy Thursday";
+            $fixedHolidays[$goodFriday->format('Y-m-d')] = "Good Friday";
+            $fixedHolidays[$blackSaturday->format('Y-m-d')] = "Black Saturday"; // Special
+
+            // 2. National Heroes Day (Last Monday of August)
+            $lastMonAug = date('Y-m-d', strtotime("last monday of august $year"));
+            $fixedHolidays[$lastMonAug] = "National Heroes Day";
+
+            // Merge calculated holidays into main list if they are within range
+            foreach ($fixedHolidays as $date => $name) {
+                if ($date >= $startDate && $date <= $endDate) {
+                    $holidays[$date] = $name;
+                }
+            }
+        }
+
+        // C. DATABASE HOLIDAYS (For Manual overrides like Chinese NY or Eids)
+        // This merges the DB result with the generated list
+        $sql = "SELECT holiday_date, description FROM holidays WHERE holiday_date BETWEEN ? AND ?";
+        $res = $this->db->query($sql, [$startDate, $endDate], "ss")->get_result();
+        while($row = $res->fetch_assoc()){
+            // DB entries take priority (overwrite generated ones if same date)
+            $holidays[$row['holiday_date']] = $row['description'];
+        }
+
+        return $holidays;
     }
 }
 ?>

@@ -5,14 +5,12 @@ class ActivityLog {
     private $db;
 
     public function __construct() {
-        $this->db = new Database();
+        // FIX: Use Singleton
+        $this->db = Database::getInstance();
     }
 
-    // This is the method causing the error - ensuring it exists
     public function log($userId, $action, $details = '') {
-        // Handle cases where IP might not be set (e.g. CLI)
         $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'; 
-        
         $sql = "INSERT INTO activity_logs (user_id, action, description, ip_address) VALUES (?, ?, ?, ?)";
         $this->db->query($sql, [$userId, $action, $details, $ip], "isss");
     }

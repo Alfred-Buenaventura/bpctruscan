@@ -1,12 +1,12 @@
 <?php
-// LOWERCASE REQUIRE
 require_once __DIR__ . '/../core/database.php';
 
 class User {
     private $db;
 
     public function __construct() {
-        $this->db = new Database();
+        // FIX: Use Singleton
+        $this->db = Database::getInstance();
     }
 
     // --- AUTHENTICATION ---
@@ -81,26 +81,13 @@ class User {
         return true;
     }
 
-    /**
-     * Permanently deletes a user and ALL their associated records.
-     */
     public function delete($id) {
-        // 1. Delete Schedules
         $this->db->query("DELETE FROM class_schedules WHERE user_id=?", [$id], "i");
-
-        // 2. Delete Attendance Records
         $this->db->query("DELETE FROM attendance_records WHERE user_id=?", [$id], "i");
-
-        // 3. Delete Notifications
         $this->db->query("DELETE FROM notifications WHERE user_id=?", [$id], "i");
-
-        // 4. Delete Activity Logs (Optional: remove if you want to keep audit history for deleted users)
         $this->db->query("DELETE FROM activity_logs WHERE user_id=?", [$id], "i");
-
-        // 5. Finally, delete the User (Fingerprint data is stored in this table, so it gets removed here)
         $sql = "DELETE FROM users WHERE id=?";
         $this->db->query($sql, [$id], "i");
-        
         return true;
     }
 

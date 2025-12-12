@@ -5,8 +5,8 @@ class Schedule {
     private $db;
 
     public function __construct() {
-        $this->db = new Database();
-    }
+    $this->db = Database::getInstance(); // Reuses existing connection
+}
     
     // --- NEW: Helper to get single schedule details (REQUIRED for Emails) ---
     public function findById($id) {
