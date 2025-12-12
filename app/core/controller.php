@@ -62,7 +62,7 @@ class Controller {
         exit; 
     }
     
-    $db = new Database();
+    $db = Database::getInstance();
     $db->query(
         "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0", 
         [$_SESSION['user_id']], 
