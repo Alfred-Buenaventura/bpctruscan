@@ -108,6 +108,7 @@ class AttendanceController extends Controller {
         $this->requireLogin();
         $userId = $_GET['user_id'] ?? $_SESSION['user_id'];
         
+        // Security: Only Admin or the user themselves can view
         if (!isAdmin() && $userId != $_SESSION['user_id']) {
             die('Access Denied');
         }
@@ -115,19 +116,50 @@ class AttendanceController extends Controller {
         $userModel = $this->model('User');
         $attModel = $this->model('Attendance');
         
+        // Default to current month if not specified
         $filters = [
             'start_date' => $_GET['start_date'] ?? date('Y-m-01'),
             'end_date' => $_GET['end_date'] ?? date('Y-m-t'),
             'user_id' => $userId
         ];
         
+        // Fetch raw records
         $records = $attModel->getRecords($filters); 
         
+        // --- GROUPING LOGIC (AM vs PM) ---
         $dtrData = [];
         foreach($records as $r) {
             $day = (int)date('d', strtotime($r['date']));
-            $dtrData[$day] = $r;
+            
+            if (!isset($dtrData[$day])) {
+                $dtrData[$day] = [
+                    'date' => $r['date'],
+                    'am_in' => null, 
+                    'am_out' => null,
+                    'pm_in' => null, 
+                    'pm_out' => null,
+                    'total_hours' => 0
+                ];
+            }
+            
+            // Identify Session
+            $timeIn = strtotime($r['time_in']);
+            if ($timeIn < strtotime($r['date'] . ' 12:00:00')) {
+                // AM Session
+                $dtrData[$day]['am_in'] = $r['time_in'];
+                $dtrData[$day]['am_out'] = $r['time_out'];
+            } else {
+                // PM Session
+                $dtrData[$day]['pm_in'] = $r['time_in'];
+                $dtrData[$day]['pm_out'] = $r['time_out'];
+            }
+            
+            // Add to total hours (calculated in DB)
+            if (!empty($r['working_hours'])) {
+                $dtrData[$day]['total_hours'] += floatval($r['working_hours']);
+            }
         }
+        // ---------------------------------
 
         $data = [
             'user' => $userModel->findById($userId),

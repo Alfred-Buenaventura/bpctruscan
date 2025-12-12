@@ -30,7 +30,16 @@ class AccountAdminController extends Controller {
 
                 if ($userModel->create($adminData)) {
                     $logModel->log($_SESSION['user_id'], 'Admin Created', "Created admin: $facultyId");
-                    $data['success'] = "Admin account created successfully!";
+                    
+                    // --- NEW: Send Email to the New Admin ---
+                    $msg = "Welcome Admin {$adminData['first_name']}. Your administrator account has been created.<br><br>";
+                    $msg .= "Username: {$adminData['username']}<br>";
+                    $msg .= "Password: DefaultPass123!<br><br>";
+                    $msg .= "Please log in and change your password immediately.";
+                    
+                    sendEmail($adminData['email'], "BPC Admin Account Credentials", $msg);
+
+                    $data['success'] = "Admin account created and email sent successfully!";
                 } else {
                     $data['error'] = 'Database error.';
                 }
