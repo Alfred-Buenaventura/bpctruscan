@@ -118,51 +118,49 @@ $currentYear = date("Y");
         loadSlideshow();
 
         function showScanEvent(data) {
-            clearTimeout(hideCardTimer);
+    clearTimeout(hideCardTimer);
 
-            scanName.textContent = data.name;
-            scanStatus.textContent = data.status;
-            
-            // --- FAIL-SAFE DATE LOGIC ---
-            // Instead of trying to parse the server date, we just use the Browser's Current Time.
-            // This guarantees a valid date/time is always shown.
-            let scanTimeObj = new Date(); 
-            
-            // Format Time (e.g., 08:45 AM)
-            scanTime.textContent = scanTimeObj.toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit', 
-                hour12: true 
-            });
+    scanName.textContent = data.name;
+    scanStatus.textContent = data.status;
+    
+    // Time/Date logic...
+    let scanTimeObj = new Date(); 
+    scanTime.textContent = scanTimeObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    scanDate.textContent = scanTimeObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-            // Format Date (e.g., Nov 19, 2025)
-            scanDate.textContent = scanTimeObj.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
-            // --- END FAIL-SAFE LOGIC ---
+    // Reset classes
+    scanIcon.className = 'icon-badge';
+    scanStatus.className = 'scan-status';
 
-            if (data.status.toLowerCase().includes('time in')) {
-                scanIcon.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i>';
-                scanIcon.className = 'icon-badge time-in';
-                scanStatus.className = 'scan-status time-in';
-            } else if (data.status.toLowerCase().includes('time out')) {
-                scanIcon.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket"></i>';
-                scanIcon.className = 'icon-badge time-badge time-out';
-                scanStatus.className = 'scan-status time-out';
-            } else {
-                scanIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
-                scanIcon.className = 'icon-badge error';
-                scanStatus.className = 'scan-status error';
-            }
+    // Handle Status Styles
+    if (data.is_warning) {
+        // NEW: Handle "Already Timed In" or "Already Timed Out"
+        scanIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+        scanIcon.classList.add('warning');
+        scanStatus.classList.add('warning');
+    } 
+    else if (data.status.toLowerCase().includes('time in')) {
+        scanIcon.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i>';
+        scanIcon.classList.add('time-in');
+        scanStatus.classList.add('time-in');
+    } 
+    else if (data.status.toLowerCase().includes('time out')) {
+        scanIcon.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket"></i>';
+        scanIcon.classList.add('time-out');
+        scanStatus.classList.add('time-out');
+    } 
+    else {
+        scanIcon.innerHTML = '<i class="fa-solid fa-times-circle"></i>';
+        scanIcon.classList.add('error');
+        scanStatus.classList.add('error');
+    }
 
-            scanCard.classList.add('show');
+    scanCard.classList.add('show');
 
-            hideCardTimer = setTimeout(() => {
-                scanCard.classList.remove('show');
-            }, 7000);
-        }
+    hideCardTimer = setTimeout(() => {
+        scanCard.classList.remove('show');
+    }, 4000); // Reduced to 4s for faster flow
+}
 
         function recordAttendance(userId) {
             console.log("📤 Recording attendance for user ID:", userId);

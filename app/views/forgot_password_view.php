@@ -7,31 +7,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Styles for Password Toggles */
-        .password-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-        .password-wrapper input {
-            padding-right: 40px !important; /* Make room for the icon */
-        }
-        .toggle-password-btn {
-            position: absolute;
-            right: 10px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #9ca3af;
-            font-size: 1rem;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            height: 100%;
-        }
-        .toggle-password-btn:hover {
-            color: var(--emerald-600, #059669);
-        }
+        .password-wrapper { position: relative; display: flex; align-items: center; }
+        .password-wrapper input { padding-right: 40px !important; }
+        .toggle-password-btn { position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 1rem; padding: 0; display: flex; align-items: center; height: 100%; }
+        .toggle-password-btn:hover { color: var(--emerald-600, #059669); }
     </style>
 </head>
 <body class="login-page">
@@ -43,7 +22,7 @@
                 <i class="fa-solid fa-key"></i>
             </div>
             <h2 class="login-title">Reset Password</h2>
-            <p class="login-subtitle">Follow the steps to recover your account</p>
+            <p class="login-subtitle">Secure Account Recovery</p>
         </div>
 
         <div class="login-new-body">
@@ -62,15 +41,19 @@
 
             <?php if ($step === 1): ?>
                 <p style="text-align: center; color: #6b7280; margin-bottom: 1.5rem; font-size: 0.95rem;">
-                    Enter your registered email address to receive a verification code (OTP).
+                    Please enter both your <strong>Email Address</strong> and <strong>Faculty ID</strong> to verify your identity.
                 </p>
                 <form method="POST">
                     <div class="form-group">
-                        <label>Email Address</label>
+                        <label>Faculty ID</label>
+                        <input type="text" name="faculty_id" class="form-control" placeholder="e.g., FAC-001" required>
+                    </div>
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>Registered Email</label>
                         <input type="email" name="email" class="form-control" placeholder="e.g., faculty@bpc.edu.ph" required>
                     </div>
-                    <button type="submit" name="send_otp" class="btn btn-primary btn-full-width" style="margin-top: 1rem;">
-                        Send OTP <i class="fa-solid fa-paper-plane" style="margin-left:8px;"></i>
+                    <button type="submit" name="send_otp" class="btn btn-primary btn-full-width" style="margin-top: 1.5rem;">
+                        Verify & Send OTP <i class="fa-solid fa-paper-plane" style="margin-left:8px;"></i>
                     </button>
                 </form>
                 <a href="login.php" class="login-new-forgot-link" style="text-align: center; margin-top: 1.5rem;">
@@ -147,7 +130,6 @@
         function togglePass(inputId, btn) {
             const input = document.getElementById(inputId);
             const icon = btn.querySelector('i');
-            
             if (input.type === "password") {
                 input.type = "text";
                 icon.classList.remove('fa-eye');
