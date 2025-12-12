@@ -4021,43 +4021,45 @@ body.dtr-body .print-controls {
 /* --- 3. Styles for PRINTING (Final Fix v4) --- */
 @media print {
     @page {
-        size: A4 portrait; /* Standard paper size */
-        margin: 0.25in;    /* Safe printer margins */
+        size: A4 portrait;
+        margin: 0.25in; /* Safe margins */
     }
     
     body.dtr-body {
         background: none;
         padding: 0;
         margin: 0;
-        width: 80%;
-        height: 80%;
+        width: 100%;
+        height: 100%;
+
     }
 
     .dtr-container-wrapper {
         display: flex !important;
         flex-direction: row !important;
-        justify-content: center !important;
+        justify-content: center !important; /* Center on page */
         align-items: flex-start !important;
         width: 100% !important;
-        gap: 0.2in !important; /* Small gap between the two forms */
-        padding: 0 !important;
+        gap: 0.5in !important; /* Space between the two DTRs */
     }
 
     .dtr-container {
-        /* STRICT 3.5 x 8.5 INCH DIMENSIONS */
-        width: 3.5in !important;
-        min-width: 3.5in !important;
-        max-width: 3.5in !important;
+        /* STRICT 3x8.5 INCH DIMENSIONS */
+        width: 3in !important;
+        max-width: 3in !important;
+        min-width: 3in !important;
         
         height: 8.5in !important;
-        min-height: 8.5in !important;
         max-height: 8.5in !important;
+        min-height: 8.5in !important;
         
-        padding: 0.15in !important; /* Minimal padding inside the border */
-        border: 2px solid #000 !important; /* Thicker border for cut lines */
+        padding: 0.1in !important;
+        border: 1px solid #000 !important;
         box-shadow: none !important;
         margin: 0 !important;
         box-sizing: border-box !important;
+        
+        /* Ensure content doesn't spill */
         overflow: hidden !important; 
     }
 
@@ -4217,8 +4219,6 @@ body.dtr-body .print-controls {
 .btn-secondary:hover {
     background: #d1d5db;
 }
-
-
 
 /* =========================================
    MOBILE RESPONSIVENESS FIXES
