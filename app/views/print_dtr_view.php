@@ -13,12 +13,250 @@ $monthLabel = $start->format('F Y');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DTR - <?= htmlspecialchars($fullName) ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body class="dtr-body"> 
-    
-    <div class="dtr-container-wrapper">
+    <style>
+       /* --- 1. GLOBAL RESET & PAGE BACKGROUND --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
+body.dtr-body {
+    background: #525659; /* Darker gray background for high contrast */
+    font-family: 'Inter', sans-serif;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* --- 2. THE DTR CONTAINER (Base Logic) --- */
+.dtr-container {
+    /* STRICT PHYSICAL DIMENSIONS */
+    width: 3.5in;
+    height: 8.5in;
+    
+    background: white;
+    padding: 0.15in; 
+    border: 1px solid #000;
+    
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; 
+    
+    /* --- SCREEN ONLY: SCALING (THE ZOOM FIX) --- */
+    /* This makes it look 1.5x bigger on screen without changing inch size */
+    transform: scale(2); 
+    transform-origin: top center; 
+    
+    /* Add visual pop for screen */
+    box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+    
+    /* Add margin to account for the zoom overlap */
+    margin-bottom: 4.5in; 
+}
+
+/* Wrapper adjustments to fit the zoomed element */
+.dtr-container-wrapper {
+    display: flex;
+    flex-direction: column; 
+    align-items: center;
+    gap: 2rem;
+    padding-top: 1rem;
+    /* Ensure scrollbar works with the zoomed element */
+    min-height: 150vh; 
+}
+
+/* --- 3. DTR CONTENT STYLING (The "Nice" Look) --- */
+
+/* Header */
+.dtr-header {
+    text-align: center;
+    font-family: 'Times New Roman', Times, serif;
+    margin-bottom: 5px;
+}
+.dtr-header h3 {
+    font-size: 8pt;
+    font-weight: bold;
+    margin: 0;
+    text-align: left;
+    text-transform: uppercase;
+}
+.dtr-header h2 {
+    font-size: 11pt; 
+    font-weight: bold;
+    margin: 3px 0;
+    text-transform: uppercase;
+}
+
+/* Info Table */
+.info-table {
+    width: 100%;
+    margin-bottom: 5px;
+    font-size: 8pt;
+    border-collapse: collapse;
+    font-family: 'Arial', sans-serif;
+}
+.info-table td { padding: 1px 0; }
+.info-table .label { white-space: nowrap; padding-right: 5px; }
+.info-table .value {
+    border-bottom: 1px solid #000;
+    width: 100%;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Attendance Table */
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 6.5pt; 
+    border: 1px solid #000;
+    text-align: center;
+    flex-grow: 0;
+    font-family: 'Arial', sans-serif;
+}
+.attendance-table th,
+.attendance-table td {
+    border: 1px solid #000;
+    padding: 0px; 
+    height: 11px; /* Fixed row height */
+    line-height: 11px;
+}
+.attendance-table th {
+    font-weight: bold;
+    background: #f3f4f6;
+    padding: 2px 0;
+    font-size: 7pt;
+}
+
+/* Inputs */
+.attendance-table input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-size: 7pt;
+    font-family: inherit;
+    outline: none;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* Footer */
+.dtr-footer-content {
+    margin-top: 5px;
+    font-size: 7pt;
+    line-height: 1.2;
+    font-family: 'Times New Roman', serif;
+    flex-grow: 1; 
+}
+.signature-block { margin-top: 15px; text-align: center; }
+.signature-line {
+    border-bottom: 1px solid #000;
+    width: 80%;
+    margin: 0 auto;
+    padding-top: 10px;
+}
+.signature-label {
+    font-size: 7pt;
+    margin-top: 2px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.holiday-text {
+    color: #dc2626;
+    font-style: italic;
+    font-size: 6pt;
+}
+
+/* Hide second copy on screen */
+.dtr-copy-1 { display: none; }
+
+
+/* --- 4. BUTTON STYLES --- */
+.print-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+.btn-primary { background: #059669; color: white; border: 1px solid #059669; }
+.btn-primary:hover { background: #047857; }
+.btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+.btn-secondary:hover { background: #e5e7eb; }
+
+/* --- 5. PRINT LAYOUT (RESET SCALING) --- */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 0.25in;
+    }
+    
+    body.dtr-body {
+        background: none;
+        padding: 0;
+        margin: 0;
+        display: block;
+        min-height: 0;
+    }
+
+    .dtr-container-wrapper {
+        display: flex !important;
+        flex-direction: row !important; 
+        justify-content: center !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+        gap: 0.2in !important;
+        padding: 0 !important;
+        min-height: 0 !important; /* Reset height */
+    }
+
+    .dtr-container {
+        /* CRITICAL: REMOVE SCALE FOR PRINT */
+        transform: none !important; 
+        margin: 0 !important; 
+        box-shadow: none !important;
+
+        /* Re-enforce strict size */
+        width: 3.5in !important;
+        height: 8.5in !important;
+        border: 1px solid #000 !important;
+        
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Show the second copy */
+    .dtr-copy-1 { display: block !important; }
+    
+    /* Hide buttons */
+    .print-controls { display: none !important; }
+}
+    </style>
+</head>
+<body>
+    <div class="dtr-container-wrapper">
         <?php for ($i = 0; $i < 2; $i++): 
             $copyClass = ($i === 1) ? 'dtr-copy-1' : 'dtr-copy-0';
         ?>
@@ -30,32 +268,22 @@ $monthLabel = $start->format('F Y');
 
             <table class="info-table">
                 <tr>
-                    <td class="label">Name:</td>
-                    <td class="value"><?= htmlspecialchars($fullName) ?></td>
+                    <td colspan="2" class="value"><?= htmlspecialchars($fullName) ?></td>
                 </tr>
                 <tr>
-                    <td class="label">For the month of:</td>
-                    <td class="value"><?= htmlspecialchars($monthLabel) ?></td>
+                    <td colspan="2" style="text-align: center; font-size: 6pt;">(Name)</td>
                 </tr>
                 <tr>
-                    <td class="label">Official hours for arrival and departure</td>
-                    <td class="value"></td> 
+                    <td colspan="2" style="text-align: center; padding-top: 3px;">
+                        For the month of <strong><?= htmlspecialchars($monthLabel) ?></strong>
+                    </td>
                 </tr>
             </table>
 
             <table class="attendance-table">
-                <colgroup>
-                    <col style="width: 8%;">
-                    <col style="width: 16.5%;">
-                    <col style="width: 16.5%;">
-                    <col style="width: 16.5%;">
-                    <col style="width: 16.5%;">
-                    <col style="width: 13%;">
-                    <col style="width: 13%;">
-                </colgroup>
                 <thead>
                     <tr>
-                        <th rowspan="2">Day</th>
+                        <th rowspan="2" style="width: 8%;">Day</th>
                         <th colspan="2">A.M.</th>
                         <th colspan="2">P.M.</th>
                         <th colspan="2">Undertime</th>
@@ -91,7 +319,6 @@ $monthLabel = $start->format('F Y');
                         $pm_in = $pmInTs ? date('H:i', $pmInTs) : '';
                         $pm_out = $pmOutTs ? date('H:i', $pmOutTs) : '';
 
-                        // Calculation Logic
                         $dailySeconds = 0;
                         if ($amInTs && $amOutTs && $amOutTs > $amInTs) $dailySeconds += ($amOutTs - $amInTs);
                         if ($pmInTs && $pmOutTs && $pmOutTs > $pmInTs) $dailySeconds += ($pmOutTs - $pmInTs);
@@ -102,26 +329,26 @@ $monthLabel = $start->format('F Y');
                         if ($dailySeconds > 0) {
                             $h = floor($dailySeconds / 3600);
                             $m = floor(($dailySeconds % 3600) / 60);
-                            $day_hours = $h; $day_minutes = $m;
-                            $totalHours += $h; $totalMinutes += $m;
+                            $day_hours = $h; 
+                            $day_minutes = $m;
+                            $totalHours += $h; 
+                            $totalMinutes += $m;
                         }
 
                         $isHoliday = !empty($rec['remarks']) && empty($am_in) && empty($pm_in);
                     ?>
                     <tr>
                         <td><?= $day ?></td>
-                        
                         <?php if ($isHoliday): ?>
                             <td colspan="4" class="holiday-text" title="<?= htmlspecialchars($rec['remarks']) ?>">
                                 <?= htmlspecialchars($rec['remarks']) ?>
                             </td>
                         <?php else: ?>
-                            <td class="time-val"><?= $am_in ?></td>
-                            <td class="time-val"><?= $am_out ?></td>
-                            <td class="time-val"><?= $pm_in ?></td>
-                            <td class="time-val"><?= $pm_out ?></td>
+                            <td><?= $am_in ?></td>
+                            <td><?= $am_out ?></td>
+                            <td><?= $pm_in ?></td>
+                            <td><?= $pm_out ?></td>
                         <?php endif; ?>
-
                         <td><?= $day_hours ?></td>
                         <td><?= $day_minutes ?></td>
                     </tr>
@@ -132,9 +359,9 @@ $monthLabel = $start->format('F Y');
                     $totalMinutes = $totalMinutes % 60;
                     ?>
                     <tr class="total-row">
-                        <td colspan="5" style="text-align: right; font-weight: bold; padding-right: 2px;">Total</td>
-                        <td style="font-weight: bold;"><?= $totalHours > 0 ? $totalHours : '' ?></td>
-                        <td style="font-weight: bold;"><?= $totalMinutes > 0 ? $totalMinutes : '' ?></td>
+                        <td colspan="5" style="text-align: right; padding-right: 4px;">Total</td>
+                        <td><?= $totalHours > 0 ? $totalHours : '' ?></td>
+                        <td><?= $totalMinutes > 0 ? $totalMinutes : '' ?></td>
                     </tr>
                 </tbody>
             </table>
@@ -149,13 +376,11 @@ $monthLabel = $start->format('F Y');
             </div>
 
             <div class="signature-block">
-                <div class="signature-line" style="margin-top: 15px;"></div>
+                <div class="signature-line"></div>
                 <div class="signature-label">(In-charge)</div>
             </div>
-
         </div>
         <?php endfor; ?>
     </div>
-
 </body>
 </html>
