@@ -18,7 +18,7 @@ class ScheduleController extends Controller {
             'error' => '',
             'success' => '',
             'activeTab' => $_GET['tab'] ?? 'manage',
-            'searchQuery' => $_GET['search'] ?? '', // <--- ADD THIS LINE
+            'searchQuery' => $_GET['search'] ?? '', 
             'filters' => ['user_id' => $_GET['user_id'] ?? null],
             'users' => [],
             'approvedSchedules' => [],
@@ -29,7 +29,8 @@ class ScheduleController extends Controller {
             'stats' => [],
             'selectedUserId' => $_GET['user_id'] ?? null,
             'selectedUserInfo' => null,
-            'userStats' => null
+            'userStats' => null,
+            'allUsers' => []
         ];
 
         $adminId = $_SESSION['user_id'];
@@ -43,12 +44,14 @@ class ScheduleController extends Controller {
                     $itemsToProcess = [];
                     $action = ''; 
 
-                    if (isset($_POST['bulk_action_type'])) {
+                    if (isset($_POST['bulk_action_type']) && !empty($_POST['bulk_action_type'])) {
                         $action = $_POST['bulk_action_type'];
                         $itemsToProcess = $_POST['selected_schedules'] ?? [];
                     } else {
                         $action = isset($_POST['approve_schedule']) ? 'approve' : 'decline';
-                        $itemsToProcess[] = $_POST['schedule_id'];
+                        if(isset($_POST['schedule_id'])) {
+                            $itemsToProcess[] = $_POST['schedule_id'];
+                        }
                     }
 
                     if (empty($itemsToProcess)) {
@@ -106,13 +109,11 @@ class ScheduleController extends Controller {
                             if (!empty($user['email'])) {
                                 if ($action === 'approve') {
                                     $emailSent = $this->sendApprovalEmail($user, $userData['schedules']);
-                                    
                                     if (!$emailSent) {
                                         error_log("Failed to send approval email to: " . $user['email']);
                                     }
                                 } else {
                                     $emailSent = $this->sendDeclineEmail($user, $daysString);
-                                    
                                     if (!$emailSent) {
                                         error_log("Failed to send decline email to: " . $user['email']);
                                     }
@@ -130,21 +131,26 @@ class ScheduleController extends Controller {
 
                 // --- ADD SCHEDULE ---
                 elseif (isset($_POST['add_schedule'])) {
-                     $userId = $_POST['user_id'] ?? $_SESSION['user_id'];
+                    $userId = $_POST['user_id'] ?? $_SESSION['user_id'];
                     $schedules = [];
-                    for ($i = 0; $i < count($_POST['day_of_week']); $i++) {
-                        $schedules[] = [ 
-                            'day' => $_POST['day_of_week'][$i], 
-                            'subject' => $_POST['subject'][$i], 
-                            'start' => $_POST['start_time'][$i], 
-                            'end' => $_POST['end_time'][$i], 
-                            'room' => $_POST['room'][$i] 
-                        ];
+                    // Ensure arrays exist
+                    if(isset($_POST['day_of_week']) && is_array($_POST['day_of_week'])) {
+                        for ($i = 0; $i < count($_POST['day_of_week']); $i++) {
+                            $schedules[] = [ 
+                                'day' => $_POST['day_of_week'][$i], 
+                                'subject' => $_POST['subject'][$i], 
+                                'start' => $_POST['start_time'][$i], 
+                                'end' => $_POST['end_time'][$i], 
+                                'room' => $_POST['room'][$i] 
+                            ];
+                        }
+                        if ($scheduleModel->create($userId, $schedules, $data['isAdmin'])) {
+                            $data['success'] = "Schedule(s) added successfully.";
+                            if (!$data['isAdmin']) { $this->notifyAdminsOfPendingSchedule($userId, $schedules); }
+                        } else { 
+                            $data['error'] = "Failed to add schedule(s)."; 
+                        }
                     }
-                    if ($scheduleModel->create($userId, $schedules, $data['isAdmin'])) {
-                        $data['success'] = "Schedule(s) added successfully.";
-                        if (!$data['isAdmin']) { $this->notifyAdminsOfPendingSchedule($userId, $schedules); }
-                    } else { $data['error'] = "Failed to add schedule(s)."; }
                 }
                 // --- DELETE SCHEDULE ---
                 elseif (isset($_POST['delete_schedule'])) {
@@ -165,6 +171,7 @@ class ScheduleController extends Controller {
         }
 
         if ($data['isAdmin']) {
+            $data['allUsers'] = $userModel->getAllActive(); // Ensure User model has this method
             $data['stats'] = $scheduleModel->getAdminStats();
             
             // Get raw count for badge before filtering
@@ -176,14 +183,11 @@ class ScheduleController extends Controller {
             $data['groupedPendingSchedules'] = $scheduleModel->getGroupedSchedulesByStatus('pending', $data['searchQuery']);
             
         } else {
-            // User View (Unchanged)
+            // User View
             $userId = $_SESSION['user_id'];
             $data['approvedSchedules'] = $scheduleModel->getByUser($userId, 'approved');
             $pendingRaw = $scheduleModel->getByUser($userId, 'pending');
             $data['pendingCount'] = count($pendingRaw);
-            // Transform user pending to grouped format for consistency in view if desired, 
-            // but standard table is usually fine for single user. 
-            // We'll keep standard table for single user to save space.
             $data['pendingSchedules'] = $pendingRaw; 
             
             $data['userStats'] = $scheduleModel->getUserStats($userId);
@@ -195,10 +199,6 @@ class ScheduleController extends Controller {
 
     /**
      * Send approval email with schedule details
-     * 
-     * @param array $user User data array
-     * @param array $schedules Array of approved schedules
-     * @return bool True if email sent successfully
      */
     private function sendApprovalEmail($user, $schedules) {
         $firstName = htmlspecialchars($user['first_name']);
@@ -228,17 +228,10 @@ class ScheduleController extends Controller {
         $emailBody .= "<p>Great news! Your class schedule has been <span class='success-badge'>APPROVED</span></p>";
         $emailBody .= "<p>Below are the details of your approved schedule:</p>";
         
-        // Schedule Table
         $emailBody .= "<table class='schedule-table'>";
-        $emailBody .= "<thead><tr>";
-        $emailBody .= "<th>Day</th>";
-        $emailBody .= "<th>Subject</th>";
-        $emailBody .= "<th>Time</th>";
-        $emailBody .= "<th>Room</th>";
-        $emailBody .= "</tr></thead>";
+        $emailBody .= "<thead><tr><th>Day</th><th>Subject</th><th>Time</th><th>Room</th></tr></thead>";
         $emailBody .= "<tbody>";
         
-        // Sort schedules by day
         $dayOrder = ['Monday'=>1, 'Tuesday'=>2, 'Wednesday'=>3, 'Thursday'=>4, 'Friday'=>5, 'Saturday'=>6];
         usort($schedules, function($a, $b) use ($dayOrder) {
             return ($dayOrder[$a['day']] ?? 7) - ($dayOrder[$b['day']] ?? 7);
@@ -266,24 +259,15 @@ class ScheduleController extends Controller {
         $emailBody .= "</div>";
         
         $emailBody .= "<div class='footer'>";
-        $emailBody .= "<p><strong>Bulacan Polytechnic College</strong><br>";
-        $emailBody .= "Attendance Monitoring System</p>";
+        $emailBody .= "<p><strong>Bulacan Polytechnic College</strong><br>Attendance Monitoring System</p>";
         $emailBody .= "<p style='font-size: 12px; color: #9ca3af;'>This is an automated message. Please do not reply to this email.</p>";
-        $emailBody .= "</div>";
-        $emailBody .= "</div>";
+        $emailBody .= "</div></div></body></html>";
         
-        $emailBody .= "</body></html>";
-        
-        // Send email using the global helper function
         return sendEmail($user['email'], $emailSubject, $emailBody);
     }
 
     /**
      * Send decline email notification
-     * 
-     * @param array $user User data array
-     * @param string $daysString Comma-separated list of days
-     * @return bool True if email sent successfully
      */
     private function sendDeclineEmail($user, $daysString) {
         $firstName = htmlspecialchars($user['first_name']);
@@ -300,79 +284,44 @@ class ScheduleController extends Controller {
         $emailBody .= "</style></head><body>";
         
         $emailBody .= "<div class='container'>";
-        $emailBody .= "<div class='header'>";
-        $emailBody .= "<h1 style='margin: 0;'>⚠ Schedule Declined</h1>";
-        $emailBody .= "</div>";
+        $emailBody .= "<div class='header'><h1 style='margin: 0;'>⚠ Schedule Declined</h1></div>";
         
         $emailBody .= "<div class='content'>";
         $emailBody .= "<p>Dear <strong>{$firstName}</strong>,</p>";
-        $emailBody .= "<div class='warning-box'>";
-        $emailBody .= "<p style='margin: 0;'><strong>Your schedule submission for {$daysString} has been declined by the administration.</strong></p>";
-        $emailBody .= "</div>";
-        $emailBody .= "<p>This may be due to:</p>";
-        $emailBody .= "<ul>";
-        $emailBody .= "<li>Schedule conflicts</li>";
-        $emailBody .= "<li>Room availability issues</li>";
-        $emailBody .= "<li>Administrative requirements not met</li>";
-        $emailBody .= "</ul>";
-        $emailBody .= "<p>Please contact the administration office for more details or to resubmit your schedule with corrections.</p>";
+        $emailBody .= "<div class='warning-box'><p style='margin: 0;'><strong>Your schedule submission for {$daysString} has been declined.</strong></p></div>";
+        $emailBody .= "<p>Please contact the administration office for more details.</p>";
         $emailBody .= "</div>";
         
         $emailBody .= "<div class='footer'>";
-        $emailBody .= "<p><strong>Bulacan Polytechnic College</strong><br>";
-        $emailBody .= "Attendance Monitoring System</p>";
-        $emailBody .= "<p style='font-size: 12px; color: #9ca3af;'>This is an automated message. Please do not reply to this email.</p>";
-        $emailBody .= "</div>";
-        $emailBody .= "</div>";
-        
-        $emailBody .= "</body></html>";
+        $emailBody .= "<p><strong>Bulacan Polytechnic College</strong><br>Attendance Monitoring System</p>";
+        $emailBody .= "</div></div></body></html>";
         
         return sendEmail($user['email'], $emailSubject, $emailBody);
     }
 
     /**
-     * Notify all admin users when a new schedule is submitted for approval
-     * 
-     * @param int $userId The ID of the user who submitted the schedule
-     * @param array $schedules Array of schedule data
+     * Notify all admin users when a new schedule is submitted
      */
     private function notifyAdminsOfPendingSchedule($userId, $schedules) {
         $userModel = $this->model('User');
         $db = Database::getInstance();
         
-        // Get the user who submitted the schedule
         $submitter = $userModel->findById($userId);
         if (!$submitter) return;
         
         $submitterName = $submitter['first_name'] . ' ' . $submitter['last_name'];
         $scheduleCount = count($schedules);
         
-        // Get list of unique days
         $days = array_unique(array_column($schedules, 'day'));
         $daysString = implode(', ', $days);
         
-        // Craft notification message
         $message = "{$submitterName} has submitted {$scheduleCount} schedule(s) for {$daysString} pending your approval.";
         
-        // Fetch all admin user IDs
-        $stmt = $db->query(
-            "SELECT id FROM users WHERE role = 'Admin' AND status = 'active'",
-            [],
-            ""
-        );
+        $stmt = $db->query("SELECT id FROM users WHERE role = 'Admin' AND status = 'active'", [], "");
         $admins = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         
-        // Send notification to each admin
         foreach ($admins as $admin) {
             Notification::create($admin['id'], $message, 'warning');
         }
-        
-        // Optional: Log this action
-        $logModel = $this->model('ActivityLog');
-        $logModel->log(
-            $userId, 
-            'Schedule Submitted', 
-            "User submitted {$scheduleCount} schedule(s) for {$daysString} - pending admin approval"
-        );
     }
 }
