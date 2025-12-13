@@ -3,7 +3,7 @@ require_once __DIR__ . '/../core/controller.php';
 
 class RegistrationController extends Controller {
 
-    // 1. The List View (Replaces complete_registration.php)
+    // 1. The List View
     public function index() {
         $this->requireAdmin();
         $userModel = $this->model('User');
@@ -21,8 +21,7 @@ class RegistrationController extends Controller {
         $this->view('registration_list_view', $data);
     }
 
-    // 2. The Enrollment Logic (Replaces fingerprint_registration.php)
-    // Note: We renamed this from index() to enroll() to avoid conflict
+    // 2. The Enrollment Logic
     public function enroll() {
         $this->requireAdmin();
         $userModel = $this->model('User');
@@ -51,7 +50,7 @@ class RegistrationController extends Controller {
         $this->view('registration_view', $data);
     }
 
-    // 3. The Notification API (Replaces notify_pending_users.php)
+    // 3. The Notification API (Updated with HTML Email)
     public function notify() {
         $this->requireAdmin();
         $userModel = $this->model('User');
@@ -62,29 +61,110 @@ class RegistrationController extends Controller {
 
         $pendingUsers = $userModel->getPendingUsers();
         $count = 0;
-        $message = "Reminder: Your account registration is incomplete. Please visit the IT office for fingerprint registration.";
+        $errors = 0;
         
+        $message = "Action Required: Complete Your Fingerprint Registration";
 
         foreach ($pendingUsers as $user) {
-            // Check if notif exists logic is simplified here for brevity; assuming we just send it.
-            // In a real app, you might want to check duplication like in the original code.
-            $notifModel->create($user['id'], $message, 'warning');
+            // Create Dashboard Notification
+            $notifModel->create($user['id'], "Please visit the IT office to complete your fingerprint registration.", 'warning');
 
-            $subject = "Pending Fingerprint Registration";
+            $subject = "Action Required: Fingerprint Registration";
             
-            $emailBody = "Hi " . htmlspecialchars($user['first_name']) . ",<br><br>" . $message;
-            $emailBody = "Your account is currently pending fingerprint registration. To complete your setup and ensure secure access, please proceed with the biometric registration at your earliest convenience.<br><br>";
-            $emailBody .= "If you need assistance or have any questions regarding this process, our support team is ready to help.<br><br>";
-            $emailBody .= "Best Regards,<br>BPC Admin";
-            sendEmail($user['email'], "Fingerprint Registration Reminder", $emailBody);
-            $count++;
+            // --- PROFESSIONAL HTML EMAIL TEMPLATE START ---
+            $currentYear = date("Y");
+            $emailBody = "
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+                    .email-container { max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
+                    
+                    /* Emerald Header */
+                    .header { background-color: #059669; /* Emerald 600 */ padding: 30px 20px; text-align: center; }
+                    .header h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; }
+                    
+                    /* Content Area */
+                    .content { padding: 30px 25px; color: #374151; line-height: 1.6; }
+                    .greeting { font-size: 18px; font-weight: 600; color: #059669; margin-top: 0; }
+                    
+                    /* Status Badge in Email */
+                    .status-badge { 
+                        display: inline-block; 
+                        background-color: #fef3c7; /* Yellow 100 */
+                        color: #b45309; /* Yellow 700 */
+                        padding: 6px 12px; 
+                        border-radius: 12px; 
+                        font-size: 14px; 
+                        font-weight: bold; 
+                        margin: 10px 0;
+                    }
+
+                    /* Call to Action Button */
+                    .btn-container { text-align: center; margin: 30px 0; }
+                    .btn { 
+                        background-color: #059669; 
+                        color: #ffffff !important; 
+                        text-decoration: none; 
+                        padding: 12px 25px; 
+                        border-radius: 6px; 
+                        font-weight: 600; 
+                        display: inline-block; 
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }
+                    .btn:hover { background-color: #047857; }
+
+                    /* Footer */
+                    .footer { background-color: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+                </style>
+            </head>
+            <body>
+                <div class='email-container'>
+                    <div class='header'>
+                        <h1>Registration Pending</h1>
+                    </div>
+                    <div class='content'>
+                        <p class='greeting'>Hello, " . htmlspecialchars($user['first_name']) . "!</p>
+                        
+                        <p>We noticed that your account setup is incomplete. To finalize your access and enable attendance tracking, you are required to register your fingerprint.</p>
+                        
+                        <div style='text-align: center;'>
+                            <span class='status-badge'>Status: Fingerprint Required</span>
+                        </div>
+
+                        <p><strong>Please visit the Registrar's Office or the IT Department at your earliest convenience to scan your fingerprint.</strong></p>
+                        
+                        <div class='btn-container'>
+                            <a href='#' class='btn'>View Account Status</a>
+                        </div>
+                        
+                        <p style='font-size: 0.9em; color: #9ca3af;'>If you have already done this, please disregard this automated message.</p>
+                    </div>
+                    <div class='footer'>
+                        &copy; {$currentYear} Bulacan Polytechnic College. All rights reserved.
+                    </div>
+                </div>
+            </body>
+            </html>
+            ";
+            // --- PROFESSIONAL HTML EMAIL TEMPLATE END ---
+
+            // Send Email using existing helper function
+            // Assuming sendEmail returns true/false
+            if (sendEmail($user['email'], $subject, $emailBody)) {
+                $count++;
+            } else {
+                $errors++;
+            }
         }
 
         if ($count > 0) {
-            $logModel->log($_SESSION['user_id'], 'Sent Notifications', "Sent $count reminders.");
-            echo json_encode(['success' => true, 'message' => "Sent $count notifications."]);
+            $logModel->log($_SESSION['user_id'], 'Sent Notifications', "Sent $count email reminders.");
+            echo json_encode(['success' => true, 'message' => "Successfully sent $count email notifications." . ($errors > 0 ? " ($errors failed)" : "")]);
         } else {
-            echo json_encode(['success' => true, 'message' => 'No pending users found.']);
+            // Even if 0 emails sent (maybe all failed), we return a valid JSON response
+            echo json_encode(['success' => false, 'message' => $errors > 0 ? "Failed to send emails." : "No pending users found."]);
         }
         exit;
     }

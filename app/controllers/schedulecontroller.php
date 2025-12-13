@@ -14,6 +14,8 @@ class ScheduleController extends Controller {
         $logModel = $this->model('ActivityLog');
 
         $data = [
+            'pageTitle' => 'Schedule Management', 
+            'pageSubtitle' => 'Manage and monitor class schedules',
             'isAdmin' => Helper::isAdmin(),
             'error' => '',
             'success' => '',
