@@ -11,6 +11,19 @@
         .password-wrapper input { padding-right: 40px !important; }
         .toggle-password-btn { position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 1rem; padding: 0; display: flex; align-items: center; height: 100%; }
         .toggle-password-btn:hover { color: var(--emerald-600, #059669); }
+        
+        /* New Style for Masked Email Box */
+        .masked-email-box {
+            background-color: #f3f4f6;
+            border: 1px dashed #9ca3af;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: #374151;
+            margin-bottom: 1.5rem;
+        }
     </style>
 </head>
 <body class="login-page">
@@ -33,7 +46,7 @@
                 </div>
             <?php endif; ?>
             
-            <?php if (!empty($success) && $step !== 4): ?>
+            <?php if (!empty($success) && $step !== 5): ?>
                 <div class="alert alert-success" style="margin-bottom: 1.5rem;">
                     <i class="fa-solid fa-check-circle"></i> <?= htmlspecialchars($success) ?>
                 </div>
@@ -41,19 +54,15 @@
 
             <?php if ($step === 1): ?>
                 <p style="text-align: center; color: #6b7280; margin-bottom: 1.5rem; font-size: 0.95rem;">
-                    Please enter both your <strong>Email Address</strong> and <strong>Faculty ID</strong> to verify your identity.
+                    To begin, please enter your unique <strong>Faculty ID</strong>.
                 </p>
                 <form method="POST">
                     <div class="form-group">
                         <label>Faculty ID</label>
-                        <input type="text" name="faculty_id" class="form-control" placeholder="e.g., FAC-001" required>
+                        <input type="text" name="faculty_id" class="form-control" placeholder="e.g., FAC-001" autofocus required>
                     </div>
-                    <div class="form-group" style="margin-top: 1rem;">
-                        <label>Registered Email</label>
-                        <input type="email" name="email" class="form-control" placeholder="e.g., faculty@bpc.edu.ph" required>
-                    </div>
-                    <button type="submit" name="send_otp" class="btn btn-primary btn-full-width" style="margin-top: 1.5rem;">
-                        Verify & Send OTP <i class="fa-solid fa-paper-plane" style="margin-left:8px;"></i>
+                    <button type="submit" name="verify_id" class="btn btn-primary btn-full-width" style="margin-top: 1.5rem;">
+                        Next <i class="fa-solid fa-arrow-right" style="margin-left:8px;"></i>
                     </button>
                 </form>
                 <a href="login.php" class="login-new-forgot-link" style="text-align: center; margin-top: 1.5rem;">
@@ -62,6 +71,33 @@
             <?php endif; ?>
 
             <?php if ($step === 2): ?>
+                <p style="text-align: center; color: #6b7280; margin-bottom: 0.5rem; font-size: 0.95rem;">
+                    Is this your email address?
+                </p>
+                
+                <div class="masked-email-box">
+                    <?= htmlspecialchars($masked_email) ?>
+                </div>
+
+                <p style="text-align: center; color: #6b7280; margin-bottom: 1rem; font-size: 0.9rem;">
+                    For security, please re-type your <strong>full email address</strong> to confirm and receive an OTP.
+                </p>
+
+                <form method="POST">
+                    <div class="form-group">
+                        <label>Confirm Full Email Address</label>
+                        <input type="email" name="email" class="form-control" placeholder="e.g., alfred2003@gmail.com" required>
+                    </div>
+                    <button type="submit" name="confirm_email" class="btn btn-primary btn-full-width" style="margin-top: 1.5rem;">
+                        Send OTP <i class="fa-solid fa-paper-plane" style="margin-left:8px;"></i>
+                    </button>
+                </form>
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <a href="forgot_password.php?action=backtologin" class="btn btn-secondary btn-sm">Cancel</a>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($step === 3): ?>
                 <p style="text-align: center; color: #6b7280; margin-bottom: 1.5rem;">
                     We sent a 6-character code to your email. It expires in 5 minutes.
                 </p>
@@ -79,9 +115,9 @@
                 </div>
             <?php endif; ?>
 
-            <?php if ($step === 3): ?>
+            <?php if ($step === 4): ?>
                 <p style="text-align: center; color: #6b7280; margin-bottom: 1.5rem;">
-                    Create a new, strong password for your account.
+                    Identity verified. Create a new password.
                 </p>
                 <form method="POST">
                     <div class="form-group">
@@ -108,7 +144,7 @@
                 </form>
             <?php endif; ?>
 
-            <?php if ($step === 4): ?>
+            <?php if ($step === 5): ?>
                 <div style="text-align: center; padding: 1rem;">
                     <div style="width: 80px; height: 80px; background: #ecfdf5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
                         <i class="fa-solid fa-check" style="font-size: 40px; color: #10b981;"></i>

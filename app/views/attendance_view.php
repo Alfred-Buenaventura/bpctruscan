@@ -1,7 +1,7 @@
 <?php 
 require_once __DIR__ . '/partials/header.php'; 
 
-// ... (Grouping Logic remains the same) ...
+// Grouping Logic (Using $records, NOT $logs)
 $groupedRecords = [];
 if (!empty($records)) {
     foreach ($records as $r) {
@@ -57,11 +57,30 @@ if (!empty($records)) {
         </div>
         <div class="card-body">
             <form method="GET" action="attendance_reports.php" id="reportFilterForm" class="filter-controls-new">
+                
                 <div class="filter-inputs" <?= !$isAdmin ? 'style="grid-template-columns: 1fr;"' : '' ?>>
+                    
                     <?php if ($isAdmin): ?>
                     <div class="form-group filter-item">
+                        <label>Select User</label>
+                        <div class="select-wrapper">
+                            <select name="user_id" id="userId" class="form-control stylish-select">
+                                <option value="">-- Select User for DTR --</option>
+                                <?php if (!empty($allUsers) && is_array($allUsers)): ?>
+                                    <?php foreach ($allUsers as $user): ?>
+                                        <option value="<?= $user['id'] ?>" <?= (isset($filters['user_id']) && $filters['user_id'] == $user['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-arrow"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group filter-item">
                         <label>Search</label>
-                        <input type="text" name="search" class="form-control" placeholder="Search users..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
+                        <input type="text" name="search" class="form-control" placeholder="Search keywords..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
                     </div>
                     <?php endif; ?>
 
@@ -72,33 +91,16 @@ if (!empty($records)) {
                              <input type="date" name="end_date" id="endDate" class="form-control" value="<?= htmlspecialchars($filters['end_date'] ?? date('Y-m-d')) ?>">
                          </div>
                     </div>
-                    
-                    <?php if ($isAdmin): ?>
-                    <div class="form-group filter-item">
-                        <label>Select User</label>
-                        <select name="user_id" id="userId" class="form-control">
-                            <option value="">-- Select User for DTR --</option>
-                            <?php if (!empty($allUsers) && is_array($allUsers)): ?>
-                                <?php foreach ($allUsers as $user): ?>
-                                    <option value="<?= $user['id'] ?>" <?= (isset($filters['user_id']) && $filters['user_id'] == $user['id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </select>
-                    </div>
-                    <?php endif; ?>
                 </div>
                 
                 <div class="filter-actions-new" style="align-items: center;">
                     <button type="submit" class="btn btn-primary btn-sm apply-filter-btn"><i class="fa-solid fa-check"></i> Apply</button>
                     
                     <button type="button" class="btn btn-warning btn-sm" onclick="handlePrintDTR()">
-                        <i class="fa-solid fa-print"></i> View/Print DTR
+                        <i class="fa-solid fa-print"></i> View DTR
                     </button>
-
-                    <a href="export_attendance.php" class="btn btn-danger btn-sm export-csv-btn"><i class="fa-solid fa-file-csv"></i> CSV</a>
-                </div>
+                    
+                    </div>
             </form>
         </div>
     </div>
@@ -173,9 +175,30 @@ if (!empty($records)) {
             </div>
         </div>
     </div>
+
+    <div id="noUserModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header warning" style="justify-content: center; background-color: #d97706 !important;">
+                <h3><i class="fa-solid fa-triangle-exclamation"></i> No User Selected</h3>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 1.1rem; color: #374151; margin-bottom: 1rem;">
+                    Please select a user from the dropdown list to view their DTR.
+                </p>
+                <p style="font-size: 0.95rem; color: #6b7280;">
+                    You must specify an employee to generate the Daily Time Record.
+                </p>
+            </div>
+            <div class="modal-footer" style="justify-content: center; background: #f9fafb;">
+                <button class="btn btn-secondary" onclick="closeModal('noUserModal')">Okay, I'll select one</button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
+// Logic to handle DTR View
 function handlePrintDTR() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
@@ -183,19 +206,21 @@ function handlePrintDTR() {
 
     <?php if ($isAdmin): ?>
         const userIdSelect = document.getElementById('userId');
-        if (!userIdSelect) {
-            alert("System Error: User selector missing.");
-            return;
+        if (userIdSelect) {
+            userId = userIdSelect.value;
         }
-        userId = userIdSelect.value;
+        
+        // If Admin and NO user selected, show Modal
         if (!userId) {
-            alert("Please select a specific User to view their DTR.");
+            openModal('noUserModal');
             return;
         }
     <?php else: ?>
+        // Regular user always sees their own DTR
         userId = '<?= $_SESSION['user_id'] ?? '' ?>'; 
     <?php endif; ?>
 
+    // If we have a user ID, open the preview
     if (userId) {
         const url = `print_dtr.php?user_id=${userId}&start_date=${startDate}&end_date=${endDate}&preview=1`;
         const f = document.getElementById('dtrFrame');
@@ -209,7 +234,6 @@ function handlePrintDTR() {
     }
 }
 
-// NEW: Function to trigger print on the Iframe
 function printDtrFrame() {
     const iframe = document.getElementById('dtrFrame');
     if (iframe && iframe.contentWindow) {
@@ -225,6 +249,16 @@ function closeDtrModal() {
     
     const frame = document.getElementById('dtrFrame');
     if (frame) frame.src = 'about:blank'; 
+}
+
+// Modal Helpers
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'flex';
+}
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
 }
 </script>
 

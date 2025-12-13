@@ -303,7 +303,7 @@ if (!function_exists('renderScheduleTable')) {
 </div>
 
 <div id="addScheduleModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content modal-lg">
         <div class="modal-header">
             <h3>Add New Schedule</h3>
             <span class="close-btn" onclick="closeModal('addScheduleModal')">&times;</span>

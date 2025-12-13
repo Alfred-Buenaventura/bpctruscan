@@ -200,38 +200,52 @@ function sendNotifications() {
     const notifyBtn = document.getElementById('confirmNotifyBtn');
     const statusMessage = document.getElementById('notify-status-message');
 
+    // 1. Set Loading State
     notifyBtn.disabled = true;
+    const originalText = notifyBtn.innerHTML;
     notifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
     statusMessage.innerHTML = '';
     statusMessage.className = '';
 
+    // 2. Call the API via MVC Controller
     fetch('api.php?action=notify_pending_users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
     })
     .then(response => response.json())
     .then(data => {
+        // 3. Handle Response
         if (data.success) {
-            statusMessage.textContent = data.message;
+            statusMessage.innerHTML = '<i class="fa-solid fa-check-circle"></i> ' + data.message;
             statusMessage.className = 'alert alert-success';
+            
             notifyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Done';
+            notifyBtn.classList.remove('btn-primary');
+            notifyBtn.classList.add('btn-success');
+
+            // Close modal automatically
             setTimeout(() => {
                 closeModal('notifyModal');
+                // Reset button for next time
                 notifyBtn.disabled = false;
                 notifyBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Yes, Notify All';
-            }, 2000);
+                notifyBtn.classList.add('btn-primary');
+                notifyBtn.classList.remove('btn-success');
+                statusMessage.innerHTML = '';
+                statusMessage.className = '';
+            }, 2500);
         } else {
-            statusMessage.textContent = 'Error: ' + data.message;
-            statusMessage.className = 'alert alert-error';
-            notifyBtn.disabled = false;
-            notifyBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Yes, Notify All';
+            throw new Error(data.message || 'Unknown error');
         }
     })
     .catch(error => {
-        statusMessage.textContent = 'A network error occurred. Please try again.';
+        console.error('Notification Error:', error);
+        statusMessage.innerHTML = '<i class="fa-solid fa-exclamation-circle"></i> ' + (error.message || 'Network error occurred.');
         statusMessage.className = 'alert alert-error';
+        
+        // Reset button to allow retry
         notifyBtn.disabled = false;
-        notifyBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Yes, Notify All';
+        notifyBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Try Again';
     });
 }
 </script>
