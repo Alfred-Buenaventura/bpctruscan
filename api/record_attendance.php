@@ -34,72 +34,22 @@ try {
         exit;
     }
 
-    // 2. Determine Session (AM/PM)
-    $isAM = ($currentTs < $noonTs);
-    $sessionLabel = $isAM ? "(AM)" : "(PM)";
+    // 2. Check for ANY open session (Time In but NO Time Out) for today
+    // This allows a user to clock in AM and clock out PM without creating a new record.
+    $openStmt = $db->query(
+        "SELECT id, time_in FROM attendance_records WHERE user_id = ? AND date = ? AND time_out IS NULL LIMIT 1", 
+        [$userId, $today], 
+        "is"
+    );
+    $openRecord = $openStmt->get_result()->fetch_assoc();
 
-    // 3. Find Existing Record for this session
-    // Logic: If AM, find record with time_in < 12:00. If PM, time_in >= 12:00
-    $sql = "SELECT id, time_in, time_out FROM attendance_records 
-            WHERE user_id = ? AND date = ? AND " . 
-            ($isAM ? "time_in < '12:00:00'" : "time_in >= '12:00:00'") . 
-            " LIMIT 1";
+    if ($openRecord) {
+        // === TIME OUT LOGIC ===
+        // User has an open record. Close it.
+        $timeInTs = strtotime($openRecord['time_in']);
 
-    $checkStmt = $db->query($sql, [$userId, $today], "is");
-    $record = $checkStmt->get_result()->fetch_assoc();
-
-    // --- MAIN ATTENDANCE LOGIC ---
-
-    if (!$record) {
-        // === TIME IN LOGIC ===
-        
-        $timeInStatus = "On-time"; // Default
-        $dayOfWeek = date('l'); 
-
-        // A. Fetch Configurable Grace Period (default 15 mins)
-        $graceStmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'late_threshold_minutes'");
-        $graceRow = $graceStmt->get_result()->fetch_assoc();
-        $graceMinutes = $graceRow ? (int)$graceRow['setting_value'] : 15;
-        $graceSeconds = $graceMinutes * 60;
-
-        // B. Check User's Schedule for Today
-        // We get the EARLIEST start time for the current day
-        $scheduleStmt = $db->query(
-            "SELECT MIN(start_time) AS first_class_start 
-             FROM class_schedules 
-             WHERE user_id = ? AND day_of_week = ? AND status = 'approved'",
-            [$userId, $dayOfWeek], "is"
-        );
-        $schedule = $scheduleStmt->get_result()->fetch_assoc();
-
-        // C. Determine Status
-        if ($schedule && $schedule['first_class_start']) {
-            $scheduleStartTs = strtotime($today . ' ' . $schedule['first_class_start']);
-            $lateThreshold = $scheduleStartTs + $graceSeconds;
-
-            if ($currentTs > $lateThreshold) {
-                $timeInStatus = "Late";
-            }
-            // Note: If $currentTs <= $lateThreshold (including early arrivals), it remains "On-time"
-        }
-
-        // D. Insert Record
-        $db->query(
-            "INSERT INTO attendance_records (user_id, date, time_in, status) VALUES (?, ?, ?, ?)", 
-            [$userId, $today, $now, $timeInStatus], 
-            "isss"
-        );
-        
-        $status = "Time In - " . $timeInStatus;
-
-    } elseif ($record['time_out'] === null) {
-        // === TIME OUT or COOLDOWN LOGIC ===
-        
-        $timeInTs = strtotime($record['time_in']);
-        
-        // Check Cooldown (60 Seconds)
+        // Check Cooldown (60 Seconds) - Prevents accidental double scans
         if (($currentTs - $timeInTs) < 60) {
-            // User scanned again too quickly
             $status = "Already Timed In";
             $isWarning = true;
         } else {
@@ -107,23 +57,77 @@ try {
             $durationSeconds = $currentTs - $timeInTs;
             $workingHours = $durationSeconds / 3600.0;
             
-            // Deduct lunch break if long duration (>5 hours)
+            // Deduct lunch break (1 hour) if duration > 5 hours
             if ($workingHours > 5) { 
                 $workingHours -= 1; 
             }
 
             $db->query(
                 "UPDATE attendance_records SET time_out = ?, working_hours = ? WHERE id = ?", 
-                [$now, $workingHours, $record['id']], 
+                [$now, $workingHours, $openRecord['id']], 
                 "sdi"
             );
             
             $status = "Time Out";
         }
+
     } else {
-        // Record exists AND Time Out exists -> Already done for this session
-        $status = "Already Timed Out";
-        $isWarning = true;
+        // === TIME IN LOGIC ===
+        // No open records. Attempt to create a NEW Time In.
+        
+        $isAM = ($currentTs < $noonTs);
+        
+        // Check if the user has ALREADY completed a session for this period (AM or PM)
+        // This prevents a user from clocking in twice in the morning or twice in the afternoon.
+        $checkCompletedSql = "SELECT id FROM attendance_records 
+                              WHERE user_id = ? AND date = ? AND time_out IS NOT NULL AND " . 
+                              ($isAM ? "time_in < '12:00:00'" : "time_in >= '12:00:00'");
+        
+        $checkCompleted = $db->query($checkCompletedSql, [$userId, $today], "is");
+        
+        if ($checkCompleted->get_result()->num_rows > 0) {
+             $status = "Already Completed " . ($isAM ? "AM" : "PM") . " Session";
+             $isWarning = true;
+        } else {
+            // Proceed to Time In
+            $timeInStatus = "On-time"; // Default
+            $dayOfWeek = date('l'); 
+
+            // A. Fetch Configurable Grace Period (default 15 mins)
+            $graceStmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'late_threshold_minutes'");
+            $graceRow = $graceStmt->get_result()->fetch_assoc();
+            $graceMinutes = $graceRow ? (int)$graceRow['setting_value'] : 15;
+            $graceSeconds = $graceMinutes * 60;
+
+            // B. Check User's Schedule for Today
+            // We get the EARLIEST start time for the current day
+            $scheduleStmt = $db->query(
+                "SELECT MIN(start_time) AS first_class_start 
+                 FROM class_schedules 
+                 WHERE user_id = ? AND day_of_week = ? AND status = 'approved'",
+                [$userId, $dayOfWeek], "is"
+            );
+            $schedule = $scheduleStmt->get_result()->fetch_assoc();
+
+            // C. Determine Status
+            if ($schedule && $schedule['first_class_start']) {
+                $scheduleStartTs = strtotime($today . ' ' . $schedule['first_class_start']);
+                $lateThreshold = $scheduleStartTs + $graceSeconds;
+
+                if ($currentTs > $lateThreshold) {
+                    $timeInStatus = "Late";
+                }
+            }
+
+            // D. Insert Record
+            $db->query(
+                "INSERT INTO attendance_records (user_id, date, time_in, status) VALUES (?, ?, ?, ?)", 
+                [$userId, $today, $now, $timeInStatus], 
+                "isss"
+            );
+            
+            $status = "Time In - " . $timeInStatus;
+        }
     }
 
     echo json_encode([
