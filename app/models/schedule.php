@@ -8,14 +8,11 @@ class Schedule {
         $this->db = Database::getInstance();
     }
     
-    // --- NEW: Fetch Dynamic Rooms from DB ---
     public function getRooms() {
         $sql = "SELECT * FROM rooms ORDER BY name";
         return $this->db->query($sql)->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    // --- CONFLICT DETECTION LOGIC ---
-    // Checks if (StartA < EndB) and (EndA > StartB) for the same Day + Room
     public function checkOverlap($day, $startTime, $endTime, $room, $excludeScheduleId = null) {
         $sql = "SELECT cs.*, u.first_name, u.last_name, u.faculty_id 
                 FROM class_schedules cs
@@ -27,11 +24,9 @@ class Schedule {
                 AND cs.end_time > ?
                 AND u.status = 'active'";
         
-        // Logic: Overlap exists if Existing.Start < New.End AND Existing.End > New.Start
         $params = [$day, $room, $endTime, $startTime];
         $types = "ssss";
 
-        // If editing, exclude the schedule's own ID so it doesn't conflict with itself
         if ($excludeScheduleId) {
             $sql .= " AND cs.id != ?";
             $params[] = $excludeScheduleId;
@@ -40,6 +35,22 @@ class Schedule {
 
         $stmt = $this->db->query($sql, $params, $types);
         return $stmt->get_result()->fetch_assoc();
+    }
+
+    // --- NEW METHOD: Find conflicting PENDING schedules ---
+    public function getPendingConflicts($day, $startTime, $endTime, $room, $excludeScheduleId) {
+        $sql = "SELECT cs.*, u.first_name, u.last_name, u.email, u.id as user_id
+                FROM class_schedules cs
+                JOIN users u ON cs.user_id = u.id
+                WHERE cs.day_of_week = ? 
+                AND cs.room = ? 
+                AND cs.status = 'pending' 
+                AND cs.start_time < ? 
+                AND cs.end_time > ?
+                AND cs.id != ?";
+        
+        $stmt = $this->db->query($sql, [$day, $room, $endTime, $startTime, $excludeScheduleId], "ssssi");
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
     public function findById($id) {
