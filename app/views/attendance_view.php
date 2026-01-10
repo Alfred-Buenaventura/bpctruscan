@@ -14,8 +14,14 @@ if (!empty($records)) {
                 'status_list' => []
             ];
         }
-        $timeIn = strtotime($r['time_in']);
-        if ($timeIn < strtotime($r['date'] . ' 12:00:00')) {
+        
+        // [UPDATED] AM/PM FIX
+        // We MUST combine the record date with the time to perform a correct timestamp comparison.
+        // Otherwise, it compares "Today's Date + TimeIn" vs "Record Date + Noon", which fails for past records.
+        $timeInTimestamp = strtotime($r['date'] . ' ' . $r['time_in']);
+        $noonCutoff = strtotime($r['date'] . ' 12:00:00');
+
+        if ($timeInTimestamp < $noonCutoff) {
             $groupedRecords[$key]['am_in'] = $r['time_in'];
             $groupedRecords[$key]['am_out'] = $r['time_out'];
             $groupedRecords[$key]['am_status'] = $r['status'];

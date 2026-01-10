@@ -309,19 +309,14 @@ body.dtr-body {
                         $dayInt = (int)$day;
                         $rec = $dtrRecords[$dayInt] ?? [];
                         
-                        $amInTs = !empty($rec['am_in']) ? strtotime($rec['am_in']) : 0;
-                        $amOutTs = !empty($rec['am_out']) ? strtotime($rec['am_out']) : 0;
-                        $pmInTs = !empty($rec['pm_in']) ? strtotime($rec['pm_in']) : 0;
-                        $pmOutTs = !empty($rec['pm_out']) ? strtotime($rec['pm_out']) : 0;
+                        // [UPDATED] Use pre-calculated display strings if available
+                        $am_in = !empty($rec['am_in']) ? date('H:i', strtotime($rec['am_in'])) : '';
+                        $am_out = !empty($rec['am_out']) ? date('H:i', strtotime($rec['am_out'])) : '';
+                        $pm_in = !empty($rec['pm_in']) ? date('H:i', strtotime($rec['pm_in'])) : '';
+                        $pm_out = !empty($rec['pm_out']) ? date('H:i', strtotime($rec['pm_out'])) : '';
 
-                        $am_in = $amInTs ? date('H:i', $amInTs) : '';
-                        $am_out = $amOutTs ? date('H:i', $amOutTs) : '';
-                        $pm_in = $pmInTs ? date('H:i', $pmInTs) : '';
-                        $pm_out = $pmOutTs ? date('H:i', $pmOutTs) : '';
-
-                        $dailySeconds = 0;
-                        if ($amInTs && $amOutTs && $amOutTs > $amInTs) $dailySeconds += ($amOutTs - $amInTs);
-                        if ($pmInTs && $pmOutTs && $pmOutTs > $pmInTs) $dailySeconds += ($pmOutTs - $pmInTs);
+                        // [UPDATED] Use the Credited Seconds passed from Controller (Clamped Logic)
+                        $dailySeconds = $rec['credited_seconds'] ?? 0;
 
                         $day_hours = '';
                         $day_minutes = '';
