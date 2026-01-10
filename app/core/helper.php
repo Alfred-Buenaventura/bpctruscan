@@ -1,13 +1,12 @@
 <?php
 class Helper {
     
-    // Load Environment Variables (.env file)
+    
     public static function loadEnv($path) {
         if (!file_exists($path)) {
             return;
         }
 
-        // FIX: Initialize $_ENV if it's not set
         if (!isset($_ENV)) {
             $_ENV = [];
         }
@@ -17,22 +16,19 @@ class Helper {
         foreach ($lines as $line) {
             $line = trim($line);
 
-            // Skip comments
             if (empty($line) || strpos($line, '#') === 0 || strpos($line, ';') === 0) {
                 continue;
             }
 
-            // Skip lines without equals sign
             if (strpos($line, '=') === false) {
                 continue;
             }
 
-            // Split into Name and Value
+            
             list($name, $value) = explode('=', $line, 2);
             $name = trim($name);
             $value = trim($value);
             
-            // Remove wrapping quotes
             if ((strpos($value, '"') === 0 && strrpos($value, '"') === strlen($value) - 1) ||
                 (strpos($value, "'") === 0 && strrpos($value, "'") === strlen($value) - 1)) {
                 $value = substr($value, 1, -1);
