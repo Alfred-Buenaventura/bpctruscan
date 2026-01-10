@@ -168,21 +168,38 @@ window.addEventListener('resize', function() {
         });
     }
 
-    // Close sidebar when clicking the overlay (Mobile)
-    document.addEventListener('click', function(e) {
-        const dbContainer = document.getElementById('dashboardContainer');
-        const sidebar = document.getElementById('sidebar');
-        const mobileBtn = document.getElementById('mobileMenuBtn');
+    // --- ROBUST MOBILE SIDEBAR HANDLER ---
+document.addEventListener('click', function(e) {
+    const dbContainer = document.getElementById('dashboardContainer');
+    const sidebar = document.getElementById('sidebar');
+    const mobileBtn = document.getElementById('mobileMenuBtn');
+    const sidebarToggle = document.getElementById('sidebarToggle');
 
-        // If menu is open, and we clicked OUTSIDE the sidebar and OUTSIDE the button
-        if (window.innerWidth <= 768 && 
-            dbContainer.classList.contains('sidebar-mobile-open') && 
-            !sidebar.contains(e.target) && 
-            (!mobileBtn || !mobileBtn.contains(e.target))) {
-            
+    // 1. If clicking the Mobile Toggle Button
+    if (mobileBtn && mobileBtn.contains(e.target)) {
+        e.stopPropagation();
+        dbContainer.classList.toggle('sidebar-mobile-open');
+        return;
+    }
+
+    // 2. If Sidebar is OPEN and we click OUTSIDE sidebar and OUTSIDE toggle buttons
+    if (dbContainer.classList.contains('sidebar-mobile-open')) {
+        // If click is NOT inside sidebar
+        if (sidebar && !sidebar.contains(e.target)) {
+            // Close the sidebar
             dbContainer.classList.remove('sidebar-mobile-open');
         }
-    });
+    }
+});
+
+// Reset sidebar state on window resize to prevent layout bugs
+window.addEventListener('resize', function() {
+    const dbContainer = document.getElementById('dashboardContainer');
+    // If we switch to desktop view (> 1024px), clean up mobile classes
+    if (window.innerWidth > 1024) {
+        dbContainer.classList.remove('sidebar-mobile-open');
+    }
+});
 
 
 /* =========================================
