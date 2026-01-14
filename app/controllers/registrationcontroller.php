@@ -21,7 +21,7 @@ class RegistrationController extends Controller {
         $this->view('registration_list_view', $data);
     }
 
-    // 2. The Enrollment Logic
+    // 2. The Enrollment Logic (UPDATED FOR MULTI-FINGER)
     public function enroll() {
         $this->requireAdmin();
         $userModel = $this->model('User');
@@ -35,18 +35,29 @@ class RegistrationController extends Controller {
             exit;
         }
 
+        // Handle POST: Saving a specific finger
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fingerprint_data'])) {
-            if ($userModel->updateFingerprint($targetUserId, $_POST['fingerprint_data'])) {
-                $logModel->log($_SESSION['user_id'], "Fingerprint Registration", "Completed for {$targetUser['faculty_id']}");
-                header("Location: complete_registration.php?success=1");
+            $fingerName = $_POST['finger_name'] ?? 'Unknown Finger';
+            $fingerData = $_POST['fingerprint_data'];
+
+            if ($userModel->addFingerprint($targetUserId, $fingerData, $fingerName)) {
+                $logModel->log($_SESSION['user_id'], "Fingerprint Registration", "Registered $fingerName for {$targetUser['faculty_id']}");
+                
+                // Redirect BACK to this same page to allow registering the next finger
+                header("Location: fingerprint_registration.php?user_id=$targetUserId&success=1&finger=" . urlencode($fingerName));
                 exit;
             }
         }
 
+        // Fetch existing fingers to display in the view
+        $registeredFingers = $userModel->getRegisteredFingers($targetUserId);
+
         $data = [
             'pageTitle' => "Fingerprint Registration",
-            'targetUser' => $targetUser
+            'targetUser' => $targetUser,
+            'registeredFingers' => $registeredFingers
         ];
+        
         $this->view('registration_view', $data);
     }
 
