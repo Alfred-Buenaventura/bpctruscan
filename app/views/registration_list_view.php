@@ -1,5 +1,4 @@
 <?php 
-// FIX: Use __DIR__ to locate the partials folder correctly
 require_once __DIR__ . '/partials/header.php'; 
 ?>
 
@@ -51,9 +50,6 @@ require_once __DIR__ . '/partials/header.php';
                      <i class="fa-solid fa-check-circle" style="font-size: 3rem; color: var(--emerald-500); margin-bottom: 1rem;"></i>
                     <p style="font-size: 1.2rem; font-weight: 600; color: var(--gray-700);">No Pending Registrations</p>
                     <p style="color: var(--gray-600);">All active users have completed fingerprint registration.</p>
-                    <a href="create_account.php" class="btn btn-primary" style="margin-top: 1rem;">
-                        <i class="fa-solid fa-user-plus"></i> Create New Account
-                    </a>
                 </div>
             <?php else: ?>
                 <div class="user-cards-container">
@@ -104,17 +100,17 @@ require_once __DIR__ . '/partials/header.php';
                                 <p class="user-card-info"><?= htmlspecialchars($u['faculty_id']) ?></p>
                                 <p class="user-card-info"><?= htmlspecialchars($u['email']) ?></p>
                             </div>
-                            <div class="user-card-registered-status">
-                                <div>
+                            
+                            <div class="user-card-registered-status" style="display:flex; flex-direction:column; gap:10px; align-items:center; padding-top:10px;">
+                                <div style="display:flex; align-items:center; gap:5px; color:var(--emerald-600); font-weight:bold;">
                                     <i class="fa-solid fa-check-circle"></i>
                                     <span>Registered</span>
                                 </div>
-                                <?php if (!empty($u['fingerprint_registered_at'])): ?>
-                                    <span class="registration-date">
-                                        <?= date('M d, Y', strtotime($u['fingerprint_registered_at'])) ?>
-                                    </span>
-                                <?php endif; ?>
+                                <a href="fingerprint_registration.php?user_id=<?= $u['id'] ?>" class="btn btn-sm btn-outline-primary" style="width:100%; font-size:0.85rem;">
+                                    <i class="fa-solid fa-plus-circle"></i> Enroll Another
+                                </a>
                             </div>
+
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -136,9 +132,6 @@ require_once __DIR__ . '/partials/header.php';
                 Are you sure you want to send a dashboard notification to all
                 <strong><?= $pendingCount ?></strong> pending user(s)?
             </p>
-            <p class="fs-small" style="color: var(--gray-600); margin-top: 1rem;">
-                They will receive a pop-up reminder on their dashboard to complete their fingerprint registration.
-            </p>
             <div id="notify-status-message" style="margin-top: 1rem;"></div>
         </div>
         <div class="modal-footer">
@@ -151,11 +144,9 @@ require_once __DIR__ . '/partials/header.php';
 </div>
 
 <script>
-// Toggle Function for Registered Users
 function toggleRegisteredUsers() {
     const container = document.getElementById('registeredUsersContainer');
     const icon = document.getElementById('registeredToggleIcon');
-    
     if (container.style.display === 'none') {
         container.style.display = 'block';
         icon.style.transform = 'rotate(180deg)';
@@ -164,89 +155,38 @@ function toggleRegisteredUsers() {
         icon.style.transform = 'rotate(0deg)';
     }
 }
-
-// Modal Helper Functions
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'flex';
-}
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'none';
-}
-
-// Search Functionality
+function openModal(modalId) { const m = document.getElementById(modalId); if(m) m.style.display='flex'; }
+function closeModal(modalId) { const m = document.getElementById(modalId); if(m) m.style.display='none'; }
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('userSearchInput');
     const userCards = document.querySelectorAll('.user-card');
-
     if (searchInput) {
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase().trim();
             userCards.forEach(card => {
                 const cardSearchTerm = card.getAttribute('data-search-term');
-                if (cardSearchTerm && cardSearchTerm.includes(searchTerm)) {
-                    card.style.display = ''; 
-                } else {
-                    card.style.display = 'none'; 
-                }
+                card.style.display = (cardSearchTerm && cardSearchTerm.includes(searchTerm)) ? '' : 'none';
             });
         });
     }
 });
-
-// Notification Logic
 function sendNotifications() {
     const notifyBtn = document.getElementById('confirmNotifyBtn');
     const statusMessage = document.getElementById('notify-status-message');
-
-    // 1. Set Loading State
     notifyBtn.disabled = true;
-    const originalText = notifyBtn.innerHTML;
     notifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
-    statusMessage.innerHTML = '';
-    statusMessage.className = '';
-
-    // 2. Call the API via MVC Controller
-    fetch('api.php?action=notify_pending_users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => response.json())
+    
+    fetch('api.php?action=notify_pending_users', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+    .then(r => r.json())
     .then(data => {
-        // 3. Handle Response
         if (data.success) {
             statusMessage.innerHTML = '<i class="fa-solid fa-check-circle"></i> ' + data.message;
             statusMessage.className = 'alert alert-success';
-            
-            notifyBtn.innerHTML = '<i class="fa-solid fa-check"></i> Done';
-            notifyBtn.classList.remove('btn-primary');
-            notifyBtn.classList.add('btn-success');
-
-            // Close modal automatically
-            setTimeout(() => {
-                closeModal('notifyModal');
-                // Reset button for next time
-                notifyBtn.disabled = false;
-                notifyBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Yes, Notify All';
-                notifyBtn.classList.add('btn-primary');
-                notifyBtn.classList.remove('btn-success');
-                statusMessage.innerHTML = '';
-                statusMessage.className = '';
-            }, 2500);
-        } else {
-            throw new Error(data.message || 'Unknown error');
-        }
+            notifyBtn.innerHTML = 'Done';
+            setTimeout(() => { closeModal('notifyModal'); notifyBtn.disabled=false; notifyBtn.innerHTML='Yes, Notify All'; }, 2500);
+        } else { throw new Error(data.message); }
     })
-    .catch(error => {
-        console.error('Notification Error:', error);
-        statusMessage.innerHTML = '<i class="fa-solid fa-exclamation-circle"></i> ' + (error.message || 'Network error occurred.');
-        statusMessage.className = 'alert alert-error';
-        
-        // Reset button to allow retry
-        notifyBtn.disabled = false;
-        notifyBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Try Again';
-    });
+    .catch(e => { statusMessage.innerHTML='Error: '+e.message; statusMessage.className='alert alert-error'; notifyBtn.disabled=false; });
 }
 </script>
 

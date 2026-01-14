@@ -1,36 +1,42 @@
-<?php 
-// FIX: Use __DIR__ to locate the partials folder correctly
-require_once __DIR__ . '/partials/header.php'; 
-?>
+<?php require_once __DIR__ . '/partials/header.php'; ?>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
 <style>
+/* Animations and States */
 .scan-step { transition: all 0.3s ease; }
-.scan-step.bg-emerald-500 {
-    transform: scale(1.1);
-    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+.scan-step.active-step { 
+    transform: scale(1.2); 
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.6); 
+    background-color: #10b981 !important; 
+    color: white !important; 
+    border-color: #10b981 !important; 
 }
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.7; }
-}
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.7; } }
 .pulse { animation: pulse 1s infinite ease-in-out; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Custom Modal Backdrop */
+.custom-modal-backdrop {
+    display: none; 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.5); 
+    z-index: 1050;
+}
 </style>
 
 <div class="main-body flex items-center justify-center">
   <div class="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-lg border border-gray-200" style="margin: 0 auto;">
-    <h2 class="text-center text-2xl font-bold text-gray-800 mb-2" style="text-align:center; font-size:1.5rem; font-weight:bold; margin-bottom:0.5rem;">Fingerprint Registration</h2>
-    <p class="text-center text-gray-600 mb-6" style="text-align:center; color:#4b5563; margin-bottom:1.5rem;">
-      Registering Fingerprint for
-      <span class="font-semibold text-emerald-700" style="color:#047857; font-weight:600;">
-          <?= htmlspecialchars($targetUser['first_name'] . ' ' . $targetUser['last_name']) ?>
-      </span><br>
-      Faculty ID: <span class="text-gray-500"><?= htmlspecialchars($targetUser['faculty_id']) ?></span>
+    
+    <h2 class="text-center text-2xl font-bold text-gray-800 mb-2">Fingerprint Enrollment</h2>
+    <p class="text-center text-gray-600 mb-6">
+      Target User: <span class="font-semibold text-emerald-700"><?= htmlspecialchars($targetUser['first_name'] . ' ' . $targetUser['last_name']) ?></span>
     </p>
 
-    <div id="deviceStatusContainer" class="border border-gray-200 bg-gray-50 text-gray-600 py-3 px-4 rounded-lg flex items-center justify-center gap-3 mb-6" style="display:flex; align-items:center; justify-content:center; gap:12px; padding:12px; border-radius:8px; border:1px solid #e5e7eb; background-color:#f9fafb; margin-bottom:1.5rem;">
+    <div id="successMsg" style="display:none; background-color:#ecfdf5; border:1px solid #6ee7b7; color:#065f46; padding:1rem; border-radius:0.5rem; margin-bottom:1.5rem; text-align:center;"></div>
+
+    <div id="deviceStatusContainer" class="border border-gray-200 bg-gray-50 text-gray-600 py-3 px-4 rounded-lg flex items-center justify-center gap-3 mb-6" style="display:flex; align-items:center; justify-content:center; gap:12px; padding:12px; margin-bottom:1.5rem;">
       <i id="deviceStatusIcon" class="fa fa-spinner fa-spin"></i>
       <span id="deviceStatusText" class="font-medium">Connecting to device...</span>
     </div>
@@ -39,213 +45,259 @@ require_once __DIR__ . '/partials/header.php';
       <div class="w-40 h-40 rounded-full border-4 border-emerald-100 flex items-center justify-center mb-4" style="width:10rem; height:10rem; border-radius:50%; border:4px solid #d1fae5; display:flex; align-items:center; justify-content:center; margin-bottom:1rem;">
         <i class="fa fa-fingerprint fa-4x text-emerald-600" id="fingerIcon" style="font-size:4em; color:#059669;"></i>
       </div>
-      <p class="text-gray-700 font-medium mb-4" id="scanStatus" style="margin-bottom:1rem; font-weight:500;">Ready to scan fingerprint...</p>
+      
+      <h3 class="text-xl font-bold text-gray-800 mb-2" id="currentFingerName">---</h3>
+      <p class="text-gray-700 font-medium mb-4" id="scanStatus">Waiting for device...</p>
       
       <div class="flex gap-3 mb-6" style="display:flex; gap:0.75rem; margin-bottom:1.5rem;">
         <?php for ($i = 1; $i <= 3; $i++): ?>
-          <div id="scanStep<?= $i ?>" class="scan-step w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-500" style="width:2rem; height:2rem; border-radius:50%; border:1px solid #d1d5db; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#6b7280;">
+          <div id="scanStep<?= $i ?>" class="scan-step w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-500" style="width:2rem; height:2rem; border-radius:50%; border:1px solid #d1d5db; display:flex; align-items:center; justify-content:center;">
               <?= $i ?>
           </div>
         <?php endfor; ?>
       </div>
 
-      <form method="POST" id="fingerprintForm" class="flex items-center gap-3" style="display:flex; gap:0.75rem;">
-        <input type="hidden" name="fingerprint_data" id="fingerprintData">
-        <button type="button" id="scanBtn" class="btn btn-primary" disabled>
-          <i class="fa fa-fingerprint"></i> Scan
-        </button>
-        <a href="complete_registration.php" class="btn btn-secondary">Cancel</a>
-      </form>
+      <button type="button" id="openModalBtn" class="btn btn-primary" disabled>
+        <i class="fa fa-plus-circle"></i> Select Finger & Scan
+      </button>
     </div>
 
-    <div class="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg text-sm" style="background-color:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; padding:1rem; border-radius:0.5rem; font-size:0.875rem;">
-      <strong>Instructions:</strong>
-      <ul class="list-disc list-inside mt-2 text-blue-700 space-y-1" style="list-style-type:disc; padding-left:1.5rem; margin-top:0.5rem;">
-        <li>Ensure finger is clean.</li>
-        <li>Place finger firmly on scanner.</li>
-        <li>Scan **3 times** to complete.</li>
-      </ul>
+    <div style="border-top:1px solid #e5e7eb; padding-top:1.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 style="font-weight:bold; margin:0;">Registered Fingers</h3>
+        </div>
+
+        <ul id="registeredList" style="list-style:none; padding:0;">
+            <?php if (!empty($registeredFingers)): ?>
+                <?php foreach ($registeredFingers as $fp): ?>
+                    <li style="padding:0.5rem; background:#ecfdf5; margin-bottom:5px; border-radius:4px; color:#065f46;">
+                        <i class="fa fa-check-circle"></i> <?= htmlspecialchars($fp['finger_name']) ?>
+                        <span style="font-size:0.8em; color:#666; float:right;"><?= date('M d, Y', strtotime($fp['created_at'])) ?></span>
+                    </li>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <li style="padding:0.5rem; color:#666; font-style:italic;">No fingers registered yet.</li>
+            <?php endif; ?>
+        </ul>
+        
+        <div style="margin-top:2rem; text-align:center;">
+             <a href="complete_registration.php" class="btn btn-secondary" style="display:inline-block; width:100%;">Return to User List</a>
+        </div>
     </div>
   </div>
 </div>
 
-<div id="deviceErrorModal" class="modal">
-    <div class="modal-content modal-small">
-        <div class="modal-header">
-            <h3><i class="fa-solid fa-triangle-exclamation"></i> Device Error</h3>
-            <button type="button" class="modal-close" onclick="closeModal('deviceErrorModal')"><i class="fa-solid fa-times"></i></button>
-        </div>
-        <div class="modal-body">
-            <p>Scanner not detected. Please check connection.</p>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-primary" id="deviceErrorOkBtn">OK</button>
-        </div>
-    </div>
-</div>
-
-<div id="retryConnectionModal" class="modal">
-    <div class="modal-content modal-small">
-        <div class="modal-header">
-            <h3>Retry Connection?</h3>
-            <button type="button" class="modal-close" onclick="closeModal('retryConnectionModal')"><i class="fa-solid fa-times"></i></button>
-        </div>
-        <div class="modal-body"><p>Device still not detected.</p></div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="window.location.href='complete_registration.php'">Back</button>
-            <button type="button" class="btn btn-primary" id="retryConnectBtn">Retry</button>
+<div id="instructionModal" class="custom-modal-backdrop">
+    <div class="modal-dialog modal-dialog-centered" style="margin: 10% auto; max-width: 500px; padding: 0;">
+        <div class="modal-content" style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div class="modal-header" style="border-bottom: 1px solid #eee; padding: 15px 20px; background: #f0fdf4;">
+                <h5 class="modal-title" style="font-weight:bold; font-size:1.1rem; margin:0; color: #166534;">
+                    <i class="fa-solid fa-info-circle"></i> Enrollment Instructions
+                </h5>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p style="margin-bottom: 10px; font-weight: bold;">Before starting:</p>
+                <ol style="margin-left: 20px; color: #444; line-height: 1.6;">
+                    <li>Ensure the user's finger is clean and dry.</li>
+                    <li>Guide the user to place their finger flat on the sensor.</li>
+                    <li>The system will require <strong>3 scans</strong> of the same finger.</li>
+                    <li>Please wait for the "Lift Finger" prompt between scans.</li>
+                </ol>
+            </div>
+            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #eee; text-align:right; background: #fff;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('instructionModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="showSelectionModal()">Next <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
         </div>
     </div>
 </div>
 
-<div id="scanNoticeModal" class="modal">
-    <div class="modal-content modal-small">
-        <div class="modal-header">
-            <h3>Ready to Scan</h3>
-            <button type="button" class="modal-close" onclick="closeModal('scanNoticeModal')"><i class="fa-solid fa-times"></i></button>
-        </div>
-        <div class="modal-body"><p>Press Proceed to start the 3-step scan.</p></div>
-        <div class="modal-footer">
-             <button type="button" class="btn btn-secondary" onclick="closeModal('scanNoticeModal')">Cancel</button>
-             <button type="button" id="proceedScanBtn" class="btn btn-primary">Proceed</button>
-        </div>
-    </div>
-</div>
-
-<div id="scanFailedModal" class="modal">
-    <div class="modal-content modal-small">
-        <div class="modal-header">
-            <h3>Scan Failed</h3>
-            <button type="button" class="modal-close" onclick="closeModal('scanFailedModal')"><i class="fa-solid fa-times"></i></button>
-        </div>
-        <div class="modal-body">
-            <p>Scan unsuccessful. Please try again.</p>
-            <p id="scanFailedAttempts" style="font-size: 0.9rem; margin-top: 0.5rem;"></p>
-        </div>
-        <div class="modal-footer">
-             <button type="button" class="btn btn-secondary" onclick="window.location.href='complete_registration.php'">Cancel</button>
-             <button type="button" id="retryScanBtn" class="btn btn-primary">Try Again</button>
+<div id="fingerSelectModal" class="custom-modal-backdrop">
+    <div class="modal-dialog modal-dialog-centered" style="margin: 10% auto; max-width: 400px; padding: 0;">
+        <div class="modal-content" style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div class="modal-header" style="border-bottom: 1px solid #eee; padding: 15px 20px; background: #f8f9fa;">
+                <h5 class="modal-title" style="font-weight:bold; font-size:1.1rem; margin:0;">Select Finger to Enroll</h5>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <div class="form-group">
+                    <label style="display:block; margin-bottom:8px; font-weight:600; color:#444;">Choose Finger:</label>
+                    <select id="fingerSelector" class="form-control" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
+                        <option value="Right Thumb">Right Thumb</option>
+                        <option value="Right Index" selected>Right Index</option>
+                        <option value="Right Middle">Right Middle</option>
+                        <option value="Right Ring">Right Ring</option>
+                        <option value="Right Little">Right Little</option>
+                        <option disabled>──────────</option>
+                        <option value="Left Thumb">Left Thumb</option>
+                        <option value="Left Index">Left Index</option>
+                        <option value="Left Middle">Left Middle</option>
+                        <option value="Left Ring">Left Ring</option>
+                        <option value="Left Little">Left Little</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #eee; text-align:right; background: #fff;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('fingerSelectModal')">Back</button>
+                <button type="button" class="btn btn-primary" onclick="confirmStart()">Proceed & Scan</button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-function openModal(modalId) { const m = document.getElementById(modalId); if(m) m.style.display='flex'; }
-function closeModal(modalId) { const m = document.getElementById(modalId); if(m) m.style.display='none'; }
-
 let socket;
 let isDeviceConnected = false;
+const userId = <?= json_encode($targetUser['id']) ?>; 
 
-const deviceStatusContainer = document.getElementById('deviceStatusContainer');
-const deviceStatusIcon = document.getElementById('deviceStatusIcon');
-const deviceStatusText = document.getElementById('deviceStatusText');
-const scanBtn = document.getElementById('scanBtn');
-const fingerIcon = document.getElementById('fingerIcon');
+// UI References
+const openModalBtn = document.getElementById('openModalBtn');
+const instructionModal = document.getElementById('instructionModal');
+const selectModal = document.getElementById('fingerSelectModal');
 const scanStatus = document.getElementById('scanStatus');
-const fingerprintForm = document.getElementById('fingerprintForm');
+const fingerIcon = document.getElementById('fingerIcon');
+const currentFingerDisplay = document.getElementById('currentFingerName');
+const registeredList = document.getElementById('registeredList');
+const deviceStatusText = document.getElementById('deviceStatusText');
+const deviceStatusContainer = document.getElementById('deviceStatusContainer');
 
-function resetScanUI() {
-    for (let i = 1; i <= 3; i++) {
-        const stepEl = document.getElementById(`scanStep${i}`);
-        if (stepEl) {
-            stepEl.classList.remove('bg-emerald-500', 'border-emerald-500', 'text-white');
-            stepEl.classList.add('text-gray-500');
-            stepEl.style.backgroundColor = ''; stepEl.style.borderColor = ''; stepEl.style.color = '';
-        }
-    }
-    fingerIcon.classList.remove('pulse');
-    scanStatus.textContent = "Ready to scan fingerprint...";
-    scanBtn.disabled = false; 
-    scanBtn.innerHTML = '<i class="fa fa-fingerprint"></i> Scan';
-}
+// --- MODAL FUNCTIONS ---
 
-function startEnrollment() {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        scanStatus.textContent = "Device not ready.";
+function openInstructionModal() {
+    if (!isDeviceConnected) {
+        alert("Cannot start: Device is not connected. Please start the C# Bridge App.");
         return;
     }
+    instructionModal.style.display = 'block';
+}
+
+function showSelectionModal() {
+    instructionModal.style.display = 'none';
+    selectModal.style.display = 'block';
+}
+
+function closeModal(modalId) {
+    const m = document.getElementById(modalId);
+    if(m) m.style.display = 'none';
+}
+
+function confirmStart() {
+    const selectedFinger = document.getElementById('fingerSelector').value;
+    currentFingerDisplay.textContent = selectedFinger;
+    
+    closeModal('fingerSelectModal');
+    startEnrollment(selectedFinger);
+}
+
+// --- SCANNING LOGIC ---
+function resetScanUI() {
+    for (let i = 1; i <= 3; i++) {
+        const step = document.getElementById(`scanStep${i}`);
+        step.classList.remove('active-step');
+    }
+    fingerIcon.classList.remove('pulse');
+    scanStatus.textContent = "Ready to scan...";
+    openModalBtn.disabled = false; 
+    openModalBtn.innerHTML = '<i class="fa fa-plus-circle"></i> Select Finger & Scan';
+}
+
+function startEnrollment(fingerName) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        alert("Device disconnected! Check C# Bridge.");
+        return;
+    }
+    
     resetScanUI();
-    scanStatus.textContent = "Place finger for scan 1 of 3...";
+    scanStatus.textContent = `Place ${fingerName} (Scan 1 of 3)...`;
     fingerIcon.classList.add('pulse');
-    scanBtn.disabled = true; 
-    scanBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scanning...';
+    openModalBtn.disabled = true; 
+    
+    // Send command to C# Bridge
     socket.send(JSON.stringify({ command: "enroll_start" }));
 }
 
 function connectWebSocket() {
     socket = new WebSocket("ws://127.0.0.1:8080");
+
     socket.onopen = () => {
         isDeviceConnected = true;
-        deviceStatusContainer.style.borderColor = '#a7f3d0'; 
-        deviceStatusContainer.style.backgroundColor = '#ecfdf5'; 
-        deviceStatusContainer.style.color = '#047857'; 
-        deviceStatusIcon.className = 'fa fa-check-circle'; 
         deviceStatusText.textContent = "Device Connected";
-        scanBtn.disabled = false; 
+        deviceStatusContainer.style.backgroundColor = '#ecfdf5';
+        scanStatus.textContent = "Ready to scan...";
+        
+        // ENABLE BUTTON ON CONNECT
+        if(openModalBtn) openModalBtn.disabled = false;
     };
+
     socket.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
-            if (data.status === "progress") {
-                const step = data.step; 
-                const stepEl = document.getElementById(`scanStep${step}`);
-                if (stepEl) {
-                    stepEl.style.backgroundColor = '#10b981'; 
-                    stepEl.style.borderColor = '#10b981';
-                    stepEl.style.color = 'white';
-                }
-                scanStatus.textContent = data.message; 
-                if (step < 3) setTimeout(() => { scanStatus.textContent = `Place finger for scan ${step + 1} of 3...`; }, 1000);
-            }
-            else if (data.status === "success") {
-                fingerIcon.classList.remove('pulse');
-                scanStatus.textContent = "All scans complete! Saving...";
-                document.getElementById('fingerprintData').value = data.template; 
-                setTimeout(() => fingerprintForm.submit(), 1500);
-            }
-            else if (data.status === "error") {
-                fingerIcon.classList.remove('pulse');
-                scanStatus.textContent = `Scan failed: ${data.message}`;
-                document.getElementById('scanFailedAttempts').textContent = "Process aborted. Try again.";
-                openModal('scanFailedModal');
-            }
-        } catch (e) { console.error(e); }
-    };
-    socket.onerror = () => {
-        isDeviceConnected = false;
-        deviceStatusContainer.style.borderColor = '#fecaca'; 
-        deviceStatusContainer.style.backgroundColor = '#fef2f2'; 
-        deviceStatusContainer.style.color = '#dc2626'; 
-        deviceStatusIcon.className = 'fa fa-times-circle';
-        deviceStatusText.textContent = "Device Not Detected";
-        scanBtn.disabled = true; 
-        openModal('deviceErrorModal'); 
-    };
-    socket.onclose = () => {
-        if (isDeviceConnected) { 
-            isDeviceConnected = false;
-            deviceStatusIcon.className = 'fa fa-times-circle';
-            deviceStatusText.textContent = "Connection Lost";
-            scanBtn.disabled = true;
+        const data = JSON.parse(event.data);
+        
+        if (data.status === "progress") {
+            const stepEl = document.getElementById(`scanStep${data.step}`);
+            if(stepEl) stepEl.classList.add('active-step');
+            scanStatus.textContent = data.message;
+        } 
+        else if (data.status === "success") {
+            saveToServer(data.template);
+        } 
+        else if (data.status === "error") {
+            scanStatus.textContent = "Error: " + data.message;
+            fingerIcon.classList.remove('pulse');
+            openModalBtn.disabled = false;
         }
+    };
+
+    socket.onclose = () => {
+        isDeviceConnected = false;
+        deviceStatusText.textContent = "Device Disconnected (Start C# App)";
+        deviceStatusContainer.style.backgroundColor = '#fef2f2';
+        if(openModalBtn) openModalBtn.disabled = true;
+    };
+    
+    socket.onerror = (err) => {
+        console.error("WebSocket Error:", err);
     };
 }
 
-function retryConnection() {
-    closeModal('retryConnectionModal');
-    deviceStatusIcon.className = 'fa fa-spinner fa-spin';
-    deviceStatusText.textContent = "Connecting...";
-    scanBtn.disabled = true;
-    connectWebSocket(); 
+async function saveToServer(template) {
+    const fingerName = document.getElementById('fingerSelector').value;
+    scanStatus.textContent = "Saving to database...";
+
+    try {
+        const res = await fetch('api/register_finger.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                position: fingerName,
+                template: template
+            })
+        });
+        const result = await res.json();
+
+        if (result.status === "success") {
+            scanStatus.textContent = "Enrolled Successfully!";
+            fingerIcon.classList.remove('pulse');
+            openModalBtn.disabled = false;
+            openModalBtn.innerHTML = "Enroll Another Finger";
+
+            // Add to list visually
+            const li = document.createElement("li");
+            li.style.cssText = "padding:0.5rem; background:#ecfdf5; margin-bottom:5px; border-radius:4px; color:#065f46;";
+            li.innerHTML = `<i class="fa fa-check-circle"></i> ${fingerName} <span style="float:right; font-size:0.8em;">Just now</span>`;
+            registeredList.prepend(li);
+        } else {
+            alert("Database Error: " + result.message);
+            resetScanUI();
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Network Error");
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    connectWebSocket(); 
-    scanBtn.addEventListener('click', () => { isDeviceConnected ? openModal('scanNoticeModal') : openModal('deviceErrorModal'); });
-    document.getElementById('proceedScanBtn').addEventListener('click', () => { closeModal('scanNoticeModal'); startEnrollment(); });
-    document.getElementById('retryScanBtn').addEventListener('click', () => { closeModal('scanFailedModal'); resetScanUI(); });
-    document.getElementById('deviceErrorOkBtn').addEventListener('click', () => { closeModal('deviceErrorModal'); openModal('retryConnectionModal'); });
-    document.getElementById('retryConnectBtn').addEventListener('click', () => { retryConnection(); });
+    connectWebSocket();
+    if(openModalBtn) openModalBtn.addEventListener('click', openInstructionModal);
 });
 </script>
 
