@@ -1,0 +1,100 @@
+/* --- DTR VIEW SCREEN STYLES --- */
+body.dtr-body {
+    background: #525659;
+    font-family: 'Inter', sans-serif;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.dtr-container-wrapper {
+    display: flex;
+    flex-direction: row; 
+    justify-content: center;
+    align-items: flex-start;
+    gap: 20px; 
+    padding-top: 1rem;
+    transform: scale(1.39); 
+    transform-origin: top center;
+    margin-bottom: 2rem; 
+}
+
+.dtr-container {
+    width: 3.5in;
+    height: 8.5in;
+    background: white;
+    padding: 0.15in; 
+    border: 1px solid #000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; 
+    box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+}
+
+.dtr-header { 
+    text-align: center; 
+    font-family: 'Times New Roman', Times, serif; 
+    margin-bottom: 5px; 
+}
+.dtr-header h3 { 
+    font-size: 8pt; 
+    font-weight: bold; 
+    margin: 0; 
+    text-align: left; 
+    text-transform: uppercase; 
+}
+.dtr-header h2 { 
+    font-size: 11pt; 
+    font-weight: bold; 
+    margin: 3px 0; 
+    text-transform: uppercase; 
+}
+
+.info-table { width: 100%; margin-bottom: 5px; font-size: 8pt; border-collapse: collapse; font-family: 'Arial', sans-serif; }
+.info-table td { padding: 1px 0; }
+.info-table .value { border-bottom: 1px solid #000; width: 100%; font-weight: bold; text-align: center; }
+.faculty-id-row { text-align: center; font-size: 7.5pt; font-weight: bold; margin: 2px 0; }
+
+.attendance-table { width: 100%; border-collapse: collapse; font-size: 6.5pt; border: 1px solid #000; text-align: center; font-family: 'Arial', sans-serif; }
+.attendance-table th, .attendance-table td { border: 1px solid #000; height: 11.5px; line-height: 11.5px; }
+.attendance-table th { font-weight: bold; background: #f3f4f6; font-size: 7pt; }
+
+.dtr-footer-content { margin-top: 5px; font-size: 7pt; line-height: 1.1; font-family: 'Times New Roman', serif; flex-grow: 1; }
+.signature-block { margin-top: 10px; text-align: center; }
+.signature-name-print { font-size: 8.5pt; font-weight: bold; text-transform: uppercase; text-decoration: underline; display: block; margin-bottom: 2px; }
+.signature-label { font-size: 7pt; margin-top: 2px; font-weight: bold; text-transform: uppercase; }
+.holiday-text { color: #dc2626; font-style: italic; font-size: 6pt; }
+
+.print-controls { position: fixed; top: 20px; right: 20px; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); z-index: 100; display: flex; flex-direction: column; gap: 0.5rem; }
+.btn-dtr { padding: 0.5rem 1rem; cursor: pointer; text-decoration: none; font-weight: 600; border-radius: 0.375rem; border: 1px solid #d1d5db; background: #f3f4f6; color: #374151; font-size: 0.875rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.btn-dtr-success { background: #059669; color: white; border-color: #059669; }
+
+/* --- PRINT OVERRIDES (A4 PORTRAIT) --- */
+@media print {
+    @page { size: 
+        A4 portrait; 
+        margin: 0.2in; 
+    }
+    body.dtr-body { 
+        background: none !important; 
+        padding: 0 !important; 
+        display: block !important; 
+    }
+    .dtr-container-wrapper { transform: none !important; 
+        display: flex !important; 
+        flex-direction: row !important; 
+        justify-content: center !important; 
+        gap: 0.25in !important; 
+        width: 100% !important; 
+        margin: 0 !important; 
+        min-height: 0 !important; 
+    }
+    .dtr-container { box-shadow: none !important; 
+        border: 1px solid #000 !important; 
+        width: 3.6in !important; 
+        height: 9in !important; }
+    .print-controls { 
+        display: none !important; 
+    }
+}
