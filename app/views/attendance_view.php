@@ -15,9 +15,6 @@ if (!empty($records)) {
             ];
         }
         
-        // [UPDATED] AM/PM FIX
-        // We MUST combine the record date with the time to perform a correct timestamp comparison.
-        // Otherwise, it compares "Today's Date + TimeIn" vs "Record Date + Noon", which fails for past records.
         $timeInTimestamp = strtotime($r['date'] . ' ' . $r['time_in']);
         $noonCutoff = strtotime($r['date'] . ' 12:00:00');
 
@@ -170,9 +167,6 @@ if (!empty($records)) {
             <div class="modal-header">
                 <h3 style="color: white !important;">DTR Preview</h3>
                 <div style="display: flex; gap: 10px;">
-                    <button type="button" class="btn btn-sm btn-light" onclick="printDtrFrame()" style="background: white; color: var(--emerald-600); border:none; font-weight:600;">
-                        <i class="fa-solid fa-print"></i> Print
-                    </button>
                     <button type="button" class="modal-close" onclick="closeDtrModal()" style="color: white !important;">&times;</button>
                 </div>
             </div>
@@ -216,17 +210,14 @@ function handlePrintDTR() {
             userId = userIdSelect.value;
         }
         
-        // If Admin and NO user selected, show Modal
         if (!userId) {
             openModal('noUserModal');
             return;
         }
     <?php else: ?>
-        // Regular user always sees their own DTR
         userId = '<?= $_SESSION['user_id'] ?? '' ?>'; 
     <?php endif; ?>
 
-    // If we have a user ID, open the preview
     if (userId) {
         const url = `print_dtr.php?user_id=${userId}&start_date=${startDate}&end_date=${endDate}&preview=1`;
         const f = document.getElementById('dtrFrame');
@@ -240,14 +231,7 @@ function handlePrintDTR() {
     }
 }
 
-function printDtrFrame() {
-    const iframe = document.getElementById('dtrFrame');
-    if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-    }
-}
-
+// FIXED: This function is used by the iframe's Back button
 function closeDtrModal() {
     const modal = document.getElementById('dtrPreviewModal');
     if (modal) modal.style.display = 'none'; 
