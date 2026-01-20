@@ -94,22 +94,45 @@ class RegistrationController extends Controller {
         $count = 0;
         
         foreach ($pendingUsers as $user) {
-            $notifModel->create($user['id'], "Please visit the IT office to complete your fingerprint registration.", 'warning');
+            $notifModel->create($user['id'], "Action Required: Please complete your fingerprint registration.", 'warning');
             
-            $subject = "Action Required: Fingerprint Registration";
+            $subject = "Action Required: Fingerprint Enrollment";
             $currentYear = date("Y");
             $emailBody = "
             <!DOCTYPE html>
             <html>
-            <body style='font-family: sans-serif;'>
-                <div style='max-width: 600px; margin: 20px auto; border: 1px solid #ddd; padding: 20px;'>
-                    <h1 style='color: #059669;'>Registration Pending</h1>
-                    <p>Hello, " . htmlspecialchars($user['first_name']) . "!</p>
-                    <p>To finalize your access, you are required to register your fingerprint.</p>
-                    <p><strong>Please visit the Registrar's Office to scan your fingerprint.</strong></p>
-                    <hr>
-                    <footer style='font-size: 12px; color: #666;'>&copy; {$currentYear} Bulacan Polytechnic College.</footer>
-                </div>
+            <body style='font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0;'>
+                <table width='100%' border='0' cellspacing='0' cellpadding='0'>
+                    <tr>
+                        <td align='center' style='padding: 20px 0;'>
+                            <table width='600' border='0' cellspacing='0' cellpadding='0' style='background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);'>
+                                <tr>
+                                    <td style='background-color: #10b981; padding: 40px 20px; text-align: center;'>
+                                        <h1 style='color: #ffffff; margin: 0; font-size: 24px;'>Biometric Registration</h1>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style='padding: 40px 30px;'>
+                                        <h2 style='color: #1e293b; margin-top: 0;'>Hello, " . htmlspecialchars($user['first_name']) . "!</h2>
+                                        <p style='color: #475569; line-height: 1.6; font-size: 16px;'>
+                                            Your account has been created, but your <strong>fingerprint enrollment</strong> is still pending. To finalize your biometric attendance access, please visit the Admin's Office as soon as possible.
+                                        </p>
+                                        <div style='background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 25px 0;'>
+                                            <p style='color: #166534; margin: 0; font-weight: bold;'>Location: Admin's Office</p>
+                                            <p style='color: #166534; margin: 5px 0 0 0;'>Please bring your Faculty ID for verification.</p>
+                                        </div>
+                                        <p style='color: #64748b; font-size: 14px;'>If you have already visited the office today, please disregard this message as the system may still be updating.</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style='background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;'>
+                                        <p style='color: #94a3b8; font-size: 12px; margin: 0;'>&copy; {$currentYear} Bulacan Polytechnic College - TruScan System</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
             </body>
             </html>";
 
@@ -118,8 +141,8 @@ class RegistrationController extends Controller {
             }
         }
 
-        $logModel->log($_SESSION['user_id'], 'Sent Notifications', "Sent $count email reminders.");
-        echo json_encode(['success' => true, 'message' => "Successfully sent $count notifications."]);
+        $logModel->log($_SESSION['user_id'], 'Sent Reminders', "Sent $count biometric enrollment reminders.");
+        echo json_encode(['success' => true, 'message' => "Successfully sent $count email reminders."]);
         exit;
     }
 }

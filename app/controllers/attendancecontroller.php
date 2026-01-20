@@ -34,7 +34,6 @@ class AttendanceController extends Controller {
 
         $rawRecords = $attModel->getRecords($filters);
         
-        // --- Grouping Logic: Aggregate per user/day for the Accordion ---
         $grouped = [];
         foreach ($rawRecords as $r) {
             $key = $r['date'] . '_' . $r['user_id'];
@@ -61,9 +60,6 @@ class AttendanceController extends Controller {
         $this->view('attendance_view', $data);
     }
 
-    /**
-     * Updated: Rounds seconds to nearest minute to resolve 59-minute display issue.
-     */
     private function calculateClampedHours($r) {
         if (empty($r['time_in']) || empty($r['time_out'])) return 0;
         if (empty($r['sched_start']) || empty($r['sched_end'])) return 0;
@@ -74,90 +70,154 @@ class AttendanceController extends Controller {
         $schedStart = strtotime("$dateStr " . $r['sched_start']);
         $schedEnd = strtotime("$dateStr " . $r['sched_end']);
 
-        // Only credit time within the scheduled block boundaries
         $effectiveIn = max($actualIn, $schedStart);
         $effectiveOut = min($actualOut, $schedEnd);
 
         $durationSeconds = $effectiveOut - $effectiveIn;
         if ($durationSeconds <= 0) return 0;
 
-        // FIX: Round to the nearest minute to prevent "59 minutes" result from minor second offsets
         return round($durationSeconds / 60) * 60;
     }
 
-    public function printDtr() {
+    public function getAttendanceSummary() {
         $this->requireLogin();
-        $userId = $_GET['user_id'] ?? $_SESSION['user_id'];
-        if (!isAdmin() && $userId != $_SESSION['user_id']) { die('Access Denied'); }
-
-        $userModel = $this->model('User');
         $attModel = $this->model('Attendance');
+        $type = $_GET['type'] ?? 'entries';
         
-        $baseDate = $_GET['start_date'] ?? date('Y-m-01');
-        $fullMonthStart = date('Y-m-01', strtotime($baseDate));
-        $fullMonthEnd   = date('Y-m-t', strtotime($baseDate));
+        $results = $attModel->getDetailedStatsByType($type);
         
-        $monthName = date('F', strtotime($fullMonthStart));
-        $year = date('Y', strtotime($fullMonthStart));
-        $lastDay = (int)date('t', strtotime($fullMonthStart));
-
-        $filters = ['start_date' => $fullMonthStart, 'end_date' => $fullMonthEnd, 'user_id' => $userId];
-        $records = $attModel->getRecords($filters);
-        $holidays = $attModel->getHolidaysInRange($fullMonthStart, $fullMonthEnd);
-        
-        $dtrData = [];
-        $period = new DatePeriod(new DateTime($fullMonthStart), new DateInterval('P1D'), (new DateTime($fullMonthEnd))->modify('+1 day'));
-
-        foreach ($period as $dt) {
-            $dateStr = $dt->format('Y-m-d');
-            $day = (int)$dt->format('d');
-            $dtrData[$day] = ['date' => $dateStr, 'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '', 'credited_seconds' => 0, 'remarks' => ''];
-            if (isset($holidays[$dateStr])) { $dtrData[$day]['remarks'] = $holidays[$dateStr]; }
-        }
-        
-        // Accumulate multiple shifts correctly per half-day
-        foreach($records as $r) {
-            $day = (int)date('d', strtotime($r['date']));
-            if (!empty($r['sched_start']) && !empty($r['sched_end'])) {
-                if (!empty($r['time_in'])) { $dtrData[$day]['remarks'] = ''; }
-                
-                $timeInTs = strtotime($r['date'] . ' ' . $r['time_in']);
-                $noonTs = strtotime($r['date'] . ' 12:00:00');
-
-                if ($timeInTs < $noonTs) {
-                    // AM: Keep earliest arrival and latest departure
-                    if (empty($dtrData[$day]['am_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['am_in'])) {
-                        $dtrData[$day]['am_in'] = $r['time_in'];
-                    }
-                    if (!empty($r['time_out'])) {
-                        $timeOutTs = strtotime($r['date'] . ' ' . $r['time_out']);
-                        if (empty($dtrData[$day]['am_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['am_out'])) {
-                            $dtrData[$day]['am_out'] = $r['time_out'];
-                        }
-                    }
-                } else {
-                    // PM: Keep earliest arrival and latest departure
-                    if (empty($dtrData[$day]['pm_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['pm_in'])) {
-                        $dtrData[$day]['pm_in'] = $r['time_in'];
-                    }
-                    if (!empty($r['time_out'])) {
-                        $timeOutTs = strtotime($r['date'] . ' ' . $r['time_out']);
-                        if (empty($dtrData[$day]['pm_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['pm_out'])) {
-                            $dtrData[$day]['pm_out'] = $r['time_out'];
-                        }
-                    }
-                }
-                // Accumulate seconds for ALL shifts on this day
-                $dtrData[$day]['credited_seconds'] += $this->calculateClampedHours($r);
+        foreach ($results as &$u) {
+            if ($type === 'exits') {
+                $u['display_time'] = "Out: " . date('h:i A', strtotime($u['time_out']));
+            } else {
+                $u['display_time'] = "In: " . date('h:i A', strtotime($u['time_in']));
             }
         }
-
-        $this->view('print_dtr_view', [
-            'user' => $userModel->findById($userId),
-            'monthName' => $monthName,
-            'year' => $year,
-            'lastDay' => $lastDay,
-            'dtrRecords' => $dtrData
-        ]);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'users' => $results]);
+        exit;
     }
+
+    public function submitFeedback() {
+        $this->requireLogin();
+        $userModel = $this->model('User');
+        $db = Database::getInstance();
+        
+        $userId = $_SESSION['user_id'];
+        $userName = $_SESSION['first_name'] . ' ' . $_SESSION['last_name'];
+        $date = clean($_POST['record_date']);
+        $message = clean($_POST['message']);
+        
+        $sql = "INSERT INTO attendance_feedbacks (user_id, target_date, message, status) VALUES (?, ?, ?, 'Pending')";
+        $result = $db->query($sql, [$userId, $date, $message], "iss");
+
+        if ($result) {
+            $admins = $userModel->getAdmins();
+            $subject = "ATTENDANCE DISCREPANCY REPORT: " . $userName;
+            
+            $emailBody = "
+            <div style='font-family: sans-serif; max-width: 600px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;'>
+                <div style='background-color: #ef4444; color: white; padding: 25px; text-align: center;'>
+                    <h2 style='margin: 0;'>New Attendance Feedback</h2>
+                </div>
+                <div style='padding: 30px; color: #1e293b;'>
+                    <p>A faculty member has reported a discrepancy in their logs:</p>
+                    <table style='width: 100%; margin-top: 20px;'>
+                        <tr><td style='padding: 8px 0; font-weight: bold;'>Faculty:</td><td>$userName</td></tr>
+                        <tr><td style='padding: 8px 0; font-weight: bold;'>Target Date:</td><td>" . date('M d, Y', strtotime($date)) . "</td></tr>
+                    </table>
+                    <div style='background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #f1f5f9;'>
+                        <p style='margin: 0; font-style: italic;'>\"$message\"</p>
+                    </div>
+                </div>
+            </div>";
+
+            foreach ($admins as $admin) {
+                Mailer::send($admin['email'], $subject, $emailBody);
+            }
+        }
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => (bool)$result]);
+        exit;
+    }
+
+    public function printDtr() {
+    $this->requireLogin();
+    $userId = $_GET['user_id'] ?? $_SESSION['user_id'];
+    if (!isAdmin() && $userId != $_SESSION['user_id']) { die('Access Denied'); }
+
+    $userModel = $this->model('User');
+    $attModel = $this->model('Attendance');
+    
+    $baseDate = $_GET['start_date'] ?? date('Y-m-01');
+    $fullMonthStart = date('Y-m-01', strtotime($baseDate));
+    $fullMonthEnd   = date('Y-m-t', strtotime($baseDate));
+    
+    $monthName = date('F', strtotime($fullMonthStart));
+    $year = date('Y', strtotime($fullMonthStart));
+    $lastDay = (int)date('t', strtotime($fullMonthStart));
+
+    $filters = ['start_date' => $fullMonthStart, 'end_date' => $fullMonthEnd, 'user_id' => $userId];
+    $records = $attModel->getRecords($filters);
+    $holidays = $attModel->getHolidaysInRange($fullMonthStart, $fullMonthEnd);
+    
+    $dtrData = [];
+    $period = new DatePeriod(new DateTime($fullMonthStart), new DateInterval('P1D'), (new DateTime($fullMonthEnd))->modify('+1 day'));
+
+    foreach ($period as $dt) {
+        $dateStr = $dt->format('Y-m-d');
+        $day = (int)$dt->format('d');
+        $dtrData[$day] = ['date' => $dateStr, 'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '', 'credited_seconds' => 0, 'remarks' => ''];
+        if (isset($holidays[$dateStr])) { $dtrData[$day]['remarks'] = $holidays[$dateStr]; }
+    }
+    
+    foreach($records as $r) {
+        $day = (int)date('d', strtotime($r['date']));
+        if (!empty($r['sched_start']) && !empty($r['sched_end'])) {
+            if (!empty($r['time_in'])) { $dtrData[$day]['remarks'] = ''; }
+            
+            $timeInTs = strtotime($r['date'] . ' ' . $r['time_in']);
+            $noonTs = strtotime($r['date'] . ' 12:00:00');
+
+            if ($timeInTs < $noonTs) {
+                if (empty($dtrData[$day]['am_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['am_in'])) {
+                    $dtrData[$day]['am_in'] = $r['time_in'];
+                }
+                if (!empty($r['time_out'])) {
+                    $timeOutTs = strtotime($r['date'] . ' ' . $r['time_out']);
+                    if (empty($dtrData[$day]['am_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['am_out'])) {
+                        $dtrData[$day]['am_out'] = $r['time_out'];
+                    }
+                }
+            } else {
+                if (empty($dtrData[$day]['pm_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['pm_in'])) {
+                    $dtrData[$day]['pm_in'] = $r['time_in'];
+                }
+                if (!empty($r['time_out'])) {
+                    $timeOutTs = strtotime($r['date'] . ' ' . $r['time_out']);
+                    if (empty($dtrData[$day]['pm_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['pm_out'])) {
+                        $dtrData[$day]['pm_out'] = $r['time_out'];
+                    }
+                }
+            }
+            $dtrData[$day]['credited_seconds'] += $this->calculateClampedHours($r);
+        }
+    }
+
+    // --- CRITICAL FIX: RENDER WITHOUT SYSTEM LAYOUT ---
+    $user = $userModel->findById($userId);
+    extract([
+        'user' => $user,
+        'monthName' => $monthName,
+        'year' => $year,
+        'lastDay' => $lastDay,
+        'dtrRecords' => $dtrData
+    ]);
+    
+    // Include the view directly to bypass the layout wrapper
+    require_once __DIR__ . '/../views/print_dtr_view.php';
+    exit(); // Stop execution to prevent system footer from loading
+}
 }

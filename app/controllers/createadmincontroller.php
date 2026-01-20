@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../core/controller.php';
+require_once __DIR__ . '/../core/mailer.php'; // Ensure Mailer is loaded
 
 class AccountAdminController extends Controller {
 
@@ -8,52 +9,53 @@ class AccountAdminController extends Controller {
         $userModel = $this->model('User');
         $logModel = $this->model('ActivityLog');
         
-        $data = ['pageTitle' => 'Admin Management', 'pageSubtitle' => 'Create a new Administrator account', 'error' => '', 'success' => ''];
+        $data = [
+            'pageTitle' => 'Admin Management', 
+            'pageSubtitle' => 'Configure high-level system administrative access', 
+            'error' => '', 
+            'success' => ''
+        ];
+
+        $allActive = $userModel->getAllActive();
+        $data['admins'] = array_filter($allActive, function($u) {
+            return $u['role'] === 'Admin';
+        });
+        
+        $data['stats'] = $userModel->getStats();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // ... (validation code) ...
+        $defaultPass = "@adminpass123"; 
+        $adminData = [
+            'faculty_id' => clean($_POST['faculty_id']),
+            'username' => strtolower(clean($_POST['faculty_id'])),
+            'password' => password_hash($defaultPass, PASSWORD_DEFAULT),
+            'first_name' => clean($_POST['first_name']),
+            'last_name' => clean($_POST['last_name']),
+            'email' => clean($_POST['email']),
+            'role' => 'Admin'
+        ];
 
-            // SECURITY UPDATE: Updated default password for Admins
-            $defaultPass = "@adminpass123"; 
+        if ($userModel->exists($adminData['faculty_id'])) {
+            $data['error'] = "Admin ID already exists.";
+        } else if ($userModel->create($adminData)) {
+            // Send Admin Creation Email
+            $subject = "Administrative Access Granted - BPC TruScan";
+            $emailBody = "
+                <div style='font-family: Arial, sans-serif; border: 1px solid #eee; padding: 20px; border-radius: 10px;'>
+                    <h2 style='color: #10b981;'>Welcome, Administrator!</h2>
+                    <p>Your admin account has been initialized for the BPC Attendance System.</p>
+                    <p><strong>Username:</strong> {$adminData['username']}<br>
+                    <strong>Temporary Password:</strong> @adminpass123</p>
+                    <p style='color: #666; font-size: 12px;'>Please change your password upon your first login.</p>
+                </div>";
+            
+            Mailer::send($adminData['email'], $subject, $emailBody); //
 
-            $adminData = [
-                'faculty_id' => clean($_POST['faculty_id']),
-                'username' => strtolower(clean($_POST['faculty_id'])),
-                'password' => password_hash($defaultPass, PASSWORD_DEFAULT),
-                // ... (rest of fields)
-                'first_name' => clean($_POST['first_name']),
-                'last_name' => clean($_POST['last_name']),
-                'middle_name' => clean($_POST['middle_name']),
-                'email' => clean($_POST['email']),
-                'phone' => clean($_POST['phone']),
-                'role' => 'Admin'
-            ];
-
-            if ($userModel->create($adminData)) {
-                $logModel->log($_SESSION['user_id'], 'Admin Created', "Created admin: {$adminData['faculty_id']}");
-                
-                // Professional Email for Admins
-                $subject = "BPC Admin Access Granted";
-                $msg = "
-                <html>
-                <body style='font-family: Arial, sans-serif;'>
-                    <h3>Welcome Admin " . $adminData['first_name'] . ",</h3>
-                    <p>Your administrator privileges have been set up.</p>
-                    <p><strong>Login Credentials:</strong></p>
-                    <ul>
-                        <li>Username: " . $adminData['username'] . "</li>
-                        <li>Temporary Password: <strong>" . $defaultPass . "</strong></li>
-                    </ul>
-                    <p style='color:red;'>Important: You must change this password immediately upon login.</p>
-                </body>
-                </html>
-                ";
-                
-                sendEmail($adminData['email'], $subject, $msg);
-                $data['success'] = "Admin created. Credentials sent via email.";
-            }
+            $logModel->log($_SESSION['user_id'], 'Admin Created', "Added system administrator: {$adminData['faculty_id']}");
+            header("Location: create_admin.php?success=1");
+            exit();
         }
-        $this->view('admin_create_view', $data);
     }
+    $this->view('admin_create_view', $data);
 }
-?>
+}
