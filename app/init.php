@@ -20,6 +20,7 @@ Helper::loadEnv(__DIR__ . '/../.env');
 require_once __DIR__ . '/models/user.php';
 require_once __DIR__ . '/models/activitylog.php';
 require_once __DIR__ . '/models/notification.php';
+require_once __DIR__ . '/models/holiday.php'; // NEWLY ADDED
 
 // Global Helper Functions
 if (!function_exists('clean')) {
