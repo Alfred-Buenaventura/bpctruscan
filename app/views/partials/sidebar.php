@@ -43,12 +43,16 @@
             <i class="fa-solid fa-calendar-days nav-icon"></i>
             <span class="nav-text">Schedule Management</span>
         </a>
+        <?php if (Helper::isAdmin()): ?>
+            <a href="holiday_management.php" class="nav-item"> <i class="fa-solid fa-umbrella-beach nav-icon"></i>
+            <span class="nav-text">Holiday Management</span>
+        </a>
+        <?php endif; ?>
         
         <button type="button" class="nav-item nav-item-button" onclick="openModal('notificationsModal')" id="notificationsBtn">
             <i class="fa-solid fa-bell nav-icon"></i>
             <span class="nav-text">Notifications</span>
             <?php
-            // FIX: Use Singleton Instance
             $db = Database::getInstance();
             $stmt = $db->query("SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0", [$_SESSION['user_id']], "i");
             $unreadCount = $stmt->get_result()->fetch_assoc()['count'] ?? 0;
@@ -81,7 +85,16 @@
     <div class="user-info">
         <div class="user-info-inner">
             <div class="user-avatar">
-                <?= strtoupper(substr($_SESSION['first_name'] ?? 'U', 0, 1)) ?>
+                <?php 
+                $profileImg = $_SESSION['profile_image_path'] ?? null;
+                // Check if the file exists relative to the root directory
+                if (!empty($profileImg) && file_exists(__DIR__ . '/../../../' . $profileImg)): ?>
+                    <img src="<?= htmlspecialchars($profileImg) ?>?v=<?= time() ?>" 
+                         alt="Profile" 
+                         style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;">
+                <?php else: ?>
+                    <?= strtoupper(substr($_SESSION['first_name'] ?? 'U', 0, 1)) ?>
+                <?php endif; ?>
             </div>
             <div class="user-details">
                 <p>Logged in as</p>
@@ -99,7 +112,6 @@
         <span class="logout-text">Log out</span>
     </button>
 </div>
-
 </aside>
 
 <div id="notificationsModal" class="modal">
@@ -112,7 +124,6 @@
         </div>
         <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
             <?php
-            // FIX: Use Singleton Instance
             $db = Database::getInstance();
             $stmt = $db->query(
                 "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 20", 
