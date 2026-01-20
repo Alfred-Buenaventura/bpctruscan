@@ -16,11 +16,14 @@ require_once __DIR__ . '/core/mailer.php';
 // 4. Load .env
 Helper::loadEnv(__DIR__ . '/../.env');
 
+// Define the Base URL for the system to resolve paths correctly
+define('BASE_URL', 'http://localhost/bpctruscan'); // Update this to match your actual project folder
+
 // Load Models
 require_once __DIR__ . '/models/user.php';
 require_once __DIR__ . '/models/activitylog.php';
 require_once __DIR__ . '/models/notification.php';
-require_once __DIR__ . '/models/holiday.php'; // NEWLY ADDED
+require_once __DIR__ . '/models/holiday.php';
 
 // Global Helper Functions
 if (!function_exists('clean')) {
