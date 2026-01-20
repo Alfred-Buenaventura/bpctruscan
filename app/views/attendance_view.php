@@ -1,36 +1,5 @@
 <?php 
 require_once __DIR__ . '/partials/header.php'; 
-
-// Grouping Logic (Using $records, NOT $logs)
-$groupedRecords = [];
-if (!empty($records)) {
-    foreach ($records as $r) {
-        $key = $r['user_id'] . '_' . $r['date'];
-        if (!isset($groupedRecords[$key])) {
-            $groupedRecords[$key] = [
-                'user' => $r,
-                'am_in' => null, 'am_out' => null, 'am_status' => null,
-                'pm_in' => null, 'pm_out' => null, 'pm_status' => null,
-                'status_list' => []
-            ];
-        }
-        
-        $timeInTimestamp = strtotime($r['date'] . ' ' . $r['time_in']);
-        $noonCutoff = strtotime($r['date'] . ' 12:00:00');
-
-        if ($timeInTimestamp < $noonCutoff) {
-            $groupedRecords[$key]['am_in'] = $r['time_in'];
-            $groupedRecords[$key]['am_out'] = $r['time_out'];
-            $groupedRecords[$key]['am_status'] = $r['status'];
-            if ($r['status']) $groupedRecords[$key]['status_list'][] = $r['status'];
-        } else {
-            $groupedRecords[$key]['pm_in'] = $r['time_in'];
-            $groupedRecords[$key]['pm_out'] = $r['time_out'];
-            $groupedRecords[$key]['pm_status'] = $r['status'];
-            if ($r['status']) $groupedRecords[$key]['status_list'][] = $r['status'];
-        }
-    }
-}
 ?>
 
 <div class="main-body attendance-reports-page"> 
@@ -38,19 +7,31 @@ if (!empty($records)) {
     <div class="report-stats-grid">
         <div class="report-stat-card">
             <div class="stat-icon-bg bg-emerald-100 text-emerald-600"><i class="fa-solid fa-arrow-right-to-bracket"></i></div>
-            <div class="stat-content"><span class="stat-label">Entries</span><span class="stat-value"><?= $stats['entries'] ?? 0 ?></span></div>
+            <div class="stat-content">
+                <span class="stat-label">Entries Today</span>
+                <span class="stat-value"><?= $stats['entries'] ?? 0 ?></span>
+            </div>
         </div>
          <div class="report-stat-card">
             <div class="stat-icon-bg bg-red-100 text-red-600"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
-            <div class="stat-content"><span class="stat-label">Exits</span><span class="stat-value"><?= $stats['exits'] ?? 0 ?></span></div>
+            <div class="stat-content">
+                <span class="stat-label">Exits Today</span>
+                <span class="stat-value"><?= $stats['exits'] ?? 0 ?></span>
+            </div>
         </div>
          <div class="report-stat-card">
             <div class="stat-icon-bg bg-blue-100 text-blue-600"><i class="fa-solid fa-user-check"></i></div>
-            <div class="stat-content"><span class="stat-label">Present</span><span class="stat-value"><?= $stats['present_total'] ?? 0 ?></span></div>
+            <div class="stat-content">
+                <span class="stat-label">Present</span>
+                <span class="stat-value"><?= $stats['present_total'] ?? 0 ?></span>
+            </div>
         </div>
-         <div class="report-stat-card">
-            <div class="stat-icon-bg bg-gray-100 text-gray-600"><i class="fa-solid fa-list-alt"></i></div>
-            <div class="stat-content"><span class="stat-label">Records</span><span class="stat-value"><?= $totalRecords ?? 0 ?></span></div>
+        <div class="report-stat-card">
+            <div class="stat-icon-bg bg-orange-100 text-orange-600"><i class="fa-solid fa-clock"></i></div>
+            <div class="stat-content">
+                <span class="stat-label">Late Logs</span>
+                <span class="stat-value"><?= $stats['late'] ?? 0 ?></span>
+            </div>
         </div>
     </div>
 
@@ -60,9 +41,7 @@ if (!empty($records)) {
         </div>
         <div class="card-body">
             <form method="GET" action="attendance_reports.php" id="reportFilterForm" class="filter-controls-new">
-                
                 <div class="filter-inputs" <?= !$isAdmin ? 'style="grid-template-columns: 1fr;"' : '' ?>>
-                    
                     <?php if ($isAdmin): ?>
                     <div class="form-group filter-item">
                         <label>Select User</label>
@@ -80,10 +59,9 @@ if (!empty($records)) {
                             <i class="fa-solid fa-chevron-down select-arrow"></i>
                         </div>
                     </div>
-                    
                     <div class="form-group filter-item">
-                        <label>Search</label>
-                        <input type="text" name="search" class="form-control" placeholder="Search keywords..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
+                        <label>Search Faculty</label>
+                        <input type="text" name="search" class="form-control" placeholder="ID or Name..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
                     </div>
                     <?php endif; ?>
 
@@ -95,64 +73,77 @@ if (!empty($records)) {
                          </div>
                     </div>
                 </div>
-                
                 <div class="filter-actions-new" style="align-items: center;">
-                    <button type="submit" class="btn btn-primary btn-sm apply-filter-btn"><i class="fa-solid fa-check"></i> Apply</button>
-                    
+                    <button type="submit" class="btn btn-primary btn-sm apply-filter-btn"><i class="fa-solid fa-check"></i> Apply Filters</button>
                     <button type="button" class="btn btn-warning btn-sm" onclick="handlePrintDTR()">
-                        <i class="fa-solid fa-print"></i> View DTR
+                        <i class="fa-solid fa-print"></i> Generate DTR
                     </button>
-                    
-                    </div>
+                </div>
             </form>
         </div>
     </div>
     
     <div class="card attendance-table-card">
          <div class="card-body" style="padding: 0; overflow-x: auto;"> 
-            <?php if (!empty($error)): ?>
-                <div class="alert alert-error" style="margin: 1rem;"><?= htmlspecialchars($error) ?></div>
-            <?php elseif (empty($groupedRecords)): ?>
-                <p style="text-align: center; color: var(--gray-500); padding: 40px;">No records found.</p>
+            <?php if (empty($records)): ?>
+                <p style="text-align: center; color: var(--gray-500); padding: 40px;">No attendance records found.</p>
             <?php else: ?>
-                <table class="attendance-table-new" style="min-width: 1000px;">
+                <table class="attendance-table-new accordion-table" style="min-width: 1000px;">
                     <thead>
                         <tr>
-                            <th>User</th>
+                            <th style="width: 50px;"></th>
+                            <th>Faculty / Staff</th>
                             <th>Date</th>
-                            <th style="text-align: center;">AM In</th>
-                            <th style="text-align: center;">AM Out</th>
-                            <th style="text-align: center;">PM In</th>
-                            <th style="text-align: center;">PM Out</th>
-                            <th>Day Status</th>
+                            <th>Duty Sessions</th>
+                            <th>Final Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($groupedRecords as $row): 
-                            $u = $row['user'];
-                            $statusList = array_unique($row['status_list']);
-                            $statusStr = implode(', ', $statusList);
-                        ?>
-                        <tr>
+                        <?php $idx = 0; foreach ($records as $row): $idx++; ?>
+                        <tr class="accordion-toggle" onclick="toggleAccordion('details-<?= $idx ?>', this)">
+                            <td style="text-align: center;"><i class="fa-solid fa-chevron-right toggle-icon"></i></td>
                             <td>
                                 <div class="user-cell">
-                                    <span class="user-name"><?= htmlspecialchars($u['first_name'] . ' ' . $u['last_name']) ?></span>
-                                    <span class="user-id"><?= htmlspecialchars($u['faculty_id']) ?></span>
+                                    <span class="user-name"><?= htmlspecialchars($row['name']) ?></span>
+                                    <span class="user-id">ID: <?= htmlspecialchars($row['faculty_id']) ?></span>
                                 </div>
                             </td>
-                            <td><span class="date-cell"><?= date('m/d/Y', strtotime($u['date'])) ?></span></td>
-                            <td style="text-align: center;"><?= $row['am_in'] ? date('h:i A', strtotime($row['am_in'])) : '-' ?></td>
-                            <td style="text-align: center;"><?= $row['am_out'] ? date('h:i A', strtotime($row['am_out'])) : '-' ?></td>
-                            <td style="text-align: center;"><?= $row['pm_in'] ? date('h:i A', strtotime($row['pm_in'])) : '-' ?></td>
-                            <td style="text-align: center;"><?= $row['pm_out'] ? date('h:i A', strtotime($row['pm_out'])) : '-' ?></td>
+                            <td><span class="date-cell"><?= date('M d, Y', strtotime($row['date'])) ?></span></td>
+                            <td><span class="session-pill"><?= count($row['logs']) ?> Class Block(s)</span></td>
                             <td style="vertical-align: middle;">
-                                <?php if (strpos($statusStr, 'Late') !== false): ?>
-                                    <span class="status-label status-late">Has Late</span>
-                                <?php elseif (!empty($statusStr)): ?>
-                                    <span class="status-label status-present">Complete</span>
-                                <?php else: ?>
-                                    <span class="status-label">-</span>
-                                <?php endif; ?>
+                                <span class="status-label status-<?= strtolower(str_replace(' ', '-', $row['status'])) ?>">
+                                    <?= htmlspecialchars($row['status']) ?>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr id="details-<?= $idx ?>" class="accordion-content" style="display: none; background-color: #f8fafc;">
+                            <td colspan="5" style="padding: 0;">
+                                <div class="duty-breakdown-wrapper" style="padding: 20px 20px 20px 60px;">
+                                    <h4 style="font-size: 0.9rem; color: #475569; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                                        <i class="fa-solid fa-fingerprint"></i> Duty Scan Breakdown
+                                    </h4>
+                                    <div class="scan-logs-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;">
+                                        <?php foreach ($row['logs'] as $log): ?>
+                                            <div class="scan-log-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                                    <div class="time-block">
+                                                        <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">In</span>
+                                                        <span style="display: block; font-size: 1.05rem; font-weight: 600; color: #0f172a;"><?= $log['time_in'] ?></span>
+                                                    </div>
+                                                    <div style="color: #cbd5e1;"><i class="fa-solid fa-arrow-right-long"></i></div>
+                                                    <div class="time-block" style="text-align: right;">
+                                                        <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Out</span>
+                                                        <span style="display: block; font-size: 1.05rem; font-weight: 600; color: #0f172a;"><?= $log['time_out'] ?></span>
+                                                    </div>
+                                                </div>
+                                                <div style="border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+                                                    <span style="font-size: 0.75rem; font-weight: 600; color: #64748b;">Class/Duty:</span>
+                                                    <span style="font-size: 0.75rem; color: #1e293b;"><?= htmlspecialchars($log['subject']) ?></span>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -185,20 +176,41 @@ if (!empty($records)) {
                 <p style="font-size: 1.1rem; color: #374151; margin-bottom: 1rem;">
                     Please select a user from the dropdown list to view their DTR.
                 </p>
-                <p style="font-size: 0.95rem; color: #6b7280;">
-                    You must specify an employee to generate the Daily Time Record.
-                </p>
             </div>
             <div class="modal-footer" style="justify-content: center; background: #f9fafb;">
-                <button class="btn btn-secondary" onclick="closeModal('noUserModal')">Okay, I'll select one</button>
+                <button class="btn btn-secondary" onclick="closeModal('noUserModal')">Okay</button>
             </div>
         </div>
     </div>
-
 </div>
 
+<style>
+/* Accordion Table Styles */
+.accordion-toggle { cursor: pointer; transition: all 0.2s ease; }
+.accordion-toggle:hover { background-color: #f1f5f9; }
+.accordion-toggle.active { background-color: #f8fafc; border-bottom: none; }
+.toggle-icon { transition: transform 0.3s; color: #94a3b8; }
+.accordion-toggle.active .toggle-icon { transform: rotate(90deg); }
+
+.session-pill {
+    background-color: #eef2ff;
+    color: #4338ca;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid #c7d2fe;
+}
+</style>
+
 <script>
-// Logic to handle DTR View
+function toggleAccordion(contentId, toggleEl) {
+    const content = document.getElementById(contentId);
+    const isVisible = content.style.display !== 'none';
+    content.style.display = isVisible ? 'none' : 'table-row';
+    toggleEl.classList.toggle('active');
+}
+
 function handlePrintDTR() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
@@ -206,14 +218,8 @@ function handlePrintDTR() {
 
     <?php if ($isAdmin): ?>
         const userIdSelect = document.getElementById('userId');
-        if (userIdSelect) {
-            userId = userIdSelect.value;
-        }
-        
-        if (!userId) {
-            openModal('noUserModal');
-            return;
-        }
+        if (userIdSelect) userId = userIdSelect.value;
+        if (!userId) { openModal('noUserModal'); return; }
     <?php else: ?>
         userId = '<?= $_SESSION['user_id'] ?? '' ?>'; 
     <?php endif; ?>
@@ -222,34 +228,20 @@ function handlePrintDTR() {
         const url = `print_dtr.php?user_id=${userId}&start_date=${startDate}&end_date=${endDate}&preview=1`;
         const f = document.getElementById('dtrFrame');
         const m = document.getElementById('dtrPreviewModal');
-        
-        if(f && m) { 
-            f.src = url; 
-            m.style.display = 'flex'; 
-            document.body.style.overflow = 'hidden'; 
-        }
+        if(f && m) { f.src = url; m.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
     }
 }
 
-// FIXED: This function is used by the iframe's Back button
 function closeDtrModal() {
     const modal = document.getElementById('dtrPreviewModal');
     if (modal) modal.style.display = 'none'; 
     document.body.style.overflow = 'auto'; 
-    
     const frame = document.getElementById('dtrFrame');
     if (frame) frame.src = 'about:blank'; 
 }
 
-// Modal Helpers
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'flex';
-}
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'none';
-}
+function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
+function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
 </script>
 
 <?php require_once __DIR__ . '/partials/footer.php'; ?>

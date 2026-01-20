@@ -94,10 +94,9 @@ require_once __DIR__ . '/partials/header.php';
                         <h4>CSV Format Requirements:</h4>
                         <ul>
                             <li>Columns (in order): Faculty ID, Last Name, First Name, Middle Name, Username, Role, Email, Phone</li>
-                            <li>All users will be created with default password: <strong>DefaultPass123!</strong></li>
+                            <li>All users will be created with default password: <strong>@defaultpass123</strong></li>
                             <li>Users must change password on first login</li>
                             <li>Duplicate Faculty IDs will be skipped</li>
-                            <li>Rows with 'Admin' role will be skipped</li>
                         </ul>
                     </div>
                 </div>
@@ -163,7 +162,7 @@ require_once __DIR__ . '/partials/header.php';
                         <div class="password-info-box">
                             <i class="fa-solid fa-circle-info"></i>
                             <div>
-                                <strong>Note:</strong> User will be assigned the default password <strong>DefaultPass123!</strong> and will be prompted to change it on first login.
+                                <strong>Note:</strong> User will be assigned the default password <strong>@defaultpass123</strong> and will be prompted to change it on first login.
                             </div>
                         </div>
 
