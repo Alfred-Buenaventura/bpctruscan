@@ -34,6 +34,36 @@ if (!$user) {
     exit;
 }
 
+if (!$isWarning && !empty($user['email']) && $user['email_notifications_enabled']) {
+    $formattedTime = date('h:i A', strtotime($now));
+    $subject = "Attendance Notification: $status Recorded";
+    
+    $emailBody = "
+    <html>
+    <body style='font-family: Arial, sans-serif; color: #333;'>
+        <div style='max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;'>
+            <div style='background: #2563eb; color: white; padding: 20px; text-align: center;'>
+                <h2 style='margin: 0;'>BPC Attendance System</h2>
+            </div>
+            <div style='padding: 30px;'>
+                <p>Hello <strong>{$user['first_name']}</strong>,</p>
+                <p>Your attendance has been recorded for today, <strong>" . date('M d, Y') . "</strong>.</p>
+                <div style='background: #f3f4f6; padding: 15px; border-radius: 6px; text-align: center; margin: 20px 0;'>
+                    <span style='font-size: 1.2rem; color: #1f2937;'>Status: <strong>$status</strong></span><br>
+                    <span style='font-size: 1.5rem; color: #2563eb;'>Time: <strong>$formattedTime</strong></span>
+                </div>
+                <p style='font-size: 0.85rem; color: #6b7280;'>You received this email because real-time alerts are enabled in your profile settings.</p>
+            </div>
+            <div style='background: #f9fafb; padding: 15px; text-align: center; font-size: 0.75rem; color: #9ca3af;'>
+                &copy; " . date('Y') . " Bulacan Polytechnic College
+            </div>
+        </div>
+    </body>
+    </html>";
+
+    sendEmail($user['email'], $subject, $emailBody);
+}
+
 // Record Attendance Logic
 $today = date('Y-m-d');
 $now = date('H:i:s');
