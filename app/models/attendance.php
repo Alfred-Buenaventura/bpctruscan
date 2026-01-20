@@ -22,7 +22,6 @@ class Attendance {
     }
 
     public function getRecords($filters) {
-        
         $sql = "SELECT ar.*, 
                        u.faculty_id, u.first_name, u.last_name, u.role,
                        s.start_time as sched_start, s.end_time as sched_end
@@ -121,50 +120,14 @@ class Attendance {
         return $stats;
     }
 
+    /**
+     * UPDATED METHOD: Now strictly uses the database table.
+     */
     public function getHolidaysInRange($startDate, $endDate) {
         $holidays = [];
         
-        $startYear = (int)date('Y', strtotime($startDate));
-        $endYear = (int)date('Y', strtotime($endDate));
-
-        for ($year = $startYear; $year <= $endYear; $year++) {
-            $fixedHolidays = [
-                "$year-01-01" => "New Year's Day",
-                "$year-02-25" => "EDSA Revolution Anniversary", 
-                "$year-04-09" => "Araw ng Kagitingan",
-                "$year-05-01" => "Labor Day",
-                "$year-06-12" => "Independence Day",
-                "$year-08-21" => "Ninoy Aquino Day", 
-                "$year-11-01" => "All Saints' Day", 
-                "$year-11-02" => "All Souls' Day", 
-                "$year-11-30" => "Bonifacio Day",
-                "$year-12-08" => "Immaculate Conception", 
-                "$year-12-24" => "Christmas Eve", 
-                "$year-12-25" => "Christmas Day",
-                "$year-12-30" => "Rizal Day",
-                "$year-12-31" => "Last Day of the Year" 
-            ];
-        
-            $daysToEaster = easter_days($year);
-            $easterDate = new DateTime("$year-03-21 +$daysToEaster days");
-            
-            $maundyThursday = clone $easterDate; $maundyThursday->modify('-3 days');
-            $goodFriday = clone $easterDate; $goodFriday->modify('-2 days');
-            $blackSaturday = clone $easterDate; $blackSaturday->modify('-1 days');
-
-            $fixedHolidays[$maundyThursday->format('Y-m-d')] = "Maundy Thursday";
-            $fixedHolidays[$goodFriday->format('Y-m-d')] = "Good Friday";
-            $fixedHolidays[$blackSaturday->format('Y-m-d')] = "Black Saturday"; 
-
-            $lastMonAug = date('Y-m-d', strtotime("last monday of august $year"));
-            $fixedHolidays[$lastMonAug] = "National Heroes Day";
-
-            foreach ($fixedHolidays as $date => $name) {
-                if ($date >= $startDate && $date <= $endDate) {
-                    $holidays[$date] = $name;
-                }
-            }
-        }
+        // Removed hardcoded array logic and calculation for Easter.
+        // Admins should now add these manually through the UI.
 
         $sql = "SELECT holiday_date, description FROM holidays WHERE holiday_date BETWEEN ? AND ?";
         $res = $this->db->query($sql, [$startDate, $endDate], "ss")->get_result();

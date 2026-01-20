@@ -9,7 +9,7 @@ class Schedule {
     }
     
     public function getRooms() {
-        $sql = "SELECT * FROM rooms ORDER BY name";
+        $sql = "SELECT * FROM rooms ORDER BY name ASC";
         return $this->db->query($sql)->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
@@ -37,7 +37,6 @@ class Schedule {
         return $stmt->get_result()->fetch_assoc();
     }
 
-    // --- NEW METHOD: Find conflicting PENDING schedules ---
     public function getPendingConflicts($day, $startTime, $endTime, $room, $excludeScheduleId) {
         $sql = "SELECT cs.*, u.first_name, u.last_name, u.email, u.id as user_id
                 FROM class_schedules cs
@@ -59,24 +58,25 @@ class Schedule {
         return $stmt->get_result()->fetch_assoc();
     }
 
-    public function update($id, $day, $subject, $start, $end, $room) {
+    public function update($id, $day, $subject, $start, $end, $room, $type = 'Class') {
         $sql = "UPDATE class_schedules 
-                SET day_of_week = ?, subject = ?, start_time = ?, end_time = ?, room = ?
+                SET day_of_week = ?, subject = ?, start_time = ?, end_time = ?, room = ?, type = ?
                 WHERE id = ?";
-        $stmt = $this->db->query($sql, [$day, $subject, $start, $end, $room, $id], "sssssi");
+        $stmt = $this->db->query($sql, [$day, $subject, $start, $end, $room, $type, $id], "ssssssi");
         return $stmt->affected_rows > 0;
     }
 
     public function create($userId, $schedules, $isAdmin) {
         $status = $isAdmin ? 'approved' : 'pending';
-        $sql = "INSERT INTO class_schedules (user_id, day_of_week, subject, start_time, end_time, room, status) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO class_schedules (user_id, day_of_week, subject, start_time, end_time, room, type, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         foreach ($schedules as $s) {
             if (empty($s['subject']) || empty($s['start']) || empty($s['end'])) continue;
+            $type = $s['type'] ?? 'Class';
             $this->db->query($sql, [
-                $userId, $s['day'], $s['subject'], $s['start'], $s['end'], $s['room'], $status
-            ], "issssss");
+                $userId, $s['day'], $s['subject'], $s['start'], $s['end'], $s['room'], $type, $status
+            ], "isssssss");
         }
         return true;
     }

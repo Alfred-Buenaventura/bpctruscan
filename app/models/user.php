@@ -8,6 +8,26 @@ class User {
         $this->db = Database::getInstance();
     }
 
+    /**
+     * Get detailed list for reports
+     * @param string $filter 'all', 'registered', 'pending'
+     */
+    public function getDetailedReport($filter = 'all') {
+        $sql = "SELECT first_name, last_name, faculty_id, role, email, status, fingerprint_registered 
+                FROM users WHERE status = 'active'";
+        
+        if ($filter === 'registered') {
+            $sql .= " AND fingerprint_registered = 1";
+        } elseif ($filter === 'pending') {
+            $sql .= " AND fingerprint_registered = 0";
+        }
+
+        $sql .= " ORDER BY role ASC, last_name ASC";
+        
+        $result = $this->db->conn->query($sql);
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
     // =========================================================
     // 1. AUTHENTICATION & LOGIN
     // =========================================================
@@ -24,32 +44,26 @@ class User {
     }
 
     // =========================================================
-    // 2. FINGERPRINT MANAGEMENT (New Multi-Finger Support)
+    // 2. FINGERPRINT MANAGEMENT
     // =========================================================
     
-    // Get all registered fingers for a specific user
     public function getRegisteredFingers($userId) {
         $sql = "SELECT id, finger_name, created_at FROM user_fingerprints WHERE user_id = ? ORDER BY created_at DESC";
         $stmt = $this->db->query($sql, [$userId], "i");
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    // Add or update a specific finger
     public function addFingerprint($userId, $fingerprintData, $fingerName) {
-        // 1. Check if this specific finger is already registered to avoid duplicates
         $check = $this->db->query("SELECT id FROM user_fingerprints WHERE user_id = ? AND finger_name = ?", [$userId, $fingerName], "is");
         
         if ($check->get_result()->num_rows > 0) {
-            // Update existing finger
             $sql = "UPDATE user_fingerprints SET fingerprint_data = ?, created_at = NOW() WHERE user_id = ? AND finger_name = ?";
             $this->db->query($sql, [$fingerprintData, $userId, $fingerName], "sis");
         } else {
-            // Insert new finger
             $sql = "INSERT INTO user_fingerprints (user_id, finger_name, fingerprint_data) VALUES (?, ?, ?)";
             $this->db->query($sql, [$userId, $fingerName, $fingerprintData], "iss");
         }
 
-        // 2. Mark user as registered (Updates the main flag)
         $this->db->query("UPDATE users SET fingerprint_registered=1, fingerprint_registered_at=NOW() WHERE id=?", [$userId], "i");
         return true;
     }
@@ -57,10 +71,30 @@ class User {
     // =========================================================
     // 3. PROFILE & ACCOUNT UPDATES
     // =========================================================
-    public function updateProfile($id, $firstName, $lastName, $middleName, $email, $phone) {
-        $sql = "UPDATE users SET first_name=?, last_name=?, middle_name=?, email=?, phone=? WHERE id=?";
-        $stmt = $this->db->query($sql, [$firstName, $lastName, $middleName, $email, $phone, $id], "sssssi");
-        return $stmt->affected_rows >= 0;
+
+    /**
+     * UPDATED: Handles 8 parameters for sssssiii
+     */
+    public function updateProfile($id, $firstName, $lastName, $middleName, $email, $phone, $emailNotif, $weeklySum) {
+        $sql = "UPDATE users SET 
+                first_name=?, 
+                last_name=?, 
+                middle_name=?, 
+                email=?, 
+                phone=?, 
+                email_notifications_enabled=?, 
+                weekly_summary_enabled=? 
+                WHERE id=?";
+        
+        return $this->db->query($sql, [
+            $firstName, $lastName, $middleName, $email, $phone, 
+            $emailNotif, $weeklySum, $id
+        ], "sssssiii");
+    }
+    
+    public function updateProfileImage($id, $imagePath) {
+        $sql = "UPDATE users SET profile_image = ? WHERE id = ?";
+        return $this->db->query($sql, [$imagePath, $id], "si");
     }
 
     public function update($id, $firstName, $lastName, $middleName, $email, $phone) {
@@ -101,14 +135,12 @@ class User {
     }
 
     public function delete($id) {
-        // Clean up related data first to avoid Foreign Key errors
         $this->db->query("DELETE FROM class_schedules WHERE user_id=?", [$id], "i");
         $this->db->query("DELETE FROM attendance_records WHERE user_id=?", [$id], "i");
         $this->db->query("DELETE FROM notifications WHERE user_id=?", [$id], "i");
         $this->db->query("DELETE FROM activity_logs WHERE user_id=?", [$id], "i");
-        $this->db->query("DELETE FROM user_fingerprints WHERE user_id=?", [$id], "i"); // Clean up fingerprints
+        $this->db->query("DELETE FROM user_fingerprints WHERE user_id=?", [$id], "i");
         
-        // Finally delete the user
         $sql = "DELETE FROM users WHERE id=?";
         $this->db->query($sql, [$id], "i");
         return true;
@@ -118,7 +150,6 @@ class User {
     // 5. DATA RETRIEVAL (Lists & Stats)
     // =========================================================
     public function getAllActive() {
-        // Use direct connection query for simple selects without parameters
         $result = $this->db->conn->query("SELECT * FROM users WHERE status='active' ORDER BY created_at DESC");
         return $result->fetch_all(MYSQLI_ASSOC);
     }
