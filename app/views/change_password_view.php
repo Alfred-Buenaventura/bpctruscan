@@ -85,74 +85,38 @@ if (!$firstLogin) { require_once __DIR__ . '/partials/header.php';  }
     </style>
 </head>
 
-<body class="<?= $firstLogin ? 'login-page' : '' ?>">
+<div class="main-body">
+    <?php if ($error): ?> <div class="alert alert-error"><?= htmlspecialchars($error) ?></div> <?php endif; ?>
+    <?php if ($success): ?> <div class="alert alert-success"><?= htmlspecialchars($success) ?></div> <?php endif; ?>
 
-    <?php if ($firstLogin): ?>
-        <div class="card login-card-new" style="max-width: 500px;">
-    <?php else: ?>
-        <div class="main-body">
-            <div class="card" style="max-width: 600px; margin: 0 auto;">
-    <?php endif; ?>
-
-        <div class="<?= $firstLogin ? 'login-new-header' : 'card-header' ?>">
-            <?php if($firstLogin): ?>
-                <div class="login-logo-container"><i class="fa-solid fa-key"></i></div>
-            <?php endif; ?>
-            <h3>Change Password</h3>
+    <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <div class="card-header">
+            <h3>Change Account Password</h3>
+            <p>Ensure your account remains secure with a strong password.</p>
         </div>
-        
-        <div class="<?= $firstLogin ? 'login-new-body' : 'card-body' ?>">
-            <?php if ($error): ?>
-                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
-            <?php endif; ?>
-            <?php if ($success): ?>
-                <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
-            <?php endif; ?>
-
+        <div class="card-body">
             <form method="POST">
                 <div class="form-group">
                     <label>Current Password</label>
-                    <div class="password-wrapper">
-                        <input type="password" name="current_password" id="current_password" class="form-control" required>
-                        <button type="button" class="toggle-password-btn" onclick="togglePass('current_password', this)">
-                            <i class="fa-solid fa-eye"></i>
-                        </button>
-                    </div>
+                    <input type="password" name="current_password" class="form-control" required>
                 </div>
-                
                 <div class="form-group">
                     <label>New Password</label>
-                    <div class="password-wrapper">
-                        <input type="password" name="new_password" id="new_password" class="form-control" minlength="8" required>
-                        <button type="button" class="toggle-password-btn" onclick="togglePass('new_password', this)">
-                            <i class="fa-solid fa-eye"></i>
-                        </button>
-                    </div>
+                    <input type="password" name="new_password" class="form-control" required minlength="8">
                 </div>
-                
                 <div class="form-group">
                     <label>Confirm New Password</label>
-                    <div class="password-wrapper">
-                        <input type="password" name="confirm_password" id="confirm_password" class="form-control" minlength="8" required>
-                        <button type="button" class="toggle-password-btn" onclick="togglePass('confirm_password', this)">
-                            <i class="fa-solid fa-eye"></i>
-                        </button>
-                    </div>
+                    <input type="password" name="confirm_password" class="form-control" required minlength="8">
                 </div>
-
-                <button type="submit" class="btn btn-primary btn-full-width">Update Password</button>
+                
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button type="submit" class="btn btn-primary">Update Password</button>
+                    <a href="profile.php" class="btn btn-secondary">Cancel</a>
+                </div>
             </form>
-            
-            <?php if (!$firstLogin): ?>
-                <div style="margin-top: 1rem; text-align: center;">
-                    <a href="index.php" class="btn btn-secondary">Cancel</a>
-                </div>
-            <?php endif; ?>
         </div>
     </div>
-
-    <?php if (!$firstLogin): ?>
-        </div> <?php endif; ?>
+</div>
 
     <div id="welcomeModal">
         <div class="welcome-modal-content">
@@ -170,22 +134,7 @@ if (!$firstLogin) { require_once __DIR__ . '/partials/header.php';  }
     </div>
 
     <script>
-        // Toggle Password Visibility Logic
-        function togglePass(inputId, btn) {
-            const input = document.getElementById(inputId);
-            const icon = btn.querySelector('i');
-            
-            if (input.type === "password") {
-                input.type = "text";
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                input.type = "password";
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
-        }
-
+    
         // Show Welcome Modal on First Login
         document.addEventListener('DOMContentLoaded', function() {
             <?php if ($firstLogin && empty($error) && empty($success)): ?>

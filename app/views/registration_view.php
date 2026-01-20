@@ -27,9 +27,9 @@
 </style>
 
 <div class="main-body flex items-center justify-center">
-  <div class="w-full max-w-2xl bg-white p-8 rounded-2xl shadow-lg border border-gray-200" style="margin: 0 auto;">
+  <div class="w-full max-w-lg bg-white p-8 rounded-2xl shadow-lg border border-gray-200" style="margin: 0 auto;">
     
-    <h2 class="text-center text-2xl font-bold text-gray-800 mb-2">Fingerprint Enrollment</h2>
+    <h2 class="text-center text-2xl font-bold text-gray-800 mb-2">Fingerprint Registration Process</h2>
     <p class="text-center text-gray-600 mb-6">
       Target User: <span class="font-semibold text-emerald-700"><?= htmlspecialchars($targetUser['first_name'] . ' ' . $targetUser['last_name']) ?></span>
     </p>
@@ -63,10 +63,7 @@
     </div>
 
     <div style="border-top:1px solid #e5e7eb; padding-top:1.5rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-            <h3 style="font-weight:bold; margin:0;">Registered Fingers</h3>
-        </div>
-
+        <h3 style="font-weight:bold; margin-bottom:1rem;">Registered Fingers</h3>
         <ul id="registeredList" style="list-style:none; padding:0;">
             <?php if (!empty($registeredFingers)): ?>
                 <?php foreach ($registeredFingers as $fp): ?>
@@ -79,7 +76,6 @@
                 <li style="padding:0.5rem; color:#666; font-style:italic;">No fingers registered yet.</li>
             <?php endif; ?>
         </ul>
-        
         <div style="margin-top:2rem; text-align:center;">
              <a href="complete_registration.php" class="btn btn-secondary" style="display:inline-block; width:100%;">Return to User List</a>
         </div>
@@ -91,20 +87,17 @@
     <div class="modal-dialog modal-dialog-centered" style="margin: 10% auto; max-width: 500px; padding: 0;">
         <div class="modal-content" style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <div class="modal-header" style="border-bottom: 1px solid #eee; padding: 15px 20px; background: #f0fdf4;">
-                <h5 class="modal-title" style="font-weight:bold; font-size:1.1rem; margin:0; color: #166534;">
-                    <i class="fa-solid fa-info-circle"></i> Enrollment Instructions
-                </h5>
+                <h5 class="modal-title" style="font-weight:bold; font-size:1.1rem; margin:0; color: #166534;"><i class="fa-solid fa-info-circle"></i> Enrollment Instructions</h5>
             </div>
             <div class="modal-body" style="padding: 20px;">
                 <p style="margin-bottom: 10px; font-weight: bold;">Before starting:</p>
                 <ol style="margin-left: 20px; color: #444; line-height: 1.6;">
                     <li>Ensure the user's finger is clean and dry.</li>
                     <li>Guide the user to place their finger flat on the sensor.</li>
-                    <li>The system will require <strong>3 scans</strong> of the same finger.</li>
-                    <li>Please wait for the "Lift Finger" prompt between scans.</li>
+                    <li>The system will require 3 scans of the same finger.</li>
                 </ol>
             </div>
-            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #eee; text-align:right; background: #fff;">
+            <div class="modal-footer" style="padding: 15px 20px; text-align:right;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('instructionModal')">Cancel</button>
                 <button type="button" class="btn btn-primary" onclick="showSelectionModal()">Next <i class="fa-solid fa-arrow-right"></i></button>
             </div>
@@ -119,24 +112,15 @@
                 <h5 class="modal-title" style="font-weight:bold; font-size:1.1rem; margin:0;">Select Finger to Enroll</h5>
             </div>
             <div class="modal-body" style="padding: 20px;">
-                <div class="form-group">
-                    <label style="display:block; margin-bottom:8px; font-weight:600; color:#444;">Choose Finger:</label>
-                    <select id="fingerSelector" class="form-control" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
-                        <option value="Right Thumb">Right Thumb</option>
-                        <option value="Right Index" selected>Right Index</option>
-                        <option value="Right Middle">Right Middle</option>
-                        <option value="Right Ring">Right Ring</option>
-                        <option value="Right Little">Right Little</option>
-                        <option disabled>──────────</option>
-                        <option value="Left Thumb">Left Thumb</option>
-                        <option value="Left Index">Left Index</option>
-                        <option value="Left Middle">Left Middle</option>
-                        <option value="Left Ring">Left Ring</option>
-                        <option value="Left Little">Left Little</option>
-                    </select>
-                </div>
+                <select id="fingerSelector" class="form-control" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:4px;">
+                    <option value="Right Thumb">Right Thumb</option>
+                    <option value="Right Index" selected>Right Index</option>
+                    <option value="Right Middle">Right Middle</option>
+                    <option value="Left Thumb">Left Thumb</option>
+                    <option value="Left Index">Left Index</option>
+                </select>
             </div>
-            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #eee; text-align:right; background: #fff;">
+            <div class="modal-footer" style="padding: 15px 20px; text-align:right;">
                 <button type="button" class="btn btn-secondary" onclick="closeModal('fingerSelectModal')">Back</button>
                 <button type="button" class="btn btn-primary" onclick="confirmStart()">Proceed & Scan</button>
             </div>
@@ -149,7 +133,6 @@ let socket;
 let isDeviceConnected = false;
 const userId = <?= json_encode($targetUser['id']) ?>; 
 
-// UI References
 const openModalBtn = document.getElementById('openModalBtn');
 const instructionModal = document.getElementById('instructionModal');
 const selectModal = document.getElementById('fingerSelectModal');
@@ -160,145 +143,52 @@ const registeredList = document.getElementById('registeredList');
 const deviceStatusText = document.getElementById('deviceStatusText');
 const deviceStatusContainer = document.getElementById('deviceStatusContainer');
 
-// --- MODAL FUNCTIONS ---
-
 function openInstructionModal() {
-    if (!isDeviceConnected) {
-        alert("Cannot start: Device is not connected. Please start the C# Bridge App.");
-        return;
-    }
+    if (!isDeviceConnected) { alert("Cannot start: Device is not connected."); return; }
     instructionModal.style.display = 'block';
 }
-
-function showSelectionModal() {
-    instructionModal.style.display = 'none';
-    selectModal.style.display = 'block';
-}
-
-function closeModal(modalId) {
-    const m = document.getElementById(modalId);
-    if(m) m.style.display = 'none';
-}
-
+function showSelectionModal() { instructionModal.style.display = 'none'; selectModal.style.display = 'block'; }
+function closeModal(modalId) { const m = document.getElementById(modalId); if(m) m.style.display = 'none'; }
 function confirmStart() {
     const selectedFinger = document.getElementById('fingerSelector').value;
     currentFingerDisplay.textContent = selectedFinger;
-    
     closeModal('fingerSelectModal');
     startEnrollment(selectedFinger);
 }
-
-// --- SCANNING LOGIC ---
 function resetScanUI() {
-    for (let i = 1; i <= 3; i++) {
-        const step = document.getElementById(`scanStep${i}`);
-        step.classList.remove('active-step');
-    }
+    for (let i = 1; i <= 3; i++) { document.getElementById(`scanStep${i}`).classList.remove('active-step'); }
     fingerIcon.classList.remove('pulse');
     scanStatus.textContent = "Ready to scan...";
     openModalBtn.disabled = false; 
     openModalBtn.innerHTML = '<i class="fa fa-plus-circle"></i> Select Finger & Scan';
 }
-
 function startEnrollment(fingerName) {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-        alert("Device disconnected! Check C# Bridge.");
-        return;
-    }
-    
+    if (!socket || socket.readyState !== WebSocket.OPEN) { alert("Device disconnected!"); return; }
     resetScanUI();
     scanStatus.textContent = `Place ${fingerName} (Scan 1 of 3)...`;
     fingerIcon.classList.add('pulse');
     openModalBtn.disabled = true; 
-    
-    // Send command to C# Bridge
     socket.send(JSON.stringify({ command: "enroll_start" }));
 }
-
 function connectWebSocket() {
     socket = new WebSocket("ws://127.0.0.1:8080");
-
-    socket.onopen = () => {
-        isDeviceConnected = true;
-        deviceStatusText.textContent = "Device Connected";
-        deviceStatusContainer.style.backgroundColor = '#ecfdf5';
-        scanStatus.textContent = "Ready to scan...";
-        
-        // ENABLE BUTTON ON CONNECT
-        if(openModalBtn) openModalBtn.disabled = false;
-    };
-
+    socket.onopen = () => { isDeviceConnected = true; deviceStatusText.textContent = "Device Connected"; deviceStatusContainer.style.backgroundColor = '#ecfdf5'; if(openModalBtn) openModalBtn.disabled = false; };
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        
-        if (data.status === "progress") {
-            const stepEl = document.getElementById(`scanStep${data.step}`);
-            if(stepEl) stepEl.classList.add('active-step');
-            scanStatus.textContent = data.message;
-        } 
-        else if (data.status === "success") {
-            saveToServer(data.template);
-        } 
-        else if (data.status === "error") {
-            scanStatus.textContent = "Error: " + data.message;
-            fingerIcon.classList.remove('pulse');
-            openModalBtn.disabled = false;
-        }
+        if (data.status === "progress") { document.getElementById(`scanStep${data.step}`).classList.add('active-step'); scanStatus.textContent = data.message; }
+        else if (data.status === "success") { saveToServer(data.template); }
     };
-
-    socket.onclose = () => {
-        isDeviceConnected = false;
-        deviceStatusText.textContent = "Device Disconnected (Start C# App)";
-        deviceStatusContainer.style.backgroundColor = '#fef2f2';
-        if(openModalBtn) openModalBtn.disabled = true;
-    };
-    
-    socket.onerror = (err) => {
-        console.error("WebSocket Error:", err);
-    };
+    socket.onclose = () => { isDeviceConnected = false; deviceStatusText.textContent = "Device Disconnected"; deviceStatusContainer.style.backgroundColor = '#fef2f2'; if(openModalBtn) openModalBtn.disabled = true; };
 }
-
 async function saveToServer(template) {
     const fingerName = document.getElementById('fingerSelector').value;
-    scanStatus.textContent = "Saving to database...";
-
     try {
-        const res = await fetch('api/register_finger.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: userId,
-                position: fingerName,
-                template: template
-            })
-        });
+        const res = await fetch('api/register_finger.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: userId, position: fingerName, template: template }) });
         const result = await res.json();
-
-        if (result.status === "success") {
-            scanStatus.textContent = "Enrolled Successfully!";
-            fingerIcon.classList.remove('pulse');
-            openModalBtn.disabled = false;
-            openModalBtn.innerHTML = "Enroll Another Finger";
-
-            // Add to list visually
-            const li = document.createElement("li");
-            li.style.cssText = "padding:0.5rem; background:#ecfdf5; margin-bottom:5px; border-radius:4px; color:#065f46;";
-            li.innerHTML = `<i class="fa fa-check-circle"></i> ${fingerName} <span style="float:right; font-size:0.8em;">Just now</span>`;
-            registeredList.prepend(li);
-        } else {
-            alert("Database Error: " + result.message);
-            resetScanUI();
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Network Error");
-    }
+        if (result.status === "success") { scanStatus.textContent = "Enrolled Successfully!"; resetScanUI(); }
+    } catch (err) { console.error(err); }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    connectWebSocket();
-    if(openModalBtn) openModalBtn.addEventListener('click', openInstructionModal);
-});
+document.addEventListener('DOMContentLoaded', () => { connectWebSocket(); if(openModalBtn) openModalBtn.addEventListener('click', openInstructionModal); });
 </script>
 
 <?php require_once __DIR__ . '/partials/footer.php'; ?>
