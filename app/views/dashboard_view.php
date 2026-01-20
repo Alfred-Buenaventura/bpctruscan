@@ -1,8 +1,9 @@
 <?php 
 require_once __DIR__ . '/partials/header.php'; 
 ?>
+
 <?php if ($isAdmin): ?>
-    <div class="main-body">
+    <div class="main-body admin-dashboard">
         
         <div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
             <a href="display.php" target="_blank" class="btn btn-primary" style="background-color: var(--blue-600); border-color: var(--blue-600);">
@@ -11,7 +12,7 @@ require_once __DIR__ . '/partials/header.php';
         </div>
 
         <div class="stats-grid">
-            <div class="stat-card">
+            <a href="create_account.php" class="stat-card clickable-card" title="Manage User Accounts">
                 <div class="stat-icon emerald">
                     <i class="fa-solid fa-users"></i>
                 </div>
@@ -19,9 +20,9 @@ require_once __DIR__ . '/partials/header.php';
                     <p>Total Users</p>
                     <div class="stat-value emerald"><?= $totalUsers ?></div>
                 </div>
-            </div>
+            </a>
 
-            <div class="stat-card">
+            <a href="attendance_reports.php" class="stat-card clickable-card" title="View Attendance Records">
                 <div class="stat-icon yellow">
                     <i class="fa-solid fa-user-clock"></i>
                 </div>
@@ -29,9 +30,9 @@ require_once __DIR__ . '/partials/header.php';
                     <p>Active Today</p>
                     <div class="stat-value"><?= $activeToday ?></div>
                 </div>
-            </div>
+            </a>
 
-            <div class="stat-card">
+            <a href="complete_registration.php" class="stat-card clickable-card" title="Pending Biometric Registrations">
                 <div class="stat-icon red">
                     <i class="fa-solid fa-user-plus"></i>
                 </div>
@@ -39,7 +40,7 @@ require_once __DIR__ . '/partials/header.php';
                     <p>Pending Registration</p>
                     <div class="stat-value red"><?= $pendingRegistrations ?></div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="card" id="recent-activity-card">
@@ -64,9 +65,7 @@ require_once __DIR__ . '/partials/header.php';
                                 <tr>
                                     <td><?= htmlspecialchars($log['action']) ?></td>
                                     <td><?= htmlspecialchars($log['description']) ?></td>
-                                    <td>
-                                        <?= htmlspecialchars(($log['first_name'] ?? '') . ' ' . ($log['last_name'] ?? 'System')) ?>
-                                    </td>
+                                    <td><?= htmlspecialchars(($log['first_name'] ?? '') . ' ' . ($log['last_name'] ?? 'System')) ?></td>
                                     <td><?= date('M d, Y g:i A', strtotime($log['created_at'])) ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -77,6 +76,24 @@ require_once __DIR__ . '/partials/header.php';
                  <div style="text-align: right; margin-top: 1rem;">
                      <a href="activity_log.php" class="btn btn-sm btn-secondary">View All Activity &rarr;</a>
                  </div>
+            </div>
+        </div>
+
+        <div class="card info-card-minimal" style="margin-top: 2rem; border-left: 5px solid #e3a406; background-color: #fffbeb;">
+            <div class="card-body" style="padding: 1.5rem;">
+                <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                    <div style="color: #fbbf24; font-size: 1.5rem; margin-top: 0.2rem;">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </div>
+                    <div>
+                        <h3 style="color: #92400e; margin-bottom: 0.5rem; font-size: 1.1rem; font-weight: 700;">System Overview</h3>
+                        <p style="color: #78350f; line-height: 1.6; font-size: 0.95rem; margin: 0;">
+                            <strong>BPC TruScan</strong> is a biometric attendance system for Bulacan Polytechnic College. 
+                            It automates the collection of attendance data and the generation of CS Form 48 (DTR) using secure fingerprint recognition, 
+                            ensuring accurate and verifiable timekeeping for all faculty and staff.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -183,5 +200,52 @@ require_once __DIR__ . '/partials/header.php';
         </div>
     </div>
 <?php endif; ?>
+
+<div id="scannerOnlineModal" class="modal">
+    <div class="modal-content modal-small" style="text-align: center; border-top: 5px solid #10b981;">
+        <div class="modal-body" style="padding: 2.5rem 1.5rem;">
+            <i class="fa-solid fa-circle-check" style="color: #15ac79; font-size: 3.5rem; margin-bottom: 1rem;"></i>
+            <h3>Scanner Operational</h3>
+            <p style="color: #64748b; margin-top: 0.5rem;">The fingerprint scanner is working properly. <strong>Please keep the scanner surface clean</strong> to ensure accurate biometric reading.</p>
+        </div>
+        <div class="modal-footer" style="justify-content: center;"><button class="btn btn-primary" onclick="closeModal('scannerOnlineModal')">Got it!</button></div>
+    </div>
+</div>
+
+<div id="scannerOfflineModal" class="modal">
+    <div class="modal-content modal-small" style="text-align: center; border-top: 5px solid #ef4444;">
+        <div class="modal-body" style="padding: 2.5rem 1.5rem;">
+            <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444; font-size: 3.5rem; margin-bottom: 1rem;"></i>
+            <h3>Scanner Offline</h3>
+            <p style="color: #64748b; margin-top: 0.5rem;">The system cannot detect the fingerprint scanner. Please <strong>check the USB connection</strong> and ensure the device is connected properly.</p>
+        </div>
+        <div class="modal-footer" style="justify-content: center;"><button class="btn btn-secondary" onclick="closeModal('scannerOfflineModal')">Close</button></div>
+    </div>
+</div>
+
+<style>
+.clickable-card {
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    display: flex;
+}
+.clickable-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+
+</style>
+
+<script>
+function checkScannerStatus(isOnline) {
+    if (isOnline) {
+        openModal('scannerOnlineModal');
+    } else {
+        openModal('scannerOfflineModal');
+    }
+}
+</script>
 
 <?php require_once __DIR__ . '/partials/footer.php'; ?>

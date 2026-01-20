@@ -2,31 +2,128 @@
 require_once __DIR__ . '/partials/header.php'; 
 ?>
 
+<style>
+/* 1. Status Card Interactivity */
+.report-stat-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+.report-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    border-color: rgba(0,0,0,0.05);
+    background: #fff;
+}
+.report-stat-card:active { transform: translateY(-2px); }
+
+/* 2. Zebra Striping (Odd/Even) */
+.attendance-table-new tbody tr.accordion-toggle:nth-child(4n+1) { background-color: #ffffff; }
+.attendance-table-new tbody tr.accordion-toggle:nth-child(4n+3) { background-color: #f8fafc; }
+.attendance-table-new tbody tr.accordion-toggle:hover { background-color: #f1f5f9 !important; }
+
+/* Design Elements */
+.session-pill {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border: 1px solid #e2e8f0;
+    display: inline-block;
+}
+
+.directory-table { width: 100%; border-collapse: collapse; }
+.directory-table th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 0.75rem; color: #475569; text-transform: uppercase; }
+.directory-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+
+/* Feedback Button */
+.btn-feedback {
+    background: #4b5563;
+    color: white;
+    border-radius: 50px;
+    padding: 8px 20px;
+    font-weight: 600;
+    transition: 0.3s;
+}
+.btn-feedback:hover { background: #374151; }
+
+/* PROFESSIONAL FEEDBACK MODAL STYLES */
+#feedbackModal .modal-content {
+    max-width: 550px;
+    border-radius: 16px;
+    border-top: 6px solid var(--blue-600);
+}
+.feedback-header-box {
+    text-align: center;
+    padding: 1.5rem 0;
+    background: #f8fafc;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+}
+.feedback-header-box i {
+    font-size: 2.5rem;
+    color: var(--blue-600);
+    margin-bottom: 10px;
+}
+.feedback-textarea {
+    min-height: 140px;
+    border-radius: 10px;
+    padding: 15px;
+    border: 2px solid #e2e8f0;
+    transition: border-color 0.2s;
+}
+.feedback-textarea:focus { border-color: var(--blue-400); outline: none; }
+
+/* DTR PREVIEW MODAL STYLES */
+#dtrPreviewModal .modal-content {
+    max-width: 1000px;
+    width: 95%;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+#dtrFrame {
+    flex-grow: 1;
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    background: #f1f5f9;
+}
+</style>
+
 <div class="main-body attendance-reports-page"> 
 
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem; gap: 10px;">
+        <button class="btn btn-feedback" onclick="openModal('feedbackModal')">
+            <i class="fa-solid fa-comment-dots"></i> Report Discrepancy
+        </button>
+    </div>
+
     <div class="report-stats-grid">
-        <div class="report-stat-card">
+        <div class="report-stat-card" onclick="openAttendanceDetail('entries', 'Today\'s Total Entries')">
             <div class="stat-icon-bg bg-emerald-100 text-emerald-600"><i class="fa-solid fa-arrow-right-to-bracket"></i></div>
             <div class="stat-content">
                 <span class="stat-label">Entries Today</span>
                 <span class="stat-value"><?= $stats['entries'] ?? 0 ?></span>
             </div>
         </div>
-         <div class="report-stat-card">
+         <div class="report-stat-card" onclick="openAttendanceDetail('exits', 'Today\'s Total Exits')">
             <div class="stat-icon-bg bg-red-100 text-red-600"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
             <div class="stat-content">
                 <span class="stat-label">Exits Today</span>
                 <span class="stat-value"><?= $stats['exits'] ?? 0 ?></span>
             </div>
         </div>
-         <div class="report-stat-card">
+         <div class="report-stat-card" onclick="openAttendanceDetail('present', 'Personnel Currently On-Site')">
             <div class="stat-icon-bg bg-blue-100 text-blue-600"><i class="fa-solid fa-user-check"></i></div>
             <div class="stat-content">
                 <span class="stat-label">Present</span>
                 <span class="stat-value"><?= $stats['present_total'] ?? 0 ?></span>
             </div>
         </div>
-        <div class="report-stat-card">
+        <div class="report-stat-card" onclick="openAttendanceDetail('late', 'Today\'s Late Arrivals')">
             <div class="stat-icon-bg bg-orange-100 text-orange-600"><i class="fa-solid fa-clock"></i></div>
             <div class="stat-content">
                 <span class="stat-label">Late Logs</span>
@@ -48,7 +145,7 @@ require_once __DIR__ . '/partials/header.php';
                         <div class="select-wrapper">
                             <select name="user_id" id="userId" class="form-control stylish-select">
                                 <option value="">-- Select User for DTR --</option>
-                                <?php if (!empty($allUsers) && is_array($allUsers)): ?>
+                                <?php if (!empty($allUsers)): ?>
                                     <?php foreach ($allUsers as $user): ?>
                                         <option value="<?= $user['id'] ?>" <?= (isset($filters['user_id']) && $filters['user_id'] == $user['id']) ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
@@ -58,10 +155,6 @@ require_once __DIR__ . '/partials/header.php';
                             </select>
                             <i class="fa-solid fa-chevron-down select-arrow"></i>
                         </div>
-                    </div>
-                    <div class="form-group filter-item">
-                        <label>Search Faculty</label>
-                        <input type="text" name="search" class="form-control" placeholder="ID or Name..." value="<?= htmlspecialchars($filters['search'] ?? '') ?>">
                     </div>
                     <?php endif; ?>
 
@@ -76,7 +169,7 @@ require_once __DIR__ . '/partials/header.php';
                 <div class="filter-actions-new" style="align-items: center;">
                     <button type="submit" class="btn btn-primary btn-sm apply-filter-btn"><i class="fa-solid fa-check"></i> Apply Filters</button>
                     <button type="button" class="btn btn-warning btn-sm" onclick="handlePrintDTR()">
-                        <i class="fa-solid fa-print"></i> Generate DTR
+                        <i class="fa-solid fa-file-invoice"></i> Preview & Generate DTR
                     </button>
                 </div>
             </form>
@@ -153,57 +246,148 @@ require_once __DIR__ . '/partials/header.php';
         </div>
     </div>
 
-    <div id="dtrPreviewModal" class="modal modal-dtr-preview">
+    <div id="attendanceDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 900px; width: 95%;">
+            <div class="modal-header">
+                <h3 id="detailModalTitle">Attendance Details</h3>
+                <button class="modal-close" onclick="closeModal('attendanceDetailModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="detailModalBody" style="min-height: 200px; padding: 0;"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('attendanceDetailModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dtrPreviewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <h3><i class="fa-solid fa-file-invoice"></i> CS Form 48 - DTR Preview</h3>
+                <button class="modal-close" onclick="closeModal('dtrPreviewModal')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1rem; flex-grow: 1;">
+                <iframe id="dtrFrame" src="about:blank"></iframe>
+            </div>
+            <div class="modal-footer" style="background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between;">
+                <p style="font-size: 0.8rem; color: #64748b;">*Use the print icon within the preview to finalize the document.</p>
+                <button class="btn btn-secondary" onclick="closeModal('dtrPreviewModal')">Close Preview</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="feedbackModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 style="color: white !important;">DTR Preview</h3>
-                <div style="display: flex; gap: 10px;">
-                    <button type="button" class="modal-close" onclick="closeDtrModal()" style="color: white !important;">&times;</button>
-                </div>
+                <h3>Attendance Correction Request</h3>
+                <button class="modal-close" onclick="closeModal('feedbackModal')">&times;</button>
             </div>
-            <div class="modal-body" style="padding: 0 !important; flex-grow: 1; overflow-y: auto; background: #e5e7eb;">
-                <iframe id="dtrFrame" src="about:blank" frameborder="0" style="width:100%; height: 1840px; display: block;"></iframe>
+            <div class="modal-body" style="padding: 2.5rem;">
+                <div class="feedback-header-box">
+                    <i class="fa-solid fa-clipboard-question"></i>
+                    <p style="color: #64748b; font-size: 0.95rem; margin: 0; padding: 0 20px;">
+                        Please provide accurate details regarding the log discrepancy for administrative review.
+                    </p>
+                </div>
+                <form id="feedbackForm">
+                    <div class="feedback-form-group">
+                        <label>Date of Concerned Record</label>
+                        <input type="date" name="record_date" class="form-control" required value="<?= date('Y-m-d') ?>" style="padding: 12px; border-radius: 8px;">
+                    </div>
+                    <div class="feedback-form-group">
+                        <label>Discrepancy Details</label>
+                        <textarea name="message" class="form-control feedback-textarea" placeholder="e.g., I timed in at 8:00 AM but the record shows 8:30 AM..." required></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-full-width" style="padding: 15px; font-size: 1rem; border-radius: 10px;" onclick="submitFeedback()">
+                        <i class="fa-solid fa-paper-plane"></i> Send Discrepancy Report
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 
-    <div id="noUserModal" class="modal">
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <div class="modal-header warning" style="justify-content: center; background-color: #d97706 !important;">
-                <h3><i class="fa-solid fa-triangle-exclamation"></i> No User Selected</h3>
-            </div>
-            <div class="modal-body">
-                <p style="font-size: 1.1rem; color: #374151; margin-bottom: 1rem;">
-                    Please select a user from the dropdown list to view their DTR.
-                </p>
-            </div>
-            <div class="modal-footer" style="justify-content: center; background: #f9fafb;">
-                <button class="btn btn-secondary" onclick="closeModal('noUserModal')">Okay</button>
+    <div id="feedbackSuccessModal" class="modal">
+        <div class="modal-content modal-small" style="text-align: center;">
+            <div class="modal-body" style="padding: 3rem 1rem;">
+                <i class="fa-solid fa-circle-check" style="font-size: 4rem; color: #10b981; margin-bottom: 1.5rem;"></i>
+                <h3>Feedback Sent</h3>
+                <p>The administrator has been notified. They will review your attendance logs shortly.</p>
+                <button class="btn btn-primary" style="margin-top: 1.5rem;" onclick="closeModal('feedbackSuccessModal')">Got it</button>
             </div>
         </div>
     </div>
+
 </div>
 
-<style>
-/* Accordion Table Styles */
-.accordion-toggle { cursor: pointer; transition: all 0.2s ease; }
-.accordion-toggle:hover { background-color: #f1f5f9; }
-.accordion-toggle.active { background-color: #f8fafc; border-bottom: none; }
-.toggle-icon { transition: transform 0.3s; color: #94a3b8; }
-.accordion-toggle.active .toggle-icon { transform: rotate(90deg); }
-
-.session-pill {
-    background-color: #eef2ff;
-    color: #4338ca;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border: 1px solid #c7d2fe;
-}
-</style>
-
 <script>
+/**
+ * RESTORED: Handle DTR Preview inside Modal
+ */
+function handlePrintDTR() {
+    const userIdInput = document.getElementById('userId');
+    const userId = userIdInput ? userIdInput.value : '<?= $_SESSION['user_id'] ?>';
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+
+    if (!userId) {
+        alert("Please select a user to generate a DTR.");
+        return;
+    }
+
+    // Ensure this path correctly hits the "printDtr" method in your controller
+    const url = `attendance_reports.php?action=print_dtr&user_id=${userId}&start_date=${startDate}&end_date=${endDate}`;
+    
+    document.getElementById('dtrFrame').src = url;
+    openModal('dtrPreviewModal');
+}
+
+/**
+ * Status Card Summaries
+ */
+function openAttendanceDetail(type, title) {
+    document.getElementById('detailModalTitle').innerText = title;
+    document.getElementById('detailModalBody').innerHTML = '<div style="padding: 50px; text-align: center;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><p>Fetching records...</p></div>';
+    openModal('attendanceDetailModal');
+
+    fetch(`api.php?action=get_attendance_summary&type=${type}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                let html = '<table class="directory-table"><thead><tr><th>Faculty ID</th><th>Name</th><th>Position</th><th>Status/Time</th></tr></thead><tbody>';
+                data.users.forEach(u => {
+                    html += `<tr>
+                        <td style="font-weight:700;">${u.faculty_id}</td>
+                        <td style="font-weight:600;">${u.first_name} ${u.last_name}</td>
+                        <td>${u.role}</td>
+                        <td>${u.display_time || '<span style="color:#10b981; font-weight:700;">On-Site</span>'}</td>
+                    </tr>`;
+                });
+                if(data.users.length === 0) html += '<tr><td colspan="4" style="text-align:center; padding:40px; color:#94a3b8;">No records found.</td></tr>';
+                html += '</tbody></table>';
+                document.getElementById('detailModalBody').innerHTML = html;
+            }
+        });
+}
+
+function submitFeedback() {
+    const form = document.getElementById('feedbackForm');
+    const formData = new FormData(form);
+    
+    fetch('api.php?action=submit_attendance_feedback', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            closeModal('feedbackModal');
+            openModal('feedbackSuccessModal');
+            form.reset();
+        } else {
+            alert('Error submitting feedback. Please try again.');
+        }
+    });
+}
+
 function toggleAccordion(contentId, toggleEl) {
     const content = document.getElementById(contentId);
     const isVisible = content.style.display !== 'none';
@@ -211,37 +395,11 @@ function toggleAccordion(contentId, toggleEl) {
     toggleEl.classList.toggle('active');
 }
 
-function handlePrintDTR() {
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
-    let userId = '';
-
-    <?php if ($isAdmin): ?>
-        const userIdSelect = document.getElementById('userId');
-        if (userIdSelect) userId = userIdSelect.value;
-        if (!userId) { openModal('noUserModal'); return; }
-    <?php else: ?>
-        userId = '<?= $_SESSION['user_id'] ?? '' ?>'; 
-    <?php endif; ?>
-
-    if (userId) {
-        const url = `print_dtr.php?user_id=${userId}&start_date=${startDate}&end_date=${endDate}&preview=1`;
-        const f = document.getElementById('dtrFrame');
-        const m = document.getElementById('dtrPreviewModal');
-        if(f && m) { f.src = url; m.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-    }
-}
-
-function closeDtrModal() {
-    const modal = document.getElementById('dtrPreviewModal');
-    if (modal) modal.style.display = 'none'; 
-    document.body.style.overflow = 'auto'; 
-    const frame = document.getElementById('dtrFrame');
-    if (frame) frame.src = 'about:blank'; 
-}
-
-function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
-function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+window.closeDtrModal = function() {
+    closeModal('dtrPreviewModal');
+    // Clear iframe src to stop the document from loading in background
+    document.getElementById('dtrFrame').src = 'about:blank';
+};
 </script>
 
 <?php require_once __DIR__ . '/partials/footer.php'; ?>
