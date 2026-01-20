@@ -22,9 +22,11 @@ class Attendance {
     }
 
     public function getRecords($filters) {
+        // SELECT ar.* and include the subject from the schedules table
         $sql = "SELECT ar.*, 
                        u.faculty_id, u.first_name, u.last_name, u.role,
-                       s.start_time as sched_start, s.end_time as sched_end
+                       s.start_time as sched_start, s.end_time as sched_end,
+                       s.subject
                 FROM attendance_records ar
                 JOIN users u ON ar.user_id = u.id
                 LEFT JOIN class_schedules s ON ar.schedule_id = s.id
@@ -109,6 +111,7 @@ class Attendance {
             $stats['exits'] = ($res && $res['time_out']) ? 1 : 0;
             $presSql = "SELECT COUNT(*) as c FROM attendance_records WHERE user_id = ? AND time_in IS NOT NULL";
             $stats['present_total'] = $this->db->query($presSql, [$userId], "i")->get_result()->fetch_assoc()['c'] ?? 0;
+            $stats['late'] = 0; 
         } else {
             $sqlEntries = "SELECT COUNT(*) as c FROM attendance_records WHERE date = ? AND time_in IS NOT NULL";
             $stats['entries'] = $this->db->query($sqlEntries, [$today], "s")->get_result()->fetch_assoc()['c'] ?? 0;
@@ -116,25 +119,19 @@ class Attendance {
             $stats['exits'] = $this->db->query($sqlExits, [$today], "s")->get_result()->fetch_assoc()['c'] ?? 0;
             $sqlPresent = "SELECT COUNT(DISTINCT user_id) as c FROM attendance_records WHERE date = ? AND time_in IS NOT NULL";
             $stats['present_total'] = $this->db->query($sqlPresent, [$today], "s")->get_result()->fetch_assoc()['c'] ?? 0;
+            $sqlLate = "SELECT COUNT(*) as c FROM attendance_records WHERE date = ? AND status LIKE '%Late%'";
+            $stats['late'] = $this->db->query($sqlLate, [$today], "s")->get_result()->fetch_assoc()['c'] ?? 0;
         }
         return $stats;
     }
 
-    /**
-     * UPDATED METHOD: Now strictly uses the database table.
-     */
     public function getHolidaysInRange($startDate, $endDate) {
         $holidays = [];
-        
-        // Removed hardcoded array logic and calculation for Easter.
-        // Admins should now add these manually through the UI.
-
         $sql = "SELECT holiday_date, description FROM holidays WHERE holiday_date BETWEEN ? AND ?";
         $res = $this->db->query($sql, [$startDate, $endDate], "ss")->get_result();
         while($row = $res->fetch_assoc()){
             $holidays[$row['holiday_date']] = $row['description'];
         }
-
         return $holidays;
     }
 }
