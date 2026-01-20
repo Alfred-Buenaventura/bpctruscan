@@ -21,7 +21,7 @@ class RegistrationController extends Controller {
         $this->view('registration_list_view', $data);
     }
 
-    // 2. The Enrollment Logic (UPDATED FOR MULTI-FINGER)
+    // 2. The Enrollment Logic
     public function enroll() {
         $this->requireAdmin();
         $userModel = $this->model('User');
@@ -35,25 +35,23 @@ class RegistrationController extends Controller {
             exit;
         }
 
-        // Handle POST: Saving a specific finger
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fingerprint_data'])) {
             $fingerName = $_POST['finger_name'] ?? 'Unknown Finger';
             $fingerData = $_POST['fingerprint_data'];
 
             if ($userModel->addFingerprint($targetUserId, $fingerData, $fingerName)) {
                 $logModel->log($_SESSION['user_id'], "Fingerprint Registration", "Registered $fingerName for {$targetUser['faculty_id']}");
-                
-                // Redirect BACK to this same page to allow registering the next finger
                 header("Location: fingerprint_registration.php?user_id=$targetUserId&success=1&finger=" . urlencode($fingerName));
                 exit;
             }
         }
 
-        // Fetch existing fingers to display in the view
         $registeredFingers = $userModel->getRegisteredFingers($targetUserId);
 
         $data = [
             'pageTitle' => "Fingerprint Registration",
+            // FIX: Explicitly set subtitle to prevent "Welcome back!" default
+            'pageSubtitle' => "Fingerprint Registration Process", 
             'targetUser' => $targetUser,
             'registeredFingers' => $registeredFingers
         ];
@@ -61,7 +59,29 @@ class RegistrationController extends Controller {
         $this->view('registration_view', $data);
     }
 
-    // 3. The Notification API (Updated with HTML Email)
+    /**
+     * AJAX endpoint to fetch data for the staff report modal
+     */
+    public function getStaffReport() {
+        $this->requireAdmin();
+        $userModel = $this->model('User');
+        $filter = $_GET['filter'] ?? 'all';
+        
+        $users = [];
+        if ($filter === 'registered') {
+            $users = $userModel->getRegisteredUsers();
+        } elseif ($filter === 'pending') {
+            $users = $userModel->getPendingUsers();
+        } else {
+            $users = array_merge($userModel->getRegisteredUsers(), $userModel->getPendingUsers());
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'users' => $users]);
+        exit;
+    }
+
+    // 3. The Notification API
     public function notify() {
         $this->requireAdmin();
         $userModel = $this->model('User');
@@ -72,112 +92,34 @@ class RegistrationController extends Controller {
 
         $pendingUsers = $userModel->getPendingUsers();
         $count = 0;
-        $errors = 0;
         
-        $message = "Action Required: Complete Your Fingerprint Registration";
-
         foreach ($pendingUsers as $user) {
-            // Create Dashboard Notification
             $notifModel->create($user['id'], "Please visit the IT office to complete your fingerprint registration.", 'warning');
-
-            $subject = "Action Required: Fingerprint Registration";
             
-            // --- PROFESSIONAL HTML EMAIL TEMPLATE START ---
+            $subject = "Action Required: Fingerprint Registration";
             $currentYear = date("Y");
             $emailBody = "
             <!DOCTYPE html>
             <html>
-            <head>
-                <style>
-                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-                    .email-container { max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
-                    
-                    /* Emerald Header */
-                    .header { background-color: #059669; /* Emerald 600 */ padding: 30px 20px; text-align: center; }
-                    .header h1 { margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; }
-                    
-                    /* Content Area */
-                    .content { padding: 30px 25px; color: #374151; line-height: 1.6; }
-                    .greeting { font-size: 18px; font-weight: 600; color: #059669; margin-top: 0; }
-                    
-                    /* Status Badge in Email */
-                    .status-badge { 
-                        display: inline-block; 
-                        background-color: #fef3c7; /* Yellow 100 */
-                        color: #b45309; /* Yellow 700 */
-                        padding: 6px 12px; 
-                        border-radius: 12px; 
-                        font-size: 14px; 
-                        font-weight: bold; 
-                        margin: 10px 0;
-                    }
-
-                    /* Call to Action Button */
-                    .btn-container { text-align: center; margin: 30px 0; }
-                    .btn { 
-                        background-color: #059669; 
-                        color: #ffffff !important; 
-                        text-decoration: none; 
-                        padding: 12px 25px; 
-                        border-radius: 6px; 
-                        font-weight: 600; 
-                        display: inline-block; 
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    }
-                    .btn:hover { background-color: #047857; }
-
-                    /* Footer */
-                    .footer { background-color: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
-                </style>
-            </head>
-            <body>
-                <div class='email-container'>
-                    <div class='header'>
-                        <h1>Registration Pending</h1>
-                    </div>
-                    <div class='content'>
-                        <p class='greeting'>Hello, " . htmlspecialchars($user['first_name']) . "!</p>
-                        
-                        <p>We noticed that your account setup is incomplete. To finalize your access and enable attendance tracking, you are required to register your fingerprint.</p>
-                        
-                        <div style='text-align: center;'>
-                            <span class='status-badge'>Status: Fingerprint Required</span>
-                        </div>
-
-                        <p><strong>Please visit the Registrar's Office or the IT Department at your earliest convenience to scan your fingerprint.</strong></p>
-                        
-                        <div class='btn-container'>
-                            <a href='#' class='btn'>View Account Status</a>
-                        </div>
-                        
-                        <p style='font-size: 0.9em; color: #9ca3af;'>If you have already done this, please disregard this automated message.</p>
-                    </div>
-                    <div class='footer'>
-                        &copy; {$currentYear} Bulacan Polytechnic College. All rights reserved.
-                    </div>
+            <body style='font-family: sans-serif;'>
+                <div style='max-width: 600px; margin: 20px auto; border: 1px solid #ddd; padding: 20px;'>
+                    <h1 style='color: #059669;'>Registration Pending</h1>
+                    <p>Hello, " . htmlspecialchars($user['first_name']) . "!</p>
+                    <p>To finalize your access, you are required to register your fingerprint.</p>
+                    <p><strong>Please visit the Registrar's Office to scan your fingerprint.</strong></p>
+                    <hr>
+                    <footer style='font-size: 12px; color: #666;'>&copy; {$currentYear} Bulacan Polytechnic College.</footer>
                 </div>
             </body>
-            </html>
-            ";
-            // --- PROFESSIONAL HTML EMAIL TEMPLATE END ---
+            </html>";
 
-            // Send Email using existing helper function
-            // Assuming sendEmail returns true/false
             if (sendEmail($user['email'], $subject, $emailBody)) {
                 $count++;
-            } else {
-                $errors++;
             }
         }
 
-        if ($count > 0) {
-            $logModel->log($_SESSION['user_id'], 'Sent Notifications', "Sent $count email reminders.");
-            echo json_encode(['success' => true, 'message' => "Successfully sent $count email notifications." . ($errors > 0 ? " ($errors failed)" : "")]);
-        } else {
-            // Even if 0 emails sent (maybe all failed), we return a valid JSON response
-            echo json_encode(['success' => false, 'message' => $errors > 0 ? "Failed to send emails." : "No pending users found."]);
-        }
+        $logModel->log($_SESSION['user_id'], 'Sent Notifications', "Sent $count email reminders.");
+        echo json_encode(['success' => true, 'message' => "Successfully sent $count notifications."]);
         exit;
     }
 }
-?>
