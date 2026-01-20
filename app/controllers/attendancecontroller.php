@@ -32,86 +32,62 @@ class AttendanceController extends Controller {
             $data['stats'] = $attModel->getStats($_SESSION['user_id']);
         }
 
-        $data['records'] = $attModel->getRecords($filters);
-        $data['totalRecords'] = count($data['records']);
+        $rawRecords = $attModel->getRecords($filters);
+        
+        // --- Grouping Logic: Aggregate per user/day for the Accordion ---
+        $grouped = [];
+        foreach ($rawRecords as $r) {
+            $key = $r['date'] . '_' . $r['user_id'];
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [
+                    'date' => $r['date'],
+                    'faculty_id' => $r['faculty_id'],
+                    'name' => $r['first_name'] . ' ' . $r['last_name'],
+                    'logs' => [],
+                    'status' => $r['status']
+                ];
+            }
+            
+            $grouped[$key]['logs'][] = [
+                'time_in' => date('h:i A', strtotime($r['time_in'])),
+                'time_out' => !empty($r['time_out']) ? date('h:i A', strtotime($r['time_out'])) : '---',
+                'subject' => $r['subject'] ?? 'General Duty'
+            ];
+        }
+
+        $data['records'] = $grouped;
         $data['filters'] = $filters;
 
         $this->view('attendance_view', $data);
     }
 
-    public function history() {
-        $this->requireLogin();
-        $attModel = $this->model('Attendance');
-        $userModel = $this->model('User');
-        $isAdmin = ($_SESSION['role'] === 'Admin');
-        
-        $filters = [
-            'user_id'     => $isAdmin ? ($_GET['user_id'] ?? '') : $_SESSION['user_id'],
-            'start_date'  => $_GET['start_date'] ?? date('Y-01-01'),
-            'end_date'    => $_GET['end_date']   ?? date('Y-m-d'),
-            'status_type' => $_GET['status_type'] ?? '' 
-        ];
-
-        $data = [
-            'pageTitle' => 'Attendance History',
-            'pageSubtitle' => 'Detailed breakdown of attendance records',
-            'isAdmin' => $isAdmin,
-            'allUsers' => $isAdmin ? $userModel->getAllStaff() : [],
-            'filters' => $filters,
-            'stats' => $attModel->getHistoryStats($filters),
-            'records' => $attModel->getRecords($filters)
-        ];
-
-        $this->view('attendance_history_view', $data);
-    }
-
-    public function export() {
-        $this->requireLogin();
-        $attModel = $this->model('Attendance');
-        $filters = [
-            'start_date' => $_GET['start_date'] ?? date('Y-m-01'),
-            'end_date' => $_GET['end_date'] ?? date('Y-m-d'),
-            'user_id' => isAdmin() ? ($_GET['user_id'] ?? '') : $_SESSION['user_id'],
-            'search' => $_GET['search'] ?? ''
-        ];
-        $records = $attModel->getRecords($filters);
-
-        header('Content-Type: text/csv');
-        header('Content-Disposition: attachment; filename="attendance_report_' . date('Y-m-d') . '.csv"');
-        
-        $output = fopen('php://output', 'w');
-        fputcsv($output, ['Date', 'Faculty ID', 'Name', 'Role', 'Time In', 'Time Out', 'Status']);
-        foreach ($records as $row) {
-            fputcsv($output, [$row['date'], $row['faculty_id'], $row['first_name'].' '.$row['last_name'], $row['role'], $row['time_in'], $row['time_out'], $row['status']]);
-        }
-        fclose($output);
-        exit;
-    }
-
+    /**
+     * Updated: Rounds seconds to nearest minute to resolve 59-minute display issue.
+     */
     private function calculateClampedHours($r) {
         if (empty($r['time_in']) || empty($r['time_out'])) return 0;
+        if (empty($r['sched_start']) || empty($r['sched_end'])) return 0;
 
         $dateStr = $r['date'];
         $actualIn = strtotime("$dateStr " . $r['time_in']);
         $actualOut = strtotime("$dateStr " . $r['time_out']);
+        $schedStart = strtotime("$dateStr " . $r['sched_start']);
+        $schedEnd = strtotime("$dateStr " . $r['sched_end']);
 
-        if (!empty($r['sched_start']) && !empty($r['sched_end'])) {
-            $schedStart = strtotime("$dateStr " . $r['sched_start']);
-            $schedEnd = strtotime("$dateStr " . $r['sched_end']);
+        // Only credit time within the scheduled block boundaries
+        $effectiveIn = max($actualIn, $schedStart);
+        $effectiveOut = min($actualOut, $schedEnd);
 
-            $effectiveIn = max($actualIn, $schedStart);
-            $effectiveOut = min($actualOut, $schedEnd);
+        $durationSeconds = $effectiveOut - $effectiveIn;
+        if ($durationSeconds <= 0) return 0;
 
-            return max(0, $effectiveOut - $effectiveIn); 
-        }
-
-        return 0; 
+        // FIX: Round to the nearest minute to prevent "59 minutes" result from minor second offsets
+        return round($durationSeconds / 60) * 60;
     }
 
     public function printDtr() {
         $this->requireLogin();
         $userId = $_GET['user_id'] ?? $_SESSION['user_id'];
-        
         if (!isAdmin() && $userId != $_SESSION['user_id']) { die('Access Denied'); }
 
         $userModel = $this->model('User');
@@ -135,16 +111,11 @@ class AttendanceController extends Controller {
         foreach ($period as $dt) {
             $dateStr = $dt->format('Y-m-d');
             $day = (int)$dt->format('d');
-            $dtrData[$day] = [
-                'date' => $dateStr, 
-                'am_in' => '', 'am_out' => '',
-                'pm_in' => '', 'pm_out' => '', 
-                'credited_seconds' => 0, 
-                'remarks' => ''
-            ];
+            $dtrData[$day] = ['date' => $dateStr, 'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '', 'credited_seconds' => 0, 'remarks' => ''];
             if (isset($holidays[$dateStr])) { $dtrData[$day]['remarks'] = $holidays[$dateStr]; }
         }
         
+        // Accumulate multiple shifts correctly per half-day
         foreach($records as $r) {
             $day = (int)date('d', strtotime($r['date']));
             if (!empty($r['sched_start']) && !empty($r['sched_end'])) {
@@ -154,12 +125,29 @@ class AttendanceController extends Controller {
                 $noonTs = strtotime($r['date'] . ' 12:00:00');
 
                 if ($timeInTs < $noonTs) {
-                    $dtrData[$day]['am_in'] = $r['time_in'];
-                    $dtrData[$day]['am_out'] = $r['time_out'];
+                    // AM: Keep earliest arrival and latest departure
+                    if (empty($dtrData[$day]['am_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['am_in'])) {
+                        $dtrData[$day]['am_in'] = $r['time_in'];
+                    }
+                    if (!empty($r['time_out'])) {
+                        $timeOutTs = strtotime($r['date'] . ' ' . $r['time_out']);
+                        if (empty($dtrData[$day]['am_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['am_out'])) {
+                            $dtrData[$day]['am_out'] = $r['time_out'];
+                        }
+                    }
                 } else {
-                    $dtrData[$day]['pm_in'] = $r['time_in'];
-                    $dtrData[$day]['pm_out'] = $r['time_out'];
+                    // PM: Keep earliest arrival and latest departure
+                    if (empty($dtrData[$day]['pm_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['pm_in'])) {
+                        $dtrData[$day]['pm_in'] = $r['time_in'];
+                    }
+                    if (!empty($r['time_out'])) {
+                        $timeOutTs = strtotime($r['date'] . ' ' . $r['time_out']);
+                        if (empty($dtrData[$day]['pm_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['pm_out'])) {
+                            $dtrData[$day]['pm_out'] = $r['time_out'];
+                        }
+                    }
                 }
+                // Accumulate seconds for ALL shifts on this day
                 $dtrData[$day]['credited_seconds'] += $this->calculateClampedHours($r);
             }
         }
