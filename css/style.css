@@ -5515,3 +5515,51 @@ html {
     transform: translateY(-50%) rotate(180deg);
     color: var(--emerald-700);
 }
+
+/* Compact Registration Card */
+.registration-card-compact {
+    max-width: 550px !important; /* Reduced from 2xl size */
+    margin: 2rem auto;
+}
+
+/* Clickable Status Cards */
+.reg-stat-card.clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.reg-stat-card.clickable:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-strong);
+    border-color: var(--emerald-400);
+}
+
+.reg-stat-card.clickable:active {
+    transform: scale(0.98);
+}
+
+/* Report Table Styling */
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.report-table th {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    font-weight: 600;
+    text-align: left;
+    padding: 12px;
+    border-bottom: 2px solid var(--gray-200);
+}
+
+.report-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 0.95rem;
+}
+
+.badge-teaching { background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+.badge-non-teaching { background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
