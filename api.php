@@ -1,13 +1,8 @@
 <?php
-/**
- * api.php
- * Central entry point for all AJAX and API requests.
- * Routes requests to the appropriate Controller methods.
- */
-
+//entry point for AJAX and API requests of the system
 require_once 'app/init.php';
 
-// Load necessary controllers
+// loads all the necessary controllers of the system
 require_once 'app/controllers/apicontroller.php';
 require_once 'app/controllers/attendancecontroller.php';
 require_once 'app/controllers/registrationcontroller.php';
@@ -16,7 +11,7 @@ require_once 'app/controllers/displaycontroller.php';
 $action = $_GET['action'] ?? '';
 
 switch ($action) {
-    // --- Kiosk & Device Endpoints (No Login Required) ---
+    // loads the attendance display module (no login required for this function)
     case 'record_attendance':
         (new ApiController())->recordAttendance();
         break;
@@ -25,12 +20,10 @@ switch ($action) {
         (new ApiController())->getFingerprintTemplates();
         break;
     
-    // --- User/UI AJAX Endpoints (Login Checked in Controller) ---
     case 'mark_notification_read':
         (new ApiController())->markNotificationRead();
         break;
     
-    // NEW: Mark all notifications as read
     case 'mark_all_notifications_read':
         (new ApiController())->markAllNotificationsRead();
         break;
@@ -39,13 +32,8 @@ switch ($action) {
         (new RegistrationController())->notify();
         break;
 
-    // --- Admin DTR Editor Endpoints ---
-    case 'get_monthly_dtr':
-        (new AttendanceController())->getMonthlyDtr();
-        break;
-        
-    case 'save_monthly_dtr':
-        (new AttendanceController())->saveMonthlyDtr();
+    case 'get_staff_report':
+        (new RegistrationController())->getStaffReport();
         break;
 
     default:

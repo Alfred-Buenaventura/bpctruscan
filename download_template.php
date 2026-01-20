@@ -5,10 +5,8 @@ require_once 'app/controllers/accountcontroller.php';
 $controller = new AccountController();
 $controller->requireAdmin();
 
-// UPDATED HEADER: Removed 'Username' column
 $csv = "Faculty ID,Last Name,First Name,Middle Name,Role,Email,Phone Number\n";
 
-// UPDATED SAMPLE DATA
 $csv .= "FAC001,Dela Cruz,Juan,P.,Full Time Teacher,juan.delacruz@bpc.edu.ph,09123456789\n";
 $csv .= "STAFF001,Garcia,Ana,L.,Guidance Office,ana.garcia@bpc.edu.ph,09171234567\n";
 
