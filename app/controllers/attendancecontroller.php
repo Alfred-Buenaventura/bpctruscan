@@ -4,61 +4,45 @@ require_once __DIR__ . '/../core/controller.php';
 class AttendanceController extends Controller {
 
     public function index() {
-        $this->requireLogin(); 
-        $attModel = $this->model('Attendance');
-        $userModel = $this->model('User');
-        
-        $data = [
-            'isAdmin' => ($_SESSION['role'] === 'Admin'),
-            'error' => ''
-        ];
+    $this->requireLogin(); 
+    $attModel = $this->model('Attendance');
+    $userModel = $this->model('User');
+    
+    $data = [
+        'isAdmin' => ($_SESSION['role'] === 'Admin'),
+        'error' => ''
+    ];
 
-        $filters = [
-            'start_date' => $_GET['start_date'] ?? date('Y-m-01'),
-            'end_date'   => $_GET['end_date']   ?? date('Y-m-d'),
-            'search'     => $_GET['search']     ?? '',
-            'user_id'    => $_GET['user_id']    ?? ''
-        ];
-
-        if ($data['isAdmin']) {
-            $data['pageTitle'] = 'Attendance Reports';
-            $data['pageSubtitle'] = 'View and manage all user attendance records';
-            $data['allUsers'] = $userModel->getAllStaff();
-            $data['stats'] = $attModel->getStats(); 
-        } else {
-            $data['pageTitle'] = 'My Attendance';
-            $data['pageSubtitle'] = 'View your personal attendance history';
-            $filters['user_id'] = $_SESSION['user_id'];
-            $data['stats'] = $attModel->getStats($_SESSION['user_id']);
-        }
-
-        $rawRecords = $attModel->getRecords($filters);
-        
-        $grouped = [];
-        foreach ($rawRecords as $r) {
-            $key = $r['date'] . '_' . $r['user_id'];
-            if (!isset($grouped[$key])) {
-                $grouped[$key] = [
-                    'date' => $r['date'],
-                    'faculty_id' => $r['faculty_id'],
-                    'name' => $r['first_name'] . ' ' . $r['last_name'],
-                    'logs' => [],
-                    'status' => $r['status']
-                ];
-            }
-            
-            $grouped[$key]['logs'][] = [
-                'time_in' => date('h:i A', strtotime($r['time_in'])),
-                'time_out' => !empty($r['time_out']) ? date('h:i A', strtotime($r['time_out'])) : '---',
-                'subject' => $r['subject'] ?? 'General Duty'
-            ];
-        }
-
-        $data['records'] = $grouped;
-        $data['filters'] = $filters;
-
-        $this->view('attendance_view', $data);
+    if ($data['isAdmin']) {
+        $data['pageTitle'] = 'Attendance Reports';
+        $data['pageSubtitle'] = 'Manage and monitor personnel logs';
+    } else {
+        $data['pageTitle'] = 'My Attendance';
+        $data['pageSubtitle'] = 'View your personal time records';
     }
+
+    $filters = [
+        'start_date' => $_GET['start_date'] ?? date('Y-m-01'),
+        'end_date'   => $_GET['end_date']   ?? date('Y-m-d'),
+        'search'     => $_GET['search']     ?? '',
+        'user_id'    => $_GET['user_id']    ?? ''
+    ];
+
+    if ($data['isAdmin']) {
+        $data['allUsers'] = $userModel->getAllStaff();
+        // Fetch global stats
+        $data['stats'] = $attModel->getStats(); 
+    } else {
+        $filters['user_id'] = $_SESSION['user_id'];
+        // Fetch only personal stats for the faculty member
+        $data['stats'] = $attModel->getStats($_SESSION['user_id']);
+    }
+
+    $data['records'] = $attModel->getRecords($filters);
+    $data['filters'] = $filters;
+
+    $this->view('attendance_view', $data);
+}
 
     private function calculateClampedHours($r) {
         if (empty($r['time_in']) || empty($r['time_out'])) return 0;
