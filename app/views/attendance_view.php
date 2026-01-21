@@ -1,6 +1,7 @@
 <?php 
 require_once __DIR__ . '/partials/header.php'; 
 ?>
+<link rel="stylesheet" href="css/print.css">
 
 <style>
 /* 1. Status Card Interactivity */
@@ -53,7 +54,7 @@ require_once __DIR__ . '/partials/header.php';
 #feedbackModal .modal-content {
     max-width: 550px;
     border-radius: 16px;
-    border-top: 6px solid var(--blue-600);
+    border-top: 6px solid #059669;
 }
 .feedback-header-box {
     text-align: center;
@@ -64,7 +65,7 @@ require_once __DIR__ . '/partials/header.php';
 }
 .feedback-header-box i {
     font-size: 2.5rem;
-    color: var(--blue-600);
+    color: #059669;
     margin-bottom: 10px;
 }
 .feedback-textarea {
@@ -74,22 +75,48 @@ require_once __DIR__ . '/partials/header.php';
     border: 2px solid #e2e8f0;
     transition: border-color 0.2s;
 }
-.feedback-textarea:focus { border-color: var(--blue-400); outline: none; }
+.feedback-textarea:focus { border-color: #059669; outline: none; }
 
 /* DTR PREVIEW MODAL STYLES */
 #dtrPreviewModal .modal-content {
-    max-width: 1000px;
-    width: 95%;
-    height: 90vh;
+    max-width: 1400px;
+    width: 98%;
+    height: 96vh;
+    margin: 2vh auto;
     display: flex;
     flex-direction: column;
-}
-#dtrFrame {
-    flex-grow: 1;
-    width: 100%;
+    border-radius: 12px;
     border: none;
-    border-radius: 8px;
-    background: #f1f5f9;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+#dtrPreviewModal .modal-header {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1rem 1.5rem;
+}
+
+#dtrPreviewModal .modal-body {
+    flex: 1;
+    padding: 0 !important;
+    display: flex;
+    overflow: hidden;
+}
+
+#dtrFrame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #fff;
+}
+
+#dtrPreviewModal .modal-footer {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 </style>
 
@@ -109,14 +136,14 @@ require_once __DIR__ . '/partials/header.php';
                 <span class="stat-value"><?= $stats['entries'] ?? 0 ?></span>
             </div>
         </div>
-         <div class="report-stat-card" onclick="openAttendanceDetail('exits', 'Today\'s Total Exits')">
+        <div class="report-stat-card" onclick="openAttendanceDetail('exits', 'Today\'s Total Exits')">
             <div class="stat-icon-bg bg-red-100 text-red-600"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
             <div class="stat-content">
                 <span class="stat-label">Exits Today</span>
                 <span class="stat-value"><?= $stats['exits'] ?? 0 ?></span>
             </div>
         </div>
-         <div class="report-stat-card" onclick="openAttendanceDetail('present', 'Personnel Currently On-Site')">
+        <div class="report-stat-card" onclick="openAttendanceDetail('present', 'Personnel Currently On-Site')">
             <div class="stat-icon-bg bg-blue-100 text-blue-600"><i class="fa-solid fa-user-check"></i></div>
             <div class="stat-content">
                 <span class="stat-label">Present</span>
@@ -138,7 +165,7 @@ require_once __DIR__ . '/partials/header.php';
         </div>
         <div class="card-body">
             <form method="GET" action="attendance_reports.php" id="reportFilterForm" class="filter-controls-new">
-                <div class="filter-inputs" <?= !$isAdmin ? 'style="grid-template-columns: 1fr;"' : '' ?>>
+                <div class="filter-inputs" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; align-items: flex-end;">
                     <?php if ($isAdmin): ?>
                     <div class="form-group filter-item">
                         <label>Select User</label>
@@ -159,6 +186,14 @@ require_once __DIR__ . '/partials/header.php';
                     <?php endif; ?>
 
                     <div class="form-group filter-item">
+                        <label>Quick Search</label>
+                        <div class="search-wrapper" style="position: relative;">
+                            <input type="text" id="liveSearchInput" class="form-control" placeholder="Search name or ID..." onkeyup="filterTableRealTime()" style="padding-left: 35px;">
+                            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group filter-item">
                         <label>Date Range</label>
                          <div style="display: flex; gap: 0.5rem;">
                              <input type="date" name="start_date" id="startDate" class="form-control" value="<?= htmlspecialchars($filters['start_date'] ?? date('Y-m-01')) ?>">
@@ -166,7 +201,7 @@ require_once __DIR__ . '/partials/header.php';
                          </div>
                     </div>
                 </div>
-                <div class="filter-actions-new" style="align-items: center;">
+                <div class="filter-actions-new" style="align-items: center; margin-top: 1rem;">
                     <button type="submit" class="btn btn-primary btn-sm apply-filter-btn"><i class="fa-solid fa-check"></i> Apply Filters</button>
                     <button type="button" class="btn btn-warning btn-sm" onclick="handlePrintDTR()">
                         <i class="fa-solid fa-file-invoice"></i> Preview & Generate DTR
@@ -179,9 +214,9 @@ require_once __DIR__ . '/partials/header.php';
     <div class="card attendance-table-card">
          <div class="card-body" style="padding: 0; overflow-x: auto;"> 
             <?php if (empty($records)): ?>
-                <p style="text-align: center; color: var(--gray-500); padding: 40px;">No attendance records found.</p>
+                <p style="text-align: center; color: #94a3b8; padding: 40px;">No attendance records found.</p>
             <?php else: ?>
-                <table class="attendance-table-new accordion-table" style="min-width: 1000px;">
+                <table class="attendance-table-new accordion-table" id="attendanceMainTable" style="min-width: 1000px;">
                     <thead>
                         <tr>
                             <th style="width: 50px;"></th>
@@ -197,8 +232,8 @@ require_once __DIR__ . '/partials/header.php';
                             <td style="text-align: center;"><i class="fa-solid fa-chevron-right toggle-icon"></i></td>
                             <td>
                                 <div class="user-cell">
-                                    <span class="user-name"><?= htmlspecialchars($row['name']) ?></span>
-                                    <span class="user-id">ID: <?= htmlspecialchars($row['faculty_id']) ?></span>
+                                    <span class="user-name" style="font-weight:700; color:#1e293b;"><?= htmlspecialchars($row['name']) ?></span>
+                                    <span class="user-id" style="display:block; font-size:0.75rem; color:#64748b;">ID: <?= htmlspecialchars($row['faculty_id']) ?></span>
                                 </div>
                             </td>
                             <td><span class="date-cell"><?= date('M d, Y', strtotime($row['date'])) ?></span></td>
@@ -243,6 +278,17 @@ require_once __DIR__ . '/partials/header.php';
                     </tbody>
                 </table>
             <?php endif; ?>
+        </div>
+    </div>
+
+    <div id="selectionWarningModal" class="modal">
+        <div class="modal-content" style="max-width: 420px; text-align: center; border-top: 5px solid #059669;">
+            <div class="modal-body" style="padding: 2.5rem;">
+                <i class="fa-solid fa-user-clock" style="font-size: 3.5rem; color: #059669; margin-bottom: 1rem;"></i>
+                <h3 style="margin-bottom: 0.5rem; font-weight: 800;">Action Required</h3>
+                <p style="color: #64748b; margin-bottom: 1.5rem;">To generate a Daily Time Record preview, please select a specific faculty member from the dropdown filter first.</p>
+                <button class="btn btn-primary btn-full-width" onclick="closeModal('selectionWarningModal')" style="padding: 12px; border-radius: 8px; font-weight: 600;">Close & Select</button>
+            </div>
         </div>
     </div>
 
@@ -320,7 +366,28 @@ require_once __DIR__ . '/partials/header.php';
 
 <script>
 /**
- * RESTORED: Handle DTR Preview inside Modal
+ * LIVE SEARCH LOGIC
+ */
+function filterTableRealTime() {
+    const input = document.getElementById("liveSearchInput").value.toLowerCase();
+    const rows = document.querySelectorAll("#attendanceMainTable tbody tr.accordion-toggle");
+
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const isMatch = text.includes(input);
+        row.style.display = isMatch ? "" : "none";
+        
+        const detailId = row.getAttribute('onclick').match(/'([^']+)'/)[1];
+        const detailRow = document.getElementById(detailId);
+        if (detailRow) {
+             detailRow.style.display = "none";
+             row.classList.remove('active');
+        }
+    });
+}
+
+/**
+ * Handle DTR Preview with Warning Modal
  */
 function handlePrintDTR() {
     const userIdInput = document.getElementById('userId');
@@ -329,19 +396,17 @@ function handlePrintDTR() {
     const endDate = document.getElementById('endDate').value;
 
     if (!userId) {
-        alert("Please select a user to generate a DTR.");
+        openModal('selectionWarningModal');
         return;
     }
 
-    // Ensure this path correctly hits the "printDtr" method in your controller
     const url = `attendance_reports.php?action=print_dtr&user_id=${userId}&start_date=${startDate}&end_date=${endDate}`;
-    
     document.getElementById('dtrFrame').src = url;
     openModal('dtrPreviewModal');
 }
 
 /**
- * Status Card Summaries
+ * Stats Detail Fetching (Fixed Naming)
  */
 function openAttendanceDetail(type, title) {
     document.getElementById('detailModalTitle').innerText = title;
@@ -354,11 +419,13 @@ function openAttendanceDetail(type, title) {
             if (data.success) {
                 let html = '<table class="directory-table"><thead><tr><th>Faculty ID</th><th>Name</th><th>Position</th><th>Status/Time</th></tr></thead><tbody>';
                 data.users.forEach(u => {
+                    // Correctly display the log time based on the type
+                    let logTime = u.time_in || u.time_out || '<span style="color:#10b981; font-weight:700;">On-Site</span>';
                     html += `<tr>
                         <td style="font-weight:700;">${u.faculty_id}</td>
                         <td style="font-weight:600;">${u.first_name} ${u.last_name}</td>
                         <td>${u.role}</td>
-                        <td>${u.display_time || '<span style="color:#10b981; font-weight:700;">On-Site</span>'}</td>
+                        <td>${logTime}</td>
                     </tr>`;
                 });
                 if(data.users.length === 0) html += '<tr><td colspan="4" style="text-align:center; padding:40px; color:#94a3b8;">No records found.</td></tr>';
@@ -397,8 +464,16 @@ function toggleAccordion(contentId, toggleEl) {
 
 window.closeDtrModal = function() {
     closeModal('dtrPreviewModal');
-    // Clear iframe src to stop the document from loading in background
     document.getElementById('dtrFrame').src = 'about:blank';
+};
+
+// Handle closing modals by clicking outside
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        const id = event.target.id;
+        closeModal(id);
+        if(id === 'dtrPreviewModal') document.getElementById('dtrFrame').src = 'about:blank';
+    }
 };
 </script>
 
