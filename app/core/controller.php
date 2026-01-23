@@ -21,6 +21,25 @@ class Controller {
         }
     }
 
+    public function history() {
+    $this->requireLogin(); // Ensure user is authenticated
+    
+    // Use the base controller's model loader
+    // This handles the require_once and instantiation for you
+    $attModel = $this->model('Attendance'); 
+    
+    $userId = $_SESSION['user_id'];
+    
+    // Fetch records using the loaded model
+    $data = [
+        'pageTitle' => 'Attendance History',
+        'history'   => $attModel->getUserHistory($userId) 
+    ];
+
+    // Load the view using the controller's view method
+    $this->view('attendance_history_view', $data);
+}
+
     // Helper to load a model
     public function model($modelName) {
         // FORCE LOWERCASE for model files (e.g., 'User' -> 'user.php')
@@ -44,6 +63,18 @@ class Controller {
             }
         }
     }
+
+    // Add this method inside the Controller class in app/core/controller.php
+public function setFlash($message, $type = 'success', $redirect = null) {
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    $_SESSION['flash_message'] = $message;
+    $_SESSION['flash_type'] = $type;
+    
+    if ($redirect) {
+        header("Location: " . $redirect);
+        exit;
+    }
+}
 
     public function requireAdmin() {
         $this->requireLogin();
