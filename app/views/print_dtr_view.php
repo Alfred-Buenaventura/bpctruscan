@@ -13,8 +13,6 @@ $facultyId = $user['faculty_id'];
     <link rel="stylesheet" href="css/print.css">
 </head>
 
-
-
 <body class="dtr-body">
     <div class="print-controls">
         <button type="button" class="btn-dtr" onclick="window.parent.closeDtrModal();">
@@ -56,9 +54,10 @@ $facultyId = $user['faculty_id'];
                     $totalHours = 0; $totalMinutes = 0;
                     for ($day = 1; $day <= 31; $day++):
                         $rec = $dtrRecords[$day] ?? null;
+                        
+                        // RESTORED CUTOFF LOGIC: Show logs only if they fall within the specific copy's period
                         $isTargetPeriod = ($copy === 0 && $day <= 15) || ($copy === 1 && $day >= 16 && $day <= $lastDay);
 
-                        // CHANGED: Formatted to 12-hour format (h:i)
                         $am_in = ($isTargetPeriod && $rec && !empty($rec['am_in'])) ? date('h:i', strtotime($rec['am_in'])) : '';
                         $am_out = ($isTargetPeriod && $rec && !empty($rec['am_out'])) ? date('h:i', strtotime($rec['am_out'])) : '';
                         $pm_in = ($isTargetPeriod && $rec && !empty($rec['pm_in'])) ? date('h:i', strtotime($rec['pm_in'])) : '';
@@ -72,11 +71,13 @@ $facultyId = $user['faculty_id'];
                             $day_h = $h; $day_m = $m;
                             $totalHours += $h; $totalMinutes += $m;
                         }
-                        $isHoliday = ($isTargetPeriod && $rec && !empty($rec['remarks']) && empty($am_in) && empty($pm_in));
+                        
+                        // HOLIDAYS: Always show regardless of cutoff period if it's a holiday and no entry was made
+                        $isHoliday = ($rec && !empty($rec['remarks']) && empty($am_in) && empty($pm_in));
                     ?>
                     <tr>
-                        <td><?= $day ?></td>
-                        <?php if ($isHoliday): ?>
+                        <td><?= $day > $lastDay ? '' : $day ?></td>
+                        <?php if ($day <= $lastDay && $isHoliday): ?>
                             <td colspan="4" class="holiday-text"><?= htmlspecialchars($rec['remarks']) ?></td>
                         <?php else: ?>
                             <td><?= $am_in ?></td><td><?= $am_out ?></td>

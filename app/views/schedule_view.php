@@ -1,18 +1,25 @@
 <?php 
-require_once __DIR__ . '/partials/header.php'; 
+require_once __DIR__ . '/partials/header.php';
+
+
 
 // Helper function to render schedule tables (User View / Simple Tables)
 if (!function_exists('renderScheduleTable')) {
     function renderScheduleTable($schedules, $nested, $isAdmin) {
-        echo '<table class="data-table"><thead><tr><th>Day</th><th>Subject / Duty</th><th>Type</th><th>Time</th><th>Room / Department</th>';
+        // Use the new specific class for the table
+        echo '<table class="user-approved-table">';
+        echo '<colgroup>';
+        echo '    <col style="width: 120px;">';  // Day
+        echo '    <col style="width: auto;">';   // Subject
+        echo '    <col style="width: 140px;">';  // Type
+        echo '    <col style="width: 220px;">';  // Time Schedule
+        echo '    <col style="width: 180px;">';  // Room
+        if ($isAdmin) echo '<col style="width: 110px;">'; // Actions
+        echo '</colgroup>';
+        echo '<thead><tr><th>Day</th><th>Subject / Duty</th><th>Type</th><th>Time Schedule</th><th>Room</th>';
         
-        // Only show Actions header if Admin
-        if ($isAdmin) {
-            echo '<th>Actions</th>';
-        }
-        
+        if ($isAdmin) echo '<th>Actions</th>';
         echo '</tr></thead><tbody>';
-        
         $dayOrder = ['Monday'=>1,'Tuesday'=>2,'Wednesday'=>3,'Thursday'=>4,'Friday'=>5,'Saturday'=>6];
         usort($schedules, function($a, $b) use ($dayOrder) {
             $da = $dayOrder[$a['day_of_week']] ?? 7;
@@ -22,12 +29,19 @@ if (!function_exists('renderScheduleTable')) {
         });
 
         foreach ($schedules as $sched) {
-            $typeClass = ($sched['type'] ?? 'Class') === 'Office' ? 'pending' : 'completed';
+            $type = $sched['type'] ?? 'Class';
+            $isOffice = ($type === 'Office');
+            $typeClass = $isOffice ? 'office' : 'class';
+            $typeIcon = $isOffice ? 'fa-building' : 'fa-chalkboard-user';
+
             echo '<tr>';
             echo '<td><span class="day-badge">' . $sched['day_of_week'] . '</span></td>';
-            echo '<td>' . htmlspecialchars($sched['subject']) . '</td>';
-            echo '<td><span class="ud-badge ' . $typeClass . '">' . htmlspecialchars($sched['type'] ?? 'Class') . '</span></td>';
-            echo '<td>' . date('g:i A', strtotime($sched['start_time'])) . ' - ' . date('g:i A', strtotime($sched['end_time'])) . '</td>';
+            echo '<td style="font-weight: 600; color: #1e293b;">' . htmlspecialchars($sched['subject']) . '</td>';
+            echo '<td><span class="type-pill ' . $typeClass . '"><i class="fa-solid ' . $typeIcon . '"></i> ' . htmlspecialchars($type) . '</span></td>';
+            // Applied the Blue Time Styling
+            echo '<td class="col-time-blue"><i class="fa-regular fa-clock" style="margin-right: 5px; opacity: 0.6;"></i>' . 
+                 date('g:i A', strtotime($sched['start_time'])) . ' - ' . 
+                 date('g:i A', strtotime($sched['end_time'])) . '</td>';
             echo '<td>' . htmlspecialchars($sched['room']) . '</td>';
             
             if ($isAdmin) {
@@ -51,63 +65,7 @@ if (!function_exists('renderScheduleTable')) {
     }
 }
 ?>
-
-<style>
-/* --- MODAL SIZE & GRID IMPROVEMENTS --- */
-.modal-lg {
-    max-width: 1150px !important; /* Wider modal to fit all 6 columns comfortably */
-    width: 95% !important;
-}
-
-/* 7-column grid for: Day, Type, Subject, Start, End, Room, and Remove button */
-.schedule-entry-row {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr 2.2fr 1.1fr 1.1fr 1.8fr auto;
-    gap: 15px;
-    align-items: flex-end; /* Keeps labels and inputs aligned at the bottom */
-    padding: 20px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    margin-bottom: 15px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.schedule-entry-row .form-group { margin-bottom: 0; }
-.schedule-entry-row .form-group label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-    color: var(--gray-500);
-    margin-bottom: 8px;
-    display: block;
-}
-
-/* --- FIX FOR OFF-CENTERED DROP-DOWN ARROWS --- */
-select.form-control {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center; /* Properly centered horizontally and vertically */
-    background-size: 16px;
-    padding-right: 36px !important; /* Large padding to prevent text-overlap with arrow */
-}
-
-/* Conflicts & Styling Defaults from your original design */
-#conflictWarningModal .modal-content { padding: 0; border-radius: 8px; overflow: hidden; max-width: 550px; border: 1px solid #e5e7eb; }
-#conflictWarningModal .email-like-header { background: #dc2626; color: white; padding: 20px; text-align: center; }
-#conflictWarningModal .email-like-header h2 { margin: 0; font-size: 1.5rem; color: white; font-weight: 600; }
-#conflictWarningModal .email-like-body { background: #f9fafb; padding: 25px; color: #374151; }
-#conflictWarningModal .warning-box { background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin-bottom: 20px; color: #991b1b; font-size: 0.95rem; }
-#conflictWarningModal .conflict-table { width: 100%; border-collapse: collapse; background: white; border: 1px solid #e5e7eb; margin-top: 15px; font-size: 0.9rem; }
-#conflictWarningModal .conflict-table th { background: #fef2f2; color: #991b1b; padding: 10px; text-align: left; border-bottom: 2px solid #fee2e2; font-weight: 600; }
-#conflictWarningModal .conflict-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; color: #4b5563; }
-#conflictWarningModal .email-like-footer { background: #f3f4f6; padding: 15px; text-align: right; border-top: 1px solid #e5e7eb; }
-</style>
-
+<link rel="stylesheet" href="css/schedule.css">
 
 <div class="main-body">
     <?php if ($error): ?> <div class="alert alert-error"><?= htmlspecialchars($error) ?></div> <?php endif; ?>
@@ -118,7 +76,7 @@ select.form-control {
             <?php elseif ($isAdmin): ?>
             <div class="stat-card stat-card-small">
                 <div class="stat-icon yellow"><i class="fa-solid fa-hourglass-half"></i></div>
-                <div class="stat-details"><p>Pending Approval</p><div class="stat-value yellow"><?= $pendingCount ?></div></div>
+                <div class="stat-details"><p>Pending Schedules</p><div class="stat-value yellow"><?= $pendingCount ?></div></div>
             </div>
         <?php endif; ?>
     </div>
@@ -162,16 +120,16 @@ select.form-control {
         <?php endif; ?>
 
         <div class="tabs">
-            <button class="tab-btn <?= $activeTab === 'manage' ? 'active' : '' ?>" onclick="showScheduleTab(event, 'manage')">
-                <i class="fa-solid fa-calendar-check"></i> Approved Schedules
-            </button>
-            <button class="tab-btn <?= $activeTab === 'pending' ? 'active' : '' ?>" onclick="showScheduleTab(event, 'pending')">
-                <i class="fa-solid fa-file-circle-question"></i> Pending Approval 
-                <?php if ($pendingCount > 0): ?>
-                    <span class="notification-count-badge"><?= $pendingCount ?></span>
-                <?php endif; ?>
-            </button>
-        </div>
+    <button class="tab-btn <?= $activeTab === 'manage' ? 'active' : '' ?>" onclick="showScheduleTab(event, 'manage')">
+        <i class="fa-solid fa-calendar-check"></i> Approved Schedules
+    </button>
+    <button class="tab-btn <?= $activeTab === 'pending' ? 'active' : '' ?>" onclick="showScheduleTab(event, 'pending')">
+        <i class="fa-solid fa-file-circle-question"></i> Pending Schedules 
+        <?php if ($pendingCount > 0): ?>
+            <span class="notification-count-badge"><?= $pendingCount ?></span>
+        <?php endif; ?>
+    </button>
+</div>
         
         <div id="manageTab" class="tab-content <?= $activeTab === 'manage' ? 'active' : '' ?>">
             <div class="card-body">
@@ -212,7 +170,7 @@ select.form-control {
                                                     <div class="day-group">
                                                         <div class="day-header"><?= $day ?></div>
                                                         <table class="day-table">
-                                                            <thead><tr><th>Subject / Duty</th><th>Type</th><th>Time</th><th>Room</th><th style="width: 100px;">Actions</th></tr></thead>
+                                                            <thead><tr><th>Subject / Duty</th><th>Type</th><th>Time</th><th>Room / Location</th><th style="width: 100px;">Actions</th></tr></thead>
                                                             <tbody>
                                                                 <?php foreach ($dailySchedules[$day] as $sched): ?>
                                                                 <tr>
@@ -294,7 +252,7 @@ select.form-control {
                                                         <th>Subject / Duty</th>
                                                         <th>Type</th>
                                                         <th>Time</th>
-                                                        <th>Room</th>
+                                                        <th>Room / Location</th>
                                                         <th style="text-align: right;">Actions</th>
                                                     </tr>
                                                 </thead>
@@ -327,25 +285,47 @@ select.form-control {
                         </form>
                     <?php endif; ?>
                 <?php else: ?>
-                    <?php if (empty($pendingSchedules)): ?>
-                        <div class="empty-state"><i class="fa-solid fa-check-double"></i><p>No pending approvals.</p></div>
-                    <?php else: ?>
-                        <table class="data-table">
-                            <thead><tr><th>Day</th><th>Subject</th><th>Type</th><th>Time</th><th>Room</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($pendingSchedules as $sched): ?>
-                                <tr>
-                                    <td><span class="day-badge"><?= $sched['day_of_week'] ?></span></td>
-                                    <td><?= htmlspecialchars($sched['subject']) ?></td>
-                                    <td><span class="ud-badge <?= ($sched['type'] ?? 'Class') === 'Office' ? 'pending' : 'completed' ?>"><?= htmlspecialchars($sched['type'] ?? 'Class') ?></span></td>
-                                    <td><?= date('g:i A', strtotime($sched['start_time'])) ?> - ...</td>
-                                    <td><?= htmlspecialchars($sched['room']) ?></td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    <?php endif; ?>
-                <?php endif; ?>
+    <?php if (empty($pendingSchedules)): ?>
+        <div class="empty-state"><i class="fa-solid fa-check-double"></i><p>No pending approvals.</p></div>
+    <?php else: ?>
+        <table class="user-pending-table">
+            <colgroup>
+                <col style="width: 120px;">  <col style="width: auto;">   <col style="width: 140px;">  <col style="width: 220px;">  <col style="width: 180px;">  </colgroup>
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th>Subject / Duty</th>
+                    <th>Type</th>
+                    <th>Time Schedule</th>
+                    <th>Room / Location</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($pendingSchedules as $sched): ?>
+                <tr>
+                    <td><span class="day-badge"><?= $sched['day_of_week'] ?></span></td>
+                    <td style="font-weight: 600; color: #1e293b;"><?= htmlspecialchars($sched['subject']) ?></td>
+                    <td>
+                        <?php 
+                            $type = $sched['type'] ?? 'Class';
+                            $isOffice = ($type === 'Office');
+                        ?>
+                        <span class="type-pill <?= $isOffice ? 'office' : 'class' ?>">
+                            <i class="fa-solid <?= $isOffice ? 'fa-building' : 'fa-chalkboard-user' ?>"></i> 
+                            <?= htmlspecialchars($type) ?>
+                        </span>
+                    </td>
+                    <td class="col-time-blue">
+                        <i class="fa-regular fa-clock" style="margin-right: 5px; opacity: 0.6;"></i>
+                        <?= date('g:i A', strtotime($sched['start_time'])) ?> - <?= date('g:i A', strtotime($sched['end_time'])) ?>
+                    </td>
+                    <td><?= htmlspecialchars($sched['room']) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+<?php endif; ?>
             </div>
         </div>
     </div>
@@ -364,6 +344,7 @@ select.form-control {
                     <input type="hidden" name="user_id" value="<?= $selectedUserId ?>">
                 <?php endif; ?>
                 <div id="schedule-entry-list"></div>
+                
                 <button type="button" class="btn btn-secondary btn-sm" onclick="addScheduleRow()" style="margin-top: 10px;">
                     <i class="fa-solid fa-plus"></i> Add Another Row
                 </button>
@@ -418,7 +399,7 @@ select.form-control {
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Room / Department</label>
+                    <label>Room / Location</label>
                     <select name="room_edit" id="editRoom" class="form-control" required>
                         <option value="">Select Room...</option>
                         <?php foreach($rooms as $r): ?>
@@ -457,12 +438,19 @@ select.form-control {
 </div>
 
 <div id="genericConfirmModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header"><h3 id="modalTitle">Confirm Action</h3><span class="close-btn" onclick="closeModal('genericConfirmModal')">&times;</span></div>
-        <div class="modal-body"><p id="modalMessage">Are you sure?</p></div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('genericConfirmModal')">Cancel</button>
-            <button type="button" class="btn btn-primary" id="confirmActionBtn">Confirm</button>
+    <div class="modal-content modal-sm">
+        <div class="modal-body text-center" style="padding: 2rem;">
+            <div id="modalIconContainer" class="modal-icon-circle">
+                <i id="modalIcon" class="fa-solid"></i>
+            </div>
+            
+            <h3 id="modalTitle" style="margin-top: 1.5rem; color: #1e293b; font-weight: 700;">Confirm Action</h3>
+            <p id="modalMessage" style="color: #64748b; margin-top: 0.5rem; font-size: 0.95rem;"></p>
+            
+            <div class="modal-action-buttons" style="margin-top: 2rem; display: flex; gap: 10px; justify-content: center;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('genericConfirmModal')" style="flex: 1;">Cancel</button>
+                <button type="button" class="btn" id="confirmActionBtn" style="flex: 1;">Confirm</button>
+            </div>
         </div>
     </div>
 </div>
@@ -478,7 +466,7 @@ select.form-control {
                 <tr><th>Day</th><td id="conflictDay"></td></tr>
                 <tr><th>Subject</th><td id="conflictSubject"></td></tr>
                 <tr><th>Time</th><td id="conflictTime"></td></tr>
-                <tr><th>Room</th><td id="conflictRoom" style="font-weight:bold; color:#dc2626;"></td></tr>
+                <tr><th>Room / Location</th><td id="conflictRoom" style="font-weight:bold; color:#dc2626;"></td></tr>
             </table>
         </div>
         <div class="email-like-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('conflictWarningModal')">Close & Edit</button></div>
@@ -490,42 +478,65 @@ let pendingActionType = '';
 let pendingActionId = null;
 const roomList = <?= json_encode(array_column($rooms, 'name')) ?>;
 
-function openBulkActionModal(action) {
-    const checkboxes = document.querySelectorAll('input[name="selected_schedules[]"]:checked');
-    if (checkboxes.length === 0) { alert("Please select at least one schedule."); return; }
-    pendingActionType = 'bulk_' + action;
-    const count = checkboxes.length;
+function triggerConfirmModal(config) {
     const title = document.getElementById('modalTitle');
     const msg = document.getElementById('modalMessage');
     const btn = document.getElementById('confirmActionBtn');
-    if (action === 'approve') {
-        title.textContent = "Confirm Bulk Approval";
-        msg.innerHTML = `Are you sure you want to <strong>APPROVE</strong> ${count} selected schedule(s)?`;
-        btn.className = "btn btn-success"; btn.textContent = "Approve All";
-    } else {
-        title.textContent = "Confirm Bulk Decline";
-        msg.innerHTML = `Are you sure you want to <strong>DECLINE</strong> ${count} selected schedule(s)?`;
-        btn.className = "btn btn-danger"; btn.textContent = "Decline All";
-    }
+    const iconContainer = document.getElementById('modalIconContainer');
+    const icon = document.getElementById('modalIcon');
+
+    // Set Text Content
+    title.textContent = config.title;
+    msg.innerHTML = config.message;
+    btn.textContent = config.buttonText;
+    
+    // Set Visual Theme
+    iconContainer.className = 'modal-icon-circle ' + (config.type === 'approve' ? 'modal-icon-success' : 'modal-icon-danger');
+    icon.className = 'fa-solid ' + (config.type === 'approve' ? 'fa-check' : 'fa-xmark');
+    btn.className = 'btn ' + (config.type === 'approve' ? 'btn-success' : 'btn-danger');
+
+    pendingActionType = config.actionType;
+    pendingActionId = config.id || null;
+
     openModal('genericConfirmModal');
+}
+
+// Updated Bulk Action Trigger
+function openBulkActionModal(action) {
+    const checkboxes = document.querySelectorAll('input[name="selected_schedules[]"]:checked');
+    if (checkboxes.length === 0) {
+        // Reuse the modal for an alert-style message if nothing is selected
+        triggerConfirmModal({
+            title: 'No Selection',
+            message: 'Please select at least one schedule to perform a batch action.',
+            buttonText: 'Got it',
+            type: 'decline', // Uses the red theme for alerts
+            actionType: 'none'
+        });
+        document.getElementById('confirmActionBtn').style.display = 'none'; // Hide confirm if just an alert
+        return;
+    }
+    
+    document.getElementById('confirmActionBtn').style.display = 'inline-block';
+    triggerConfirmModal({
+        title: `Bulk ${action === 'approve' ? 'Approval' : 'Decline'}`,
+        message: `Confirming the batch <strong>${action.toUpperCase()}</strong> of ${checkboxes.length} selected records.`,
+        buttonText: action === 'approve' ? 'Approve All' : 'Decline All',
+        type: action,
+        actionType: 'bulk_' + action
+    });
 }
 
 function openSingleActionModal(action, id) {
-    pendingActionType = 'single_' + action;
-    pendingActionId = id;
-    const title = document.getElementById('modalTitle');
-    const msg = document.getElementById('modalMessage');
-    const btn = document.getElementById('confirmActionBtn');
-    if (action === 'approve') {
-        title.textContent = "Confirm Approval"; msg.textContent = "Are you sure you want to approve this schedule?";
-        btn.className = "btn btn-success"; btn.textContent = "Approve";
-    } else {
-        title.textContent = "Confirm Decline"; msg.textContent = "Are you sure you want to decline this schedule?";
-        btn.className = "btn btn-danger"; btn.textContent = "Decline";
-    }
-    openModal('genericConfirmModal');
+    triggerConfirmModal({
+        title: action === 'approve' ? 'Approve Schedule' : 'Decline Schedule',
+        message: `Are you sure you want to <strong>${action.toUpperCase()}</strong> this specific duty record?`,
+        buttonText: action === 'approve' ? 'Approve' : 'Decline',
+        type: action,
+        actionType: 'single_' + action,
+        id: id
+    });
 }
-
 document.getElementById('confirmActionBtn').addEventListener('click', function() {
     if (pendingActionType === 'bulk_approve') { document.getElementById('bulkActionInput').value = 'approve'; document.getElementById('bulkActionForm').submit(); } 
     else if (pendingActionType === 'bulk_decline') { document.getElementById('bulkActionInput').value = 'decline'; document.getElementById('bulkActionForm').submit(); }

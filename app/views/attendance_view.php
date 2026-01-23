@@ -25,14 +25,20 @@ require_once __DIR__ . '/partials/header.php';
 
 /* Design Elements */
 .session-pill {
-    background: #f1f5f9;
-    color: #475569;
+    background: #eff6ff; /* Light Blue 50 */
+    color: #2563eb;      /* Blue 600 */
     padding: 6px 12px;
     border-radius: 6px;
-    font-weight: 600;
+    font-weight: 700;    /* Made bolder for visibility */
     font-size: 0.85rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #bfdbfe; /* Blue 200 border */
     display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.session-pill:hover {
+    background: #dbeafe; /* Light Blue 100 on hover */
+    border-color: #3b82f6; /* Blue 500 */
 }
 
 .directory-table { width: 100%; border-collapse: collapse; }
@@ -250,27 +256,38 @@ require_once __DIR__ . '/partials/header.php';
                                     <h4 style="font-size: 0.9rem; color: #475569; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
                                         <i class="fa-solid fa-fingerprint"></i> Duty Scan Breakdown
                                     </h4>
-                                    <div class="scan-logs-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;">
-                                        <?php foreach ($row['logs'] as $log): ?>
-                                            <div class="scan-log-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                                    <div class="time-block">
-                                                        <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">In</span>
-                                                        <span style="display: block; font-size: 1.05rem; font-weight: 600; color: #0f172a;"><?= $log['time_in'] ?></span>
-                                                    </div>
-                                                    <div style="color: #cbd5e1;"><i class="fa-solid fa-arrow-right-long"></i></div>
-                                                    <div class="time-block" style="text-align: right;">
-                                                        <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Out</span>
-                                                        <span style="display: block; font-size: 1.05rem; font-weight: 600; color: #0f172a;"><?= $log['time_out'] ?></span>
-                                                    </div>
-                                                </div>
-                                                <div style="border-top: 1px dashed #e2e8f0; padding-top: 8px;">
-                                                    <span style="font-size: 0.75rem; font-weight: 600; color: #64748b;">Class/Duty:</span>
-                                                    <span style="font-size: 0.75rem; color: #1e293b;"><?= htmlspecialchars($log['subject']) ?></span>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
+                                    <?php 
+// Sort the logs for this specific row by time (earliest to latest) before displaying
+usort($row['logs'], function($a, $b) {
+    return strtotime($a['time_in']) - strtotime($b['time_in']); //
+}); 
+?>
+
+<div class="scan-logs-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;">
+    <?php foreach ($row['logs'] as $log): ?>
+        <div class="scan-log-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div class="time-block">
+                    <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">In</span>
+                    <span style="display: block; font-size: 1.05rem; font-weight: 600; color: #2563eb;">
+                        <?= !empty($log['time_in']) ? date('g:i A', strtotime($log['time_in'])) : '---' ?>
+                    </span>
+                </div>
+                <div style="color: #cbd5e1;"><i class="fa-solid fa-arrow-right-long"></i></div>
+                <div class="time-block" style="text-align: right;">
+                    <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Out</span>
+                    <span style="display: block; font-size: 1.05rem; font-weight: 600; color: #2563eb;">
+                        <?= !empty($log['time_out']) ? date('g:i A', strtotime($log['time_out'])) : '---' ?>
+                    </span>
+                </div>
+            </div>
+            <div style="border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+                <span style="font-size: 0.75rem; font-weight: 600; color: #64748b;">Class/Duty:</span>
+                <span style="font-size: 0.75rem; color: #1e293b;"><?= htmlspecialchars($log['subject']) ?></span>
+            </div>
+        </div>
+    <?php endforeach; ?>
+</div>
                                 </div>
                             </td>
                         </tr>

@@ -1,8 +1,62 @@
 <?php 
 require_once __DIR__ . '/partials/header.php'; 
 ?>
+<style>
+    /* Modern Pill Badges */
+.ud-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 9999px; /* Pill shape */
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border: 1px solid transparent;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
 
+/* Status Variants */
+.ud-badge.completed {
+    background-color: #ecfdf5; /* Emerald 50 */
+    color: #059669;            /* Emerald 600 */
+    border-color: #a7f3d0;     /* Emerald 200 */
+}
+
+.ud-badge.pending {
+    background-color: #fffbeb; /* Amber 50 */
+    color: #d97706;            /* Amber 600 */
+    border-color: #fde68a;     /* Amber 200 */
+}
+
+.ud-badge.not-present {
+    background-color: #f8fafc; /* Slate 50 */
+    color: #64748b;            /* Slate 600 */
+    border-color: #e2e8f0;     /* Slate 200 */
+}
+
+/* Row Styling for better spacing */
+.ud-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ud-card-row:last-child {
+    border-bottom: none;
+}
+
+.ud-badge.absent {
+    background-color: #fef2f2; /* Red 50 */
+    color: #dc2626;            /* Red 600 */
+    border-color: #fecaca;     /* Red 200 */
+}
+</style>
 <?php if ($isAdmin): ?>
+
     <div class="main-body admin-dashboard">
         
         <div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
@@ -100,64 +154,108 @@ require_once __DIR__ . '/partials/header.php';
 
 <?php else: ?>
     <div class="main-body user-dashboard-body">
-        
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
-            <a href="attendance_history.php" class="btn btn-secondary btn-sm">
-                <i class="fa-solid fa-clock-rotate-left"></i> View My Attendance History
-            </a>
+ 
+        <div class="page-hint-card" style="margin-top: 2rem; margin-bottom: 2rem;">
+    <div class="page-hint-icon">
+        <i class="fa-solid fa-lightbulb"></i>
+    </div>
+    <div class="page-hint-content">
+        <h4>Note!</h4>
+        <p>
+            This dashboard provides a snapshot of your current status. The cards below summarize your total attendance activity for today. For a full breakdown, please visit your Attendance History.
+        </p>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon emerald"><i class="fa-solid fa-calendar-check"></i></div>
+        <div class="stat-details">
+            <p>Today's Entries</p>
+            <div class="stat-value emerald"><?= $stats['entries'] ?? 0 ?></div>
         </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon yellow"><i class="fa-solid fa-clock"></i></div>
+        <div class="stat-details">
+            <p>Late Arrivals</p>
+            <div class="stat-value yellow"><?= $stats['late'] ?? 0 ?></div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fa-solid fa-door-open"></i></div>
+        <div class="stat-details">
+            <p>Current Status</p>
+            <div class="stat-value blue" style="font-size: 1rem;">
+                <?= ($stats['present_total'] > 0) ? 'Currently In' : 'Timed Out' ?>
+            </div>
+        </div>
+    </div>
+</div>
+
 
         <div class="ud-grid">
-            <div class="ud-card">
-                <h3 class="ud-card-title emerald-header">
-                    <i class="fa-solid fa-clipboard-check"></i> Registration Status
-                </h3>
-                <div class="ud-card-content">
-                    <div class="ud-card-row">
-                        <span class="ud-card-label">Account Created</span>
-                        <span class="ud-badge completed">Completed</span>
-                    </div>
-                    <div class="ud-card-row">
-                        <span class="ud-card-label">Fingerprint Registered</span>
-                        <?php if ($fingerprint_registered): ?>
-                            <span class="ud-badge completed">Completed</span>
-                        <?php else: ?>
-                            <span class="ud-badge pending">Pending</span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
+    <div class="ud-card" style="border-top: 6px solid var(--emerald-500);">
+    <h3 class="ud-card-title emerald-header">
+        <i class="fa-solid fa-calendar-day"></i> Today's Attendance
+    </h3>
+    <div class="ud-card-content">
+        <div class="ud-card-row">
+    <span class="ud-card-label" style="font-weight: 600; color: #475569;">Attendance Status</span>
+    <?php
+        $status = $attendance['status'] ?? 'Not Present';
+        $badgeClass = 'not-present';
+        $icon = 'fa-circle-xmark';
 
-            <div class="ud-card">
-                <h3 class="ud-card-title emerald-header">
-                    <i class="fa-solid fa-calendar-check"></i> Today's Attendance
-                </h3>
-                <div class="ud-card-content">
-                    <div class="ud-card-row">
-                        <span class="ud-card-label">Status</span>
-                        <?php
-                            $status = $attendance['status'] ?? 'Not Present';
-                            $statusClass = 'not-present';
-                            if ($status === 'Present' || $status === 'On-time') $statusClass = 'completed';
-                            if ($status === 'Late') $statusClass = 'pending';
-                        ?>
-                        <span class="ud-badge <?= $statusClass ?>"><?= htmlspecialchars($status) ?></span>
-                    </div>
-                    <div class="ud-card-row">
-                        <span class="ud-card-label">Time In</span>
-                        <span class="ud-card-value">
-                            <?= isset($attendance['time_in']) ? date('g:i A', strtotime($attendance['time_in'])) : '------' ?>
-                        </span>
-                    </div>
-                    <div class="ud-card-row">
-                        <span class="ud-card-label">Time Out</span>
-                        <span class="ud-card-value">
-                            <?= isset($attendance['time_out']) ? date('g:i A', strtotime($attendance['time_out'])) : '------' ?>
-                        </span>
-                    </div>
-                </div>
+        // Map status to vibrant badge designs
+        if ($status === 'Present' || $status === 'On-time') {
+            $badgeClass = 'completed';
+            $icon = 'fa-circle-check';
+        } elseif ($status === 'Late') {
+            $badgeClass = 'pending';
+            $icon = 'fa-clock';
+        } elseif ($status === 'Absent') {
+            $badgeClass = 'absent';
+            $icon = 'fa-user-xmark';
+        }
+    ?>
+    <span class="ud-badge <?= $badgeClass ?>">
+        <i class="fa-solid <?= $icon ?>"></i> <?= htmlspecialchars($status) ?>
+    </span>
+</div>
+        <div class="ud-card-row">
+            <span class="ud-card-label" style="color: #64748b;">First In</span> <span class="ud-card-value" style="font-family: monospace; font-weight: 700; color: #1e293b;">
+                <?= isset($attendance['time_in']) ? date('g:i A', strtotime($attendance['time_in'])) : '--:-- --' ?>
+            </span>
+        </div>
+        <div class="ud-card-row">
+            <span class="ud-card-label" style="color: #64748b;">Last Out</span> <span class="ud-card-value" style="font-family: monospace; font-weight: 700; color: #1e293b;">
+                <?= isset($attendance['time_out']) ? date('g:i A', strtotime($attendance['time_out'])) : '--:-- --' ?>
+            </span>
+        </div>
+    </div>
+</div>
+
+    <div class="ud-card" style="border-top: 6px solid var(--emerald-500);">
+        <h3 class="ud-card-title emerald-header">
+            <i class="fa-solid fa-id-card-clip"></i> Registration Status
+        </h3>
+        <div class="ud-card-content">
+            <div class="ud-card-row">
+                <span class="ud-card-label" style="font-weight: 600; color: #475569;">System Account</span>
+                <span class="ud-badge completed"><i class="fa-solid fa-user-check"></i> Active</span>
+            </div>
+            <div class="ud-card-row">
+                <span class="ud-card-label" style="font-weight: 600; color: #475569;">Biometrics</span>
+                <?php if ($fingerprint_registered): ?>
+                    <span class="ud-badge completed"><i class="fa-solid fa-fingerprint"></i> Registered</span>
+                <?php else: ?>
+                    <span class="ud-badge pending"><i class="fa-solid fa-triangle-exclamation"></i> Registration Required </span>
+                <?php endif; ?>
             </div>
         </div>
+    </div>
+</div>
 
         <div class="ud-card ud-activity-card">
             <h3 class="ud-card-title emerald-header">
@@ -184,21 +282,14 @@ require_once __DIR__ . '/partials/header.php';
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
-             </div>
+    </div>
+</div>
+<div style="text-align: right; margin-top: 1rem; border-top: 1px solid var(--gray-100); padding-top: 1rem;">
+            <a href="activity_log.php" class="btn btn-sm btn-secondary">
+                View All My Activity &rarr;
+            </a>
         </div>
 
-        <div class="page-hint-card">
-            <div class="page-hint-icon">
-                <i class="fa-solid fa-lightbulb"></i>
-            </div>
-            <div class="page-hint-content">
-                <h4>Note!</h4>
-                <p>
-                    This is your main dashboard. You can quickly see your registration status and check if your attendance for today has been recorded. Use the "View My Attendance History" button to see your complete attendance records.
-                </p>
-            </div>
-        </div>
-    </div>
 <?php endif; ?>
 
 <div id="scannerOnlineModal" class="modal">

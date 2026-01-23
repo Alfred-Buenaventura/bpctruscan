@@ -2,9 +2,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
 
 <div class="main-body">
-    <?php if (!empty($success)): ?> <div class="alert alert-success"><?= $success ?></div> <?php endif; ?>
-    <?php if (!empty($error)): ?> <div class="alert alert-error"><?= $error ?></div> <?php endif; ?>
-
     <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
         <div class="card">
             <div class="card-body" style="text-align: center; padding: 30px 20px;">
@@ -212,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => { 
                 if(data.success) {
                     location.reload(); 
-                } else { 
+                } else {       
                     alert(data.message);
                     saveBtn.disabled = false;
                     saveBtn.innerHTML = 'Save and Apply';

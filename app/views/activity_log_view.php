@@ -11,23 +11,25 @@
             <?php else: ?>
                 <table>
                     <thead>
-                        <tr>
-                            <th>Action</th>
-                            <th>Details</th>
-                            <th>User</th>
-                            <th>Time & Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($logs as $log): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($log['action']) ?></td>
-                                <td><?= htmlspecialchars($log['description']) ?></td>
-                                <td><?= htmlspecialchars(($log['first_name'] ?? '') . ' ' . ($log['last_name'] ?? 'System')) ?></td>
-                                <td><?= date('M d, Y g:i A', strtotime($log['created_at'])) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
+    <tr>
+        <th>Action</th>
+        <th>Details</th>
+        <?php if ($isAdmin): ?><th>User</th><?php endif; ?>
+        <th>Time & Date</th>
+    </tr>
+</thead>
+<tbody>
+    <?php foreach ($logs as $log): ?>
+        <tr>
+            <td><strong><?= htmlspecialchars($log['action']) ?></strong></td>
+            <td><?= htmlspecialchars($log['description']) ?></td>
+            <?php if ($isAdmin): ?>
+                <td><?= htmlspecialchars($log['first_name'] . ' ' . $log['last_name']) ?></td>
+            <?php endif; ?>
+            <td><?= date('M d, Y g:i A', strtotime($log['created_at'])) ?></td>
+        </tr>
+    <?php endforeach; ?>
+</tbody>
                 </table>
             <?php endif; ?>
 
