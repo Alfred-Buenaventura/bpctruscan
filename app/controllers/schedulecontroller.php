@@ -168,6 +168,8 @@ class ScheduleController extends Controller {
                                     $processedCount++;
                                     if (!isset($usersToNotify[$schedInfo['user_id']])) {
                                         $usersToNotify[$schedInfo['user_id']] = ['days' => [], 'schedules' => []];
+                                        $actionVerb = ($action === 'approve') ? 'Approved' : 'Declined';
+        $logModel->log($schedInfo['user_id'], "Schedule $actionVerb", "Your request for {$schedInfo['day_of_week']} has been $action" . "d.");      
                                     }
                                     $usersToNotify[$schedInfo['user_id']]['days'][] = $schedInfo['day_of_week'];
                                     $usersToNotify[$schedInfo['user_id']]['schedules'][] = [
@@ -235,7 +237,10 @@ class ScheduleController extends Controller {
                         }
                         if ($scheduleModel->create($userId, $schedules, $data['isAdmin'])) {
                             $data['success'] = "Schedule(s) added successfully.";
-                            if (!$data['isAdmin']) { $this->notifyAdminsOfPendingSchedule($userId, $schedules); }
+                            $sessionCount = count($schedules);
+        $logModel->log($userId, 'Schedule Submitted', "Submitted $sessionCount session(s) for approval.");
+        
+        if (!$data['isAdmin']) { $this->notifyAdminsOfPendingSchedule($userId, $schedules); 
                         } else { 
                             $data['error'] = "Failed to add schedule(s)."; 
                         }
@@ -245,6 +250,8 @@ class ScheduleController extends Controller {
                 elseif (isset($_POST['delete_schedule'])) {
                      if ($scheduleModel->delete($_POST['schedule_id_delete'], $_POST['user_id_delete'], $data['isAdmin'])) {
                         $data['success'] = "Schedule deleted successfully.";
+                        $logModel->log($_SESSION['user_id'], 'Schedule Removed', "Deleted a schedule entry from the system.");
+    }
                     } else { $data['error'] = "Failed to delete schedule."; }
                 }
                 // --- EDIT SCHEDULE ---

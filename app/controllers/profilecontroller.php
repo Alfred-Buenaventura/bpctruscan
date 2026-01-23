@@ -7,6 +7,7 @@ class ProfileController extends Controller {
         $this->requireLogin();
         $userModel = $this->model('User');
         $logModel = $this->model('ActivityLog');
+        $attendanceModel = $this->model('Attendance'); // Load the attendance model
         $userId = $_SESSION['user_id'];
 
         // --- 1. HANDLE AJAX CROPPER UPLOAD ---
@@ -41,28 +42,33 @@ class ProfileController extends Controller {
 
         // --- 2. HANDLE STANDARD PROFILE UPDATE ---
         $data = ['pageTitle' => 'My Profile', 'pageSubtitle' => 'View and edit your information', 'error' => '', 'success' => ''];
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
-            $firstName = trim($_POST['first_name']);
-            $lastName = trim($_POST['last_name']);
-            $middleName = trim($_POST['middle_name']);
-            $email = trim($_POST['email']);
-            $phone = trim($_POST['phone']);
-            $emailNotif = isset($_POST['email_notifications']) ? 1 : 0;
-            $weeklySum = isset($_POST['weekly_summary']) ? 1 : 0;
+        // Find the POST handling section in app/controllers/profilecontroller.php
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
+    $firstName = trim($_POST['first_name']);
+    $lastName = trim($_POST['last_name']);
+    $middleName = trim($_POST['middle_name']);
+    $email = trim($_POST['email']);
+    $phone = trim($_POST['phone']);
+    $emailNotif = isset($_POST['email_notifications']) ? 1 : 0;
+    $weeklySum = isset($_POST['weekly_summary']) ? 1 : 0;
 
-            if ($userModel->updateProfile($userId, $firstName, $lastName, $middleName, $email, $phone, $emailNotif, $weeklySum)) {
-                $_SESSION['full_name'] = $firstName . ' ' . $lastName;
-                $_SESSION['first_name'] = $firstName;
-                $data['success'] = 'Profile updated successfully!';
-            } else {
-                $data['error'] = 'Failed to update profile settings.';
-            }
-        }
+    if ($userModel->updateProfile($userId, $firstName, $lastName, $middleName, $email, $phone, $emailNotif, $weeklySum)) {
+        $_SESSION['full_name'] = $firstName . ' ' . $lastName;
+        $_SESSION['first_name'] = $firstName;
+        
+        // Use the new global flash system and redirect
+        $this->setFlash('Profile updated successfully!', 'success', 'profile.php');
+    } else {
+        $this->setFlash('Failed to update profile settings.', 'error', 'profile.php');
+    }
+}
 
         $data['user'] = $userModel->findById($userId);
         $_SESSION['profile_image'] = $data['user']['profile_image'];
         $data['activities'] = $logModel->getRecentLogs(10, $userId);
+        $data['stats'] = $attendanceModel->getStats($userId);
         $this->view('profile_view', $data);
+
     }
 }
 ?>

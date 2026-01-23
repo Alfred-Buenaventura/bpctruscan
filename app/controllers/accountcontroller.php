@@ -188,13 +188,6 @@ class AccountController extends Controller {
         $this->setFlash("Successfully imported $imported users. Skipped $skipped.", 'success', 'csv');
     }
 
-    private function setFlash($message, $type, $tab) {
-        $_SESSION['flash_message'] = $message;
-        $_SESSION['flash_type'] = $type;
-        header("Location: create_account.php?tab=$tab");
-        exit;
-    }
-
     public function downloadTemplate() {
         $this->requireAdmin();
 

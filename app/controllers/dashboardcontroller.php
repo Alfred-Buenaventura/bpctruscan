@@ -23,15 +23,19 @@ class DashboardController extends Controller {
             $data['activityLogs'] = $logModel->getRecentLogs(5); // Global logs
             $data['isAdmin'] = true;
         } else {
-            // --- USER DASHBOARD DATA ---
-            $firstName = $_SESSION['first_name'] ?? 'User';
-            $data['pageSubtitle'] = "Welcome back, " . htmlspecialchars($firstName) . "!";
-            
-            $data['fingerprint_registered'] = $userModel->getFingerprintStatus($_SESSION['user_id']);
-            $data['attendance'] = $attModel->getTodayRecord($_SESSION['user_id']);
-            $data['activityLogs'] = $logModel->getRecentLogs(5, $_SESSION['user_id']); // Personal logs
-            $data['isAdmin'] = false;
-        }
+    // --- USER DASHBOARD DATA ---
+    $firstName = $_SESSION['first_name'] ?? 'User';
+    $data['pageSubtitle'] = "Welcome back, " . htmlspecialchars($firstName) . "!";
+    
+    $data['fingerprint_registered'] = $userModel->getFingerprintStatus($_SESSION['user_id']);
+    
+    // CHANGE THIS: Call the new Daily Summary method instead of getTodayRecord
+    $data['attendance'] = $attModel->getDailySummary($_SESSION['user_id']); 
+    
+    $data['activityLogs'] = $logModel->getRecentLogs(5, $_SESSION['user_id']);
+    $data['stats'] = $attModel->getStats($_SESSION['user_id']); 
+    $data['isAdmin'] = false;
+}
 
         $this->view('dashboard_view', $data);
     }
