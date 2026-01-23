@@ -1,0 +1,175 @@
+/* --- MODAL SIZE & GRID IMPROVEMENTS --- */
+.modal-lg {
+    max-width: 1150px !important;
+    width: 95% !important;
+}
+
+.schedule-entry-row {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 2.2fr 1.1fr 1.1fr 1.8fr auto;
+    gap: 15px;
+    align-items: flex-end;
+    padding: 20px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.schedule-entry-row .form-group { margin-bottom: 0; }
+.schedule-entry-row .form-group label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: var(--gray-500);
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* --- FIX FOR DROP-DOWNS --- */
+select.form-control {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 36px !important;
+}
+
+/* --- PROFESSIONAL BADGES & TABLES --- */
+.day-badge {
+    display: inline-flex;
+    padding: 4px 10px;
+    background-color: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.ud-badge.completed { background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.ud-badge.pending { background-color: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+
+.day-table, .data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+.day-table th, .data-table th {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    padding: 12px 15px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.day-table td, .data-table td {
+    background: white;
+    padding: 12px 15px;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* --- USER ACCOUNT SCHEDULE TABLE FIX --- */
+.user-schedule-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+    border-collapse: separate;
+    border-spacing: 0 10px;
+}
+
+.user-schedule-table th, .user-schedule-table td {
+    padding: 12px 15px !important;
+    text-align: left !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- SYMMETRICAL TABS --- */
+.tabs {
+    display: flex;
+    width: 100%;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.tab-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 0;
+    background: transparent;
+    color: #475569;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.tab-btn.active { color: #ffffff; font-weight: 800; }
+.tab-btn.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 3px; background: #2563eb; }
+
+/* --- TYPE PILLS --- */
+.type-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.type-pill.office { background-color: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.type-pill.class { background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+
+.time-blue { color: #2563eb !important; font-weight: 700 !important; }
+
+/* --- MODERN MODAL REFINEMENTS --- */
+.modal-sm {
+    max-width: 400px !important;
+    border-radius: 16px !important;
+    overflow: hidden;
+}
+
+.modal-icon-circle {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-size: 1.8rem;
+    transition: all 0.3s ease;
+}
+
+/* Success State (Approve) */
+.modal-icon-success {
+    background-color: #ecfdf5;
+    color: #10b981;
+    border: 3px solid #d1fae5;
+}
+
+/* Danger State (Decline/Delete) */
+.modal-icon-danger {
+    background-color: #fef2f2;
+    color: #ef4444;
+    border: 3px solid #fee2e2;
+}
+
+.modal-action-buttons .btn {
+    padding: 12px 20px;
+    font-weight: 700;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    font-size: 0.85rem;
+}
