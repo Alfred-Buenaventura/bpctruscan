@@ -129,7 +129,7 @@ class Schedule {
             $params[] = $searchTerm;
             $params[] = $searchTerm;
             $params[] = $searchTerm;
-            $params[] = $search; 
+            $params[] = $search;
             $types .= "sssi";
         }
 
@@ -202,4 +202,3 @@ class Schedule {
         ];
     }
 }
-?>

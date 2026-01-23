@@ -30,17 +30,29 @@ class ActivityLog {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    public function getTotalCount() {
-        $res = $this->db->query("SELECT COUNT(*) as total FROM activity_logs");
-        return $res->get_result()->fetch_assoc()['total'] ?? 0;
-    }
+    // Update these methods in app/models/activitylog.php
 
-    public function getPaginated($limit, $offset) {
-        $sql = "SELECT al.*, u.first_name, u.last_name 
-                FROM activity_logs al 
-                LEFT JOIN users u ON al.user_id = u.id 
-                ORDER BY al.created_at DESC LIMIT ? OFFSET ?";
+public function getTotalCount($userId = null) {
+    if ($userId) {
+        $res = $this->db->query("SELECT COUNT(*) as total FROM activity_logs WHERE user_id = ?", [$userId], "i");
+    } else {
+        $res = $this->db->query("SELECT COUNT(*) as total FROM activity_logs");
+    }
+    return $res->get_result()->fetch_assoc()['total'] ?? 0;
+}
+
+public function getPaginated($limit, $offset, $userId = null) {
+    $sql = "SELECT al.*, u.first_name, u.last_name 
+            FROM activity_logs al 
+            LEFT JOIN users u ON al.user_id = u.id";
+    
+    if ($userId) {
+        $sql .= " WHERE al.user_id = ? ORDER BY al.created_at DESC LIMIT ? OFFSET ?";
+        return $this->db->query($sql, [$userId, $limit, $offset], "iii")->get_result()->fetch_all(MYSQLI_ASSOC);
+    } else {
+        $sql .= " ORDER BY al.created_at DESC LIMIT ? OFFSET ?";
         return $this->db->query($sql, [$limit, $offset], "ii")->get_result()->fetch_all(MYSQLI_ASSOC);
     }
+}
 }
 ?>

@@ -18,8 +18,41 @@ class Attendance {
         return $stmt->get_result()->fetch_assoc();
     }
 
+    public function getUserHistory($userId, $filters = []) {
+    // UPDATED: JOINing with the correct table 'class_schedules'
+    $sql = "SELECT r.*, u.first_name, u.last_name, u.faculty_id, 
+                   cs.subject as duty_subject, cs.room as duty_room, cs.type as duty_type
+            FROM attendance_records r 
+            JOIN users u ON r.user_id = u.id 
+            LEFT JOIN class_schedules cs ON r.schedule_id = cs.id 
+            WHERE 1=1"; 
+    
+    $params = [];
+    $types = "";
+
+    if (!empty($userId)) {
+        $sql .= " AND r.user_id = ?";
+        $params[] = $userId;
+        $types .= "i";
+    }
+
+    if (!empty($filters['status_type'])) {
+        $sql .= " AND r.status = ?";
+        $params[] = $filters['status_type'];
+        $types .= "s";
+    }
+    
+    $sql .= " AND r.date BETWEEN ? AND ? ORDER BY r.date DESC, r.time_in ASC";
+    $params[] = $filters['start_date'];
+    $params[] = $filters['end_date'];
+    $types .= "ss";
+
+    // Use the core MySQLi query method
+    $stmt = $this->db->query($sql, $params, $types);
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
     /**
-     * Get records based on filters (for the main table)
+     * Get records based on filters (for the main table and DTR)
      */
     public function getRecords($filters) {
         $sql = "SELECT ar.*, 
@@ -47,7 +80,6 @@ class Attendance {
             $types .= "i";
         }
 
-        // Backend search support (in addition to the Live Search)
         if (!empty($filters['search'])) {
             $sql .= " AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.faculty_id LIKE ?)";
             $search = "%" . $filters['search'] . "%";
@@ -55,7 +87,7 @@ class Attendance {
             $types .= "sss";
         }
 
-        $sql .= " ORDER BY ar.date DESC, ar.time_in DESC";
+        $sql .= " ORDER BY ar.date DESC, ar.time_in ASC";
         
         $res = $this->db->query($sql, $params, $types)->get_result();
         
@@ -70,15 +102,17 @@ class Attendance {
                     'faculty_id' => $row['faculty_id'],
                     'date'       => $row['date'],
                     'status'     => $row['status'],
-                    'logs'       => [] // Initialize as empty array to prevent count() errors
+                    'logs'       => []
                 ];
             }
             
             if (!empty($row['time_in'])) {
                 $records[$key]['logs'][] = [
-                    'subject'  => $row['subject'] ?? 'General Duty',
-                    'time_in'  => $row['time_in'],
-                    'time_out' => $row['time_out']
+                    'subject'     => $row['subject'] ?? 'General Duty',
+                    'time_in'     => $row['time_in'],
+                    'time_out'    => $row['time_out'],
+                    'sched_start' => $row['sched_start'], // Added for clamping logic
+                    'sched_end'   => $row['sched_end']    // Added for clamping logic
                 ];
             }
         }
@@ -88,13 +122,11 @@ class Attendance {
 
     /**
      * Get Count Stats for Dashboard Cards
-     * Robust check for NULL, empty strings, and 00:00:00
      */
     public function getStats($userId = null) {
         $today = date('Y-m-d');
         $stats = ['entries' => 0, 'exits' => 0, 'present_total' => 0, 'late' => 0];
 
-        // Base clauses for "Timed In" and "Timed Out"
         $hasIn  = " (time_in IS NOT NULL AND time_in != '' AND time_in != '00:00:00') ";
         $hasOut = " (time_out IS NOT NULL AND time_out != '' AND time_out != '00:00:00') ";
         $noOut  = " (time_out IS NULL OR time_out = '' OR time_out = '00:00:00') ";
@@ -110,7 +142,6 @@ class Attendance {
             $stats['present_total'] = $this->db->query($sqlPresent, [$userId, $today], "is")->get_result()->fetch_assoc()['c'] ?? 0;
             $stats['late']    = $this->db->query($sqlLate, [$userId, $today], "is")->get_result()->fetch_assoc()['c'] ?? 0;
         } else {
-            // For Admin: Count unique users
             $sqlEntries = "SELECT COUNT(DISTINCT user_id) as c FROM attendance_records WHERE DATE(date) = ? AND $hasIn";
             $sqlExits   = "SELECT COUNT(DISTINCT user_id) as c FROM attendance_records WHERE DATE(date) = ? AND $hasOut";
             $sqlPresent = "SELECT COUNT(DISTINCT user_id) as c FROM attendance_records WHERE DATE(date) = ? AND $hasIn AND $noOut";
@@ -126,14 +157,14 @@ class Attendance {
     }
 
     public function countActiveToday() {
-    $today = date('Y-m-d');
-    $sql = "SELECT COUNT(DISTINCT user_id) as c FROM attendance_records WHERE DATE(date) = ? AND time_in IS NOT NULL AND time_in != ''";
-    $res = $this->db->query($sql, [$today], "s")->get_result();
-    return $res->fetch_assoc()['c'] ?? 0;
-}
+        $today = date('Y-m-d');
+        $sql = "SELECT COUNT(DISTINCT user_id) as c FROM attendance_records WHERE DATE(date) = ? AND time_in IS NOT NULL AND time_in != ''";
+        $res = $this->db->query($sql, [$today], "s")->get_result();
+        return $res->fetch_assoc()['c'] ?? 0;
+    }
 
     /**
-     * API Support: Fetch specific list of users for the Detail Modals
+     * Fetch specific list of users for the Detail Modals
      */
     public function getDetailedStatsByType($type) {
         $today = date('Y-m-d');
@@ -147,37 +178,14 @@ class Attendance {
                 WHERE DATE(ar.date) = ?";
         
         switch ($type) {
-            case 'entries':
-                $sql .= " AND $hasIn";
-                break;
-            case 'exits':
-                $sql .= " AND $hasOut";
-                break;
-            case 'present':
-                $sql .= " AND $hasIn AND $noOut";
-                break;
-            case 'late':
-                $sql .= " AND ar.status LIKE '%Late%'";
-                break;
+            case 'entries': $sql .= " AND $hasIn"; break;
+            case 'exits': $sql .= " AND $hasOut"; break;
+            case 'present': $sql .= " AND $hasIn AND $noOut"; break;
+            case 'late': $sql .= " AND ar.status LIKE '%Late%'"; break;
         }
         
-        // Group by user to avoid duplicate rows in the modal for multi-session faculty
         $sql .= " GROUP BY u.id";
-        
         return $this->db->query($sql, [$today], "s")->get_result()->fetch_all(MYSQLI_ASSOC);
-    }
-
-    /**
-     * Calculate seconds for DTR generation
-     */
-    public function calculateClampedHours($record) {
-        if (empty($record['time_in']) || empty($record['time_out'])) return 0;
-        
-        $start = strtotime($record['time_in']);
-        $end = strtotime($record['time_out']);
-        
-        if ($end <= $start) return 0;
-        return $end - $start;
     }
 
     public function getHolidaysInRange($startDate, $endDate) {
@@ -189,4 +197,48 @@ class Attendance {
         }
         return $holidays;
     }
+
+    public function getDailySummary($userId) {
+    $today = date('Y-m-d');
+    $dayOfWeek = date('l'); // e.g., 'Monday', 'Tuesday'
+    
+    // 1. Get the earliest Time In and latest Time Out
+    $sqlSummary = "SELECT 
+                MIN(NULLIF(time_in, '00:00:00')) as first_in, 
+                MAX(NULLIF(time_out, '00:00:00')) as last_out
+            FROM attendance_records 
+            WHERE user_id = ? AND DATE(date) = ?";
+    
+    $stmtSummary = $this->db->query($sqlSummary, [$userId, $today], "is");
+    $summary = $stmtSummary->get_result()->fetch_assoc();
+
+    // 2. Determine initial status based on attendance logs
+    $sqlStatus = "SELECT status FROM attendance_records 
+                  WHERE user_id = ? AND DATE(date) = ? 
+                  ORDER BY time_in ASC LIMIT 1";
+                  
+    $stmtStatus = $this->db->query($sqlStatus, [$userId, $today], "is");
+    $statusRow = $stmtStatus->get_result()->fetch_assoc();
+    $currentStatus = $statusRow['status'] ?? null;
+
+    // 3. LOGIC REFINEMENT: If no logs exist, check the schedule
+    if (empty($summary['first_in'])) {
+        // Check if the user has any approved schedules for today
+        $sqlSched = "SELECT COUNT(*) as sched_count FROM class_schedules 
+                     WHERE user_id = ? AND day_of_week = ? AND status = 'approved'";
+        $resSched = $this->db->query($sqlSched, [$userId, $dayOfWeek], "is")->get_result()->fetch_assoc();
+        
+        if ($resSched['sched_count'] > 0) {
+            $currentStatus = 'Absent'; // Scheduled but no log
+        } else {
+            $currentStatus = 'Not Present'; // No schedule and no log
+        }
+    }
+    
+    return [
+        'time_in'  => $summary['first_in'] ?? null,
+        'time_out' => $summary['last_out'] ?? null,
+        'status'   => $currentStatus
+    ];
+}
 }
