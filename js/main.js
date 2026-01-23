@@ -142,11 +142,38 @@ function initScannerSocket(widget) {
     const statusBadge = widget.querySelector('.scanner-status-badge');
     
     function setStatus(online, msg) {
-        widget.classList.toggle('online', online);
-        widget.classList.toggle('offline', !online);
-        if (statusText) statusText.textContent = online ? 'Device Connected' : (msg || 'Check connection');
-        if (statusBadge) statusBadge.textContent = online ? 'ONLINE' : 'OFFLINE';
+    const widget = document.getElementById('scanner-status-widget');
+    const statusMsg = document.getElementById('scanner-status-msg');
+    const statusLabel = document.getElementById('scanner-status-label');
+    const modalIcon = document.getElementById('modal-scanner-icon');
+    const modalDesc = document.getElementById('modal-scanner-desc');
+
+    if (online) {
+        // Swap Classes
+        widget.classList.remove('offline');
+        widget.classList.add('online');
+        
+        // Update Header UI
+        if (statusLabel) statusLabel.textContent = 'ONLINE';
+        if (statusMsg) statusMsg.textContent = 'Hardware Ready';
+        
+        // Update Modal UI
+        if (modalIcon) modalIcon.style.color = '#10b981';
+        if (modalDesc) modalDesc.textContent = "The biometric scanner device is connected and ready for fingerprint processing. Ensure device is clean for proper use.";
+    } else {
+        // Swap Classes
+        widget.classList.remove('online');
+        widget.classList.add('offline');
+        
+        // Update Header UI
+        if (statusLabel) statusLabel.textContent = 'OFFLINE';
+        if (statusMsg) statusMsg.textContent = msg || 'Check connection';
+        
+        // Update Modal UI
+        if (modalIcon) modalIcon.style.color = '#ef4444';
+        if (modalDesc) modalDesc.textContent = "The scanner service is currently unreachable. Ensure device is properly connected before use.";
     }
+}
 
     try {
         const socket = new WebSocket("ws://127.0.0.1:8080");
