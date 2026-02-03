@@ -8,53 +8,67 @@ class Attendance {
         $this->db = Database::getInstance();
     }
 
-    /**
-     * Get basic today's record for a specific user
-     */
     public function getTodayRecord($userId) {
         $today = date('Y-m-d');
+        // pulls the attendance log for a specific user for the current date
         $sql = "SELECT * FROM attendance_records WHERE user_id = ? AND DATE(date) = ? LIMIT 1";
         $stmt = $this->db->query($sql, [$userId, $today], "is");
         return $stmt->get_result()->fetch_assoc();
     }
 
-    public function getUserHistory($userId, $filters = []) {
-    // UPDATED: JOINing with the correct table 'class_schedules'
-    $sql = "SELECT r.*, u.first_name, u.last_name, u.faculty_id, 
-                   cs.subject as duty_subject, cs.room as duty_room, cs.type as duty_type
-            FROM attendance_records r 
-            JOIN users u ON r.user_id = u.id 
-            LEFT JOIN class_schedules cs ON r.schedule_id = cs.id 
-            WHERE 1=1"; 
+    public function getFullHistory() {
+    $db = Database::getInstance();
     
-    $params = [];
-    $types = "";
-
-    if (!empty($userId)) {
-        $sql .= " AND r.user_id = ?";
-        $params[] = $userId;
-        $types .= "i";
-    }
-
-    if (!empty($filters['status_type'])) {
-        $sql .= " AND r.status = ?";
-        $params[] = $filters['status_type'];
-        $types .= "s";
-    }
-    
-    $sql .= " AND r.date BETWEEN ? AND ? ORDER BY r.date DESC, r.time_in ASC";
-    $params[] = $filters['start_date'];
-    $params[] = $filters['end_date'];
-    $types .= "ss";
-
-    // Use the core MySQLi query method
-    $stmt = $this->db->query($sql, $params, $types);
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    // This is where you input your SQL query
+    $sql = "SELECT 
+                u.student_id, 
+                u.name, 
+                a.status, 
+                a.method, 
+                a.log_date, 
+                a.log_time 
+            FROM attendance_records a
+            JOIN users u ON a.user_id = u.id
+            ORDER BY a.log_date DESC, a.log_time DESC";
+            
+    return $db->query($sql)->fetch_all(MYSQLI_ASSOC);
 }
-    /**
-     * Get records based on filters (for the main table and DTR)
-     */
+
+    public function getUserHistory($userId, $filters = []) {
+        // fetches history and joins with schedules to show specific subject details
+        $sql = "SELECT r.*, u.first_name, u.last_name, u.faculty_id, 
+                       cs.subject as duty_subject, cs.room as duty_room, cs.type as duty_type
+                FROM attendance_records r 
+                JOIN users u ON r.user_id = u.id 
+                LEFT JOIN class_schedules cs ON r.schedule_id = cs.id 
+                WHERE 1=1"; 
+        
+        $params = [];
+        $types = "";
+
+        if (!empty($userId)) {
+            $sql .= " AND r.user_id = ?";
+            $params[] = $userId;
+            $types .= "i";
+        }
+
+        if (!empty($filters['status_type'])) {
+            $sql .= " AND r.status = ?";
+            $params[] = $filters['status_type'];
+            $types .= "s";
+        }
+        
+        $sql .= " AND r.date BETWEEN ? AND ? ORDER BY r.date DESC, r.time_in ASC";
+        $params[] = $filters['start_date'];
+        $params[] = $filters['end_date'];
+        $types .= "ss";
+
+        $stmt = $this->db->query($sql, $params, $types);
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
     public function getRecords($filters) {
+        // main query for the admin dashboard to see everyone's logs grouped by date
         $sql = "SELECT ar.*, 
                        u.faculty_id, u.first_name, u.last_name, u.role,
                        s.start_time as sched_start, s.end_time as sched_end,
@@ -111,8 +125,8 @@ class Attendance {
                     'subject'     => $row['subject'] ?? 'General Duty',
                     'time_in'     => $row['time_in'],
                     'time_out'    => $row['time_out'],
-                    'sched_start' => $row['sched_start'], // Added for clamping logic
-                    'sched_end'   => $row['sched_end']    // Added for clamping logic
+                    'sched_start' => $row['sched_start'], 
+                    'sched_end'   => $row['sched_end']    
                 ];
             }
         }
@@ -120,10 +134,8 @@ class Attendance {
         return array_values($records);
     }
 
-    /**
-     * Get Count Stats for Dashboard Cards
-     */
     public function getStats($userId = null) {
+        // calculates totals for entries, exits, and lates for the dashboard cards
         $today = date('Y-m-d');
         $stats = ['entries' => 0, 'exits' => 0, 'present_total' => 0, 'late' => 0];
 
@@ -157,16 +169,15 @@ class Attendance {
     }
 
     public function countActiveToday() {
+        // simple count of how many unique users have checked in today
         $today = date('Y-m-d');
         $sql = "SELECT COUNT(DISTINCT user_id) as c FROM attendance_records WHERE DATE(date) = ? AND time_in IS NOT NULL AND time_in != ''";
         $res = $this->db->query($sql, [$today], "s")->get_result();
         return $res->fetch_assoc()['c'] ?? 0;
     }
 
-    /**
-     * Fetch specific list of users for the Detail Modals
-     */
     public function getDetailedStatsByType($type) {
+        // pulls specific user lists for the dashboard detail popups
         $today = date('Y-m-d');
         $hasIn  = " (ar.time_in IS NOT NULL AND ar.time_in != '' AND ar.time_in != '00:00:00') ";
         $hasOut = " (ar.time_out IS NOT NULL AND ar.time_out != '' AND ar.time_out != '00:00:00') ";
@@ -189,6 +200,7 @@ class Attendance {
     }
 
     public function getHolidaysInRange($startDate, $endDate) {
+        // helper to see which holidays fall within a date range for reports
         $holidays = [];
         $sql = "SELECT holiday_date, description FROM holidays WHERE holiday_date BETWEEN ? AND ?";
         $res = $this->db->query($sql, [$startDate, $endDate], "ss")->get_result();
@@ -199,46 +211,44 @@ class Attendance {
     }
 
     public function getDailySummary($userId) {
-    $today = date('Y-m-d');
-    $dayOfWeek = date('l'); // e.g., 'Monday', 'Tuesday'
-    
-    // 1. Get the earliest Time In and latest Time Out
-    $sqlSummary = "SELECT 
-                MIN(NULLIF(time_in, '00:00:00')) as first_in, 
-                MAX(NULLIF(time_out, '00:00:00')) as last_out
-            FROM attendance_records 
-            WHERE user_id = ? AND DATE(date) = ?";
-    
-    $stmtSummary = $this->db->query($sqlSummary, [$userId, $today], "is");
-    $summary = $stmtSummary->get_result()->fetch_assoc();
-
-    // 2. Determine initial status based on attendance logs
-    $sqlStatus = "SELECT status FROM attendance_records 
-                  WHERE user_id = ? AND DATE(date) = ? 
-                  ORDER BY time_in ASC LIMIT 1";
-                  
-    $stmtStatus = $this->db->query($sqlStatus, [$userId, $today], "is");
-    $statusRow = $stmtStatus->get_result()->fetch_assoc();
-    $currentStatus = $statusRow['status'] ?? null;
-
-    // 3. LOGIC REFINEMENT: If no logs exist, check the schedule
-    if (empty($summary['first_in'])) {
-        // Check if the user has any approved schedules for today
-        $sqlSched = "SELECT COUNT(*) as sched_count FROM class_schedules 
-                     WHERE user_id = ? AND day_of_week = ? AND status = 'approved'";
-        $resSched = $this->db->query($sqlSched, [$userId, $dayOfWeek], "is")->get_result()->fetch_assoc();
+        $today = date('Y-m-d');
+        $dayOfWeek = date('l'); 
         
-        if ($resSched['sched_count'] > 0) {
-            $currentStatus = 'Absent'; // Scheduled but no log
-        } else {
-            $currentStatus = 'Not Present'; // No schedule and no log
+        // finds the very first time in and the very last time out for the day
+        $sqlSummary = "SELECT 
+                    MIN(NULLIF(time_in, '00:00:00')) as first_in, 
+                    MAX(NULLIF(time_out, '00:00:00')) as last_out
+                FROM attendance_records 
+                WHERE user_id = ? AND DATE(date) = ?";
+        
+        $stmtSummary = $this->db->query($sqlSummary, [$userId, $today], "is");
+        $summary = $stmtSummary->get_result()->fetch_assoc();
+
+        $sqlStatus = "SELECT status FROM attendance_records 
+                      WHERE user_id = ? AND DATE(date) = ? 
+                      ORDER BY time_in ASC LIMIT 1";
+                      
+        $stmtStatus = $this->db->query($sqlStatus, [$userId, $today], "is");
+        $statusRow = $stmtStatus->get_result()->fetch_assoc();
+        $currentStatus = $statusRow['status'] ?? null;
+
+        // if they have no log, we check their schedule to see if they were absent or just off duty
+        if (empty($summary['first_in'])) {
+            $sqlSched = "SELECT COUNT(*) as sched_count FROM class_schedules 
+                         WHERE user_id = ? AND day_of_week = ? AND status = 'approved'";
+            $resSched = $this->db->query($sqlSched, [$userId, $dayOfWeek], "is")->get_result()->fetch_assoc();
+            
+            if ($resSched['sched_count'] > 0) {
+                $currentStatus = 'Absent'; 
+            } else {
+                $currentStatus = 'Not Present'; 
+            }
         }
+        
+        return [
+            'time_in'  => $summary['first_in'] ?? null,
+            'time_out' => $summary['last_out'] ?? null,
+            'status'   => $currentStatus
+        ];
     }
-    
-    return [
-        'time_in'  => $summary['first_in'] ?? null,
-        'time_out' => $summary['last_out'] ?? null,
-        'status'   => $currentStatus
-    ];
-}
 }
