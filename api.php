@@ -36,6 +36,14 @@ switch ($action) {
         (new RegistrationController())->getStaffReport();
         break;
 
+    case 'get_attendance_summary':
+        (new AttendanceController())->getAttendanceSummary();
+        break;
+
+    case 'submit_attendance_feedback':
+        (new AttendanceController())->submitFeedback();
+        break;
+
     default:
         header('HTTP/1.1 404 Not Found');
         echo json_encode(['success' => false, 'message' => 'Invalid API Action']);
