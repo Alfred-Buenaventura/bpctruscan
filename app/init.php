@@ -16,6 +16,10 @@ require_once __DIR__ . '/core/mailer.php';
 // 4. Load .env
 Helper::loadEnv(__DIR__ . '/../.env');
 
+if (!defined('API_ACCESS')) {
+    define('API_ACCESS', false);
+}
+
 // Define the Base URL for the system to resolve paths correctly
 define('BASE_URL', 'https://bpctruscan.com'); // Update this to match your actual project folder
 
