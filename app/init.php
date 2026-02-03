@@ -17,7 +17,7 @@ require_once __DIR__ . '/core/mailer.php';
 Helper::loadEnv(__DIR__ . '/../.env');
 
 // Define the Base URL for the system to resolve paths correctly
-define('BASE_URL', 'http://localhost/bpctruscan'); // Update this to match your actual project folder
+define('BASE_URL', 'https://bpctruscan.com'); // Update this to match your actual project folder
 
 // Load Models
 require_once __DIR__ . '/models/user.php';
