@@ -1,6 +1,22 @@
 <?php
+// 1. Set CORS headers at the absolute top
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+
+// 2. Define API_ACCESS to bypass potential CSRF/Token checks in init.php
+define('API_ACCESS', true);
+
 session_start();
 date_default_timezone_set('Asia/Manila');
+
+// 3. Handle pre-flight OPTIONS requests
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+// 4. Load the framework
 require_once __DIR__ . '/../app/init.php';
 header('Content-Type: application/json');
 
@@ -15,17 +31,18 @@ if (!$data || !isset($data->user_id)) {
 $db = Database::getInstance(); 
 $scannedId = (int)$data->user_id; 
 
-// identifies the user by their fingerprint data saved on the dtabase
+$isSynced = isset($data->timestamp) && !empty($data->timestamp);
+$effectiveTime = $isSynced ? strtotime($data->timestamp) : time();
+
+$today = date('Y-m-d', $effectiveTime);
+$now = date('H:i:s', $effectiveTime);
+$dayOfWeek = date('l', $effectiveTime);
+
+// Map template ID to User ID
 $check = $db->query("SELECT user_id FROM user_fingerprints WHERE id = ?", [$scannedId], "i");
 $row = $check->get_result()->fetch_assoc();
+$userId = $row ? $row['user_id'] : $scannedId;
 
-if ($row) {
-    $userId = $row['user_id'];
-} else {
-    $userId = $scannedId;
-}
-
-// gets the active user details
 $userStmt = $db->query("SELECT * FROM users WHERE id = ? AND status = 'active'", [$userId], "i");
 $user = $userStmt->get_result()->fetch_assoc();
 
@@ -34,14 +51,7 @@ if (!$user) {
     exit;
 }
 
-// for recording the variables
-$today = date('Y-m-d');
-$now = date('H:i:s');
-$dayOfWeek = date('l'); 
-$status = "";
-$isWarning = false;
-
-// scans for the specific approved schedules of users
+// Find applicable schedule
 $schedQuery = "SELECT id FROM class_schedules 
                WHERE user_id = ? AND day_of_week = ? AND status = 'approved' 
                AND (ABS(TIMESTAMPDIFF(MINUTE, start_time, ?)) <= 60 
@@ -51,32 +61,49 @@ $schedStmt = $db->query($schedQuery, [$userId, $dayOfWeek, $now, $now, $now], "i
 $currentSched = $schedStmt->get_result()->fetch_assoc();
 $scheduleId = $currentSched ? $currentSched['id'] : null;
 
-// this is the logic ofr recording the attendance
-$openStmt = $db->query("SELECT id, time_in FROM attendance_records WHERE user_id = ? AND date = ? AND time_out IS NULL ORDER BY id DESC LIMIT 1", [$userId, $today], "is");
-$openRecord = $openStmt->get_result()->fetch_assoc();
+$status = "";
+$isWarning = false;
 
-if ($openRecord) {
-    $timeInTs = strtotime($openRecord['time_in']);
-    $currentTs = strtotime("$today $now");
-    
-    // 1 minute interval logic for preventing double attendance records (mostly because of mistakes)
-    if (($currentTs - $timeInTs) < 60) {
-        $status = "Already Timed In";
-        $isWarning = true;
-    } else {
-        $db->query("UPDATE attendance_records SET time_out = ? WHERE id = ?", [$now, $openRecord['id']], "si");
-        $status = "Time Out";
+// 1. Fetch the absolute latest record for this user today (open or closed)
+$lastRecordStmt = $db->query("SELECT * FROM attendance_records WHERE user_id = ? AND date = ? ORDER BY id DESC LIMIT 1", [$userId, $today], "is");
+$lastRecord = $lastRecordStmt->get_result()->fetch_assoc();
+
+if ($lastRecord) {
+    // 2. Case: User is currently "Timed In" (waiting to Time Out)
+    if ($lastRecord['time_out'] === null) {
+        $timeInTs = strtotime($lastRecord['time_in']);
+        
+        if (($effectiveTime - $timeInTs) < 60) {
+            $status = "Already Timed In!";
+            $isWarning = true;
+        } else {
+            $db->query("UPDATE attendance_records SET time_out = ? WHERE id = ?", [$now, $lastRecord['id']], "si");
+            $status = "Time Out";
+        }
+    } 
+    // 3. Case: User is currently "Timed Out" (waiting for next Time In)
+    else {
+        $timeOutTs = strtotime($lastRecord['time_out']);
+        
+        if (($effectiveTime - $timeOutTs) < 60) {
+            $status = "Already Timed Out!";
+            $isWarning = true;
+        } else {
+            $db->query("INSERT INTO attendance_records (user_id, date, time_in, schedule_id, status) VALUES (?, ?, ?, ?, 'Present')", 
+                       [$userId, $today, $now, $scheduleId], "issi");
+            $status = "Time In";
+        }
     }
 } else {
-    // Save the log including the found schedule_id
+    // 4. No records exist for today yet
     $db->query("INSERT INTO attendance_records (user_id, date, time_in, schedule_id, status) VALUES (?, ?, ?, ?, 'Present')", 
                [$userId, $today, $now, $scheduleId], "issi");
     $status = "Time In";
 }
 
-// email notification logic for sending emails to users
+// email notification logic
 if (!$isWarning && !empty($user['email']) && $user['email_notifications_enabled']) {
-    $formattedTime = date('h:i A', strtotime($now));
+    $formattedTime = date('h:i A', $effectiveTime);
     $subject = "Attendance Notification: $status Recorded";
     
     $emailBody = "
