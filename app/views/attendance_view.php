@@ -3,49 +3,85 @@ require_once __DIR__ . '/partials/header.php';
 ?>
 <link rel="stylesheet" href="css/print.css">
 
+<?php
+$success = null;
+$error = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
+    $subject = $_POST['subject'] ?? 'Attendance Record Discrepancy';
+    $messageBody = $_POST['message'] ?? '';
+    $adminEmail = getenv('SMTP_USER');
+    $userFullName = $_SESSION['full_name'];
+    $userEmail = $_SESSION['email'] ?? 'No Email Provided';
+    $fullContent = "<h2>Attendance Discrepancy Report</h2><p>From: {$userFullName}</p><p>{$messageBody}</p>";
+
+    if (Mailer::send($adminEmail, $subject, $fullContent)) {
+        $success = "Your discrepancy report has been sent to the IT Department.";
+    } else {
+        $error = "Failed to send report. Please visit the IT office directly.";
+    }
+}
+?>
+
 <style>
-/* 1. Status Card Interactivity */
 .report-stat-card {
     cursor: pointer;
     transition: all 0.3s ease;
     border: 1px solid transparent;
 }
+
 .report-stat-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     border-color: rgba(0,0,0,0.05);
     background: #fff;
 }
-.report-stat-card:active { transform: translateY(-2px); }
 
-/* 2. Zebra Striping (Odd/Even) */
-.attendance-table-new tbody tr.accordion-toggle:nth-child(4n+1) { background-color: #ffffff; }
-.attendance-table-new tbody tr.accordion-toggle:nth-child(4n+3) { background-color: #f8fafc; }
-.attendance-table-new tbody tr.accordion-toggle:hover { background-color: #f1f5f9 !important; }
+.report-stat-card:active { 
+    transform: translateY(-2px); 
+}
 
-/* Design Elements */
+.attendance-table-new tbody tr.accordion-toggle:nth-child(4n+1) { 
+    background-color: #ffffff; 
+}
+
+.attendance-table-new tbody tr.accordion-toggle:nth-child(4n+3) { 
+    background-color: #f8fafc; 
+}
+
+.attendance-table-new tbody tr.accordion-toggle:hover { 
+    background-color: #f1f5f9 !important; 
+}
+
 .session-pill {
-    background: #eff6ff; /* Light Blue 50 */
-    color: #2563eb;      /* Blue 600 */
+    background: #eff6ff;
+    color: #2563eb;
     padding: 6px 12px;
     border-radius: 6px;
-    font-weight: 700;    /* Made bolder for visibility */
+    font-weight: 700;
     font-size: 0.85rem;
-    border: 1px solid #bfdbfe; /* Blue 200 border */
+    border: 1px solid #bfdbfe;
     display: inline-block;
     transition: all 0.2s ease;
 }
 
 .session-pill:hover {
-    background: #dbeafe; /* Light Blue 100 on hover */
-    border-color: #3b82f6; /* Blue 500 */
+    background: #dbeafe;
+    border-color: #3b82f6;
 }
 
-.directory-table { width: 100%; border-collapse: collapse; }
-.directory-table th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 0.75rem; color: #475569; text-transform: uppercase; }
-.directory-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+.directory-table { 
+    width: 100%; border-collapse: collapse; 
+}
 
-/* Feedback Button */
+.directory-table th { 
+    background: #f1f5f9; padding: 12px; text-align: left; font-size: 0.75rem; color: #475569; text-transform: uppercase; 
+}
+
+.directory-table td { 
+    padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; 
+}
+
 .btn-feedback {
     background: #4b5563;
     color: white;
@@ -54,9 +90,10 @@ require_once __DIR__ . '/partials/header.php';
     font-weight: 600;
     transition: 0.3s;
 }
-.btn-feedback:hover { background: #374151; }
+.btn-feedback:hover { 
+    background: #374151; 
+}
 
-/* PROFESSIONAL FEEDBACK MODAL STYLES */
 #feedbackModal .modal-content {
     max-width: 550px;
     border-radius: 16px;
@@ -81,9 +118,10 @@ require_once __DIR__ . '/partials/header.php';
     border: 2px solid #e2e8f0;
     transition: border-color 0.2s;
 }
-.feedback-textarea:focus { border-color: #059669; outline: none; }
+.feedback-textarea:focus { 
+    border-color: #059669; outline: none; 
+}
 
-/* DTR PREVIEW MODAL STYLES */
 #dtrPreviewModal .modal-content {
     max-width: 1400px;
     width: 98%;
@@ -127,12 +165,46 @@ require_once __DIR__ . '/partials/header.php';
 </style>
 
 <div class="main-body attendance-reports-page"> 
+    <div class="info-card-header" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; display: flex; align-items: center; gap: 20px;">
+        <div style="background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
+            <i class="fa-solid <?= $isAdmin ? 'fa-chart-line' : 'fa-user-clock' ?>"></i>
+        </div>
+        <div>
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">
+                <?= $isAdmin ? 'Personnel Attendance Reports' : 'My Personal Attendance' ?>
+            </h2>
+            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">
+                <?= $isAdmin ? 'Manage personnel logs and generate administrative time records.' : 'Monitor your daily logs and track your attendance performance.' ?>
+            </p>
+        </div>
+    </div>
 
-    <div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem; gap: 10px;">
-        <button class="btn btn-feedback" onclick="openModal('feedbackModal')">
+    <div class="info-guide-wrapper" style="margin-bottom: 2.5rem; padding: 0 5px;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: #f1f5f9; color: #64748b; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <div style="flex: 1;">
+                <p style="margin: 0; font-size: 0.92rem; color: #475569; line-height: 1.6;">
+                    <span style="font-weight: 700; color: #1e293b; margin-right: 5px;">Notice:</span> 
+                    The Attendance reports page summarizes entries and exits for today. Use the 
+                    <span style="color: #6366f1; font-weight: 600;">Filter & Reports</span> section below to 
+                    search specific dates or generate your <span style="color: #6366f1; font-weight: 600;">Personal DTR Record</span> 
+                    previews.
+                </p>
+            </div>
+        </div>
+    </div>
+
+<div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem; gap: 10px;">
+    <a href="attendance_history.php" class="btn" style="background: #6366f1; color: white; border-radius: 50px; padding: 8px 20px; font-weight: 600; text-decoration: none; transition: 0.3s;">
+        <i class="fa-solid fa-clock-rotate-left"></i> Attendance History
+    </a>
+
+    <button class="btn btn-feedback" onclick="openModal('feedbackModal')">
             <i class="fa-solid fa-comment-dots"></i> Report Discrepancy
         </button>
-    </div>
+</div>
 
     <div class="report-stats-grid">
         <div class="report-stat-card" onclick="openAttendanceDetail('entries', 'Today\'s Total Entries')">
@@ -190,14 +262,6 @@ require_once __DIR__ . '/partials/header.php';
                         </div>
                     </div>
                     <?php endif; ?>
-
-                    <div class="form-group filter-item">
-                        <label>Quick Search</label>
-                        <div class="search-wrapper" style="position: relative;">
-                            <input type="text" id="liveSearchInput" class="form-control" placeholder="Search name or ID..." onkeyup="filterTableRealTime()" style="padding-left: 35px;">
-                            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
-                        </div>
-                    </div>
 
                     <div class="form-group filter-item">
                         <label>Date Range</label>
@@ -338,35 +402,42 @@ usort($row['logs'], function($a, $b) {
         </div>
     </div>
     
-    <div id="feedbackModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Attendance Correction Request</h3>
-                <button class="modal-close" onclick="closeModal('feedbackModal')">&times;</button>
-            </div>
-            <div class="modal-body" style="padding: 2.5rem;">
-                <div class="feedback-header-box">
-                    <i class="fa-solid fa-clipboard-question"></i>
-                    <p style="color: #64748b; font-size: 0.95rem; margin: 0; padding: 0 20px;">
-                        Please provide accurate details regarding the log discrepancy for administrative review.
+    <div id="feedbackModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: white; width: 95%; max-width: 500px; border-radius: 20px; border-top: 8px solid #f59e0b; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden;">
+        
+        <div style="padding: 25px 30px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-weight: 800; color: #1e293b !important;">Report Discrepancy</h3>
+            <button onclick="closeFeedbackModal()" style="background: none; border: none; font-size: 1.8rem; color: #94a3b8; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+        
+        <form method="POST" action="attendance_reports.php">
+            <div style="padding: 30px;">
+                <input type="hidden" name="subject" value="Attendance Record Discrepancy">
+                
+                <div style="background: #fffbeb; border: 1px solid #fef3c7; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                    <p style="margin: 0; font-size: 0.85rem; color: #92400e; line-height: 1.6;">
+                        <i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i>
+                        Please specify the <strong>Date</strong> and <strong>Time</strong> of the error. This message will be sent directly to the IT Administration for verification.
                     </p>
                 </div>
-                <form id="feedbackForm">
-                    <div class="feedback-form-group">
-                        <label>Date of Concerned Record</label>
-                        <input type="date" name="record_date" class="form-control" required value="<?= date('Y-m-d') ?>" style="padding: 12px; border-radius: 8px;">
-                    </div>
-                    <div class="feedback-form-group">
-                        <label>Discrepancy Details</label>
-                        <textarea name="message" class="form-control feedback-textarea" placeholder="e.g., I timed in at 8:00 AM but the record shows 8:30 AM..." required></textarea>
-                    </div>
-                    <button type="button" class="btn btn-primary btn-full-width" style="padding: 15px; font-size: 1rem; border-radius: 10px;" onclick="submitFeedback()">
-                        <i class="fa-solid fa-paper-plane"></i> Send Discrepancy Report
-                    </button>
-                </form>
+
+                <div class="form-group">
+                    <label style="font-weight: 700; color: #475569; display: block; margin-bottom: 8px;">Discrepancy Details</label>
+                    <textarea name="message" class="form-control" rows="5" 
+                        placeholder="Example: On Jan 22, my Time-Out was 5:00 PM but it shows as 4:30 PM..." 
+                        required style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-family: inherit; resize: none;"></textarea>
+                </div>
             </div>
-        </div>
+            
+            <div style="padding: 20px 30px; background: #f8fafc; display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" onclick="closeFeedbackModal()" class="btn btn-secondary">Cancel</button>
+        <button type="submit" name="submit_contact" class="btn btn-primary" style="background: #f59e0b; border: none;">
+            <i class="fa-solid fa-paper-plane"></i> Submit Report
+        </button>
+            </div>
+        </form>
     </div>
+</div>
 
     <div id="feedbackSuccessModal" class="modal">
         <div class="modal-content modal-small" style="text-align: center;">
@@ -381,10 +452,34 @@ usort($row['logs'], function($a, $b) {
 
 </div>
 
+<div id="statusPopupModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: white; width: 90%; max-width: 400px; border-radius: 20px; border-top: 8px solid <?= $success ? '#10b981' : '#ef4444' ?>; text-align: center; padding: 40px 30px;">
+        <div style="width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 35px; <?= $success ? 'background: #ecfdf5; color: #10b981;' : 'background: #fef2f2; color: #ef4444;' ?>">
+            <i class="fa-solid <?= $success ? 'fa-check-circle' : 'fa-exclamation-circle' ?>"></i>
+        </div>
+        <h3 style="font-weight: 800; color: #1e293b;"><?= $success ? 'Report Submitted' : 'Submission Failed' ?></h3>
+        <p style="color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-top: 10px;">
+            <?= htmlspecialchars(($success ?? $error) ?? '') ?>
+        </p>
+        <button onclick="document.getElementById('statusPopupModal').style.display='none'; document.body.style.overflow='auto';" style="margin-top: 25px; background: #1e293b; color: white; border: none; padding: 10px 40px; border-radius: 50px; font-weight: 700; cursor: pointer;">
+            Got it!
+        </button>
+    </div>
+</div>
+
 <script>
-/**
- * LIVE SEARCH LOGIC
- */
+document.addEventListener("DOMContentLoaded", function() {
+    <?php if ($success || $error): ?>
+        const statusModal = document.getElementById('statusPopupModal');
+        if (statusModal) {
+            statusModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+    <?php endif; ?>
+});
+</script>
+
+<script>
 function filterTableRealTime() {
     const input = document.getElementById("liveSearchInput").value.toLowerCase();
     const rows = document.querySelectorAll("#attendanceMainTable tbody tr.accordion-toggle");
@@ -403,9 +498,6 @@ function filterTableRealTime() {
     });
 }
 
-/**
- * Handle DTR Preview with Warning Modal
- */
 function handlePrintDTR() {
     const userIdInput = document.getElementById('userId');
     const userId = userIdInput ? userIdInput.value : '<?= $_SESSION['user_id'] ?>';
@@ -422,9 +514,6 @@ function handlePrintDTR() {
     openModal('dtrPreviewModal');
 }
 
-/**
- * Stats Detail Fetching (Fixed Naming)
- */
 function openAttendanceDetail(type, title) {
     document.getElementById('detailModalTitle').innerText = title;
     document.getElementById('detailModalBody').innerHTML = '<div style="padding: 50px; text-align: center;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><p>Fetching records...</p></div>';
@@ -436,7 +525,6 @@ function openAttendanceDetail(type, title) {
             if (data.success) {
                 let html = '<table class="directory-table"><thead><tr><th>Faculty ID</th><th>Name</th><th>Position</th><th>Status/Time</th></tr></thead><tbody>';
                 data.users.forEach(u => {
-                    // Correctly display the log time based on the type
                     let logTime = u.time_in || u.time_out || '<span style="color:#10b981; font-weight:700;">On-Site</span>';
                     html += `<tr>
                         <td style="font-weight:700;">${u.faculty_id}</td>
@@ -452,24 +540,76 @@ function openAttendanceDetail(type, title) {
         });
 }
 
-function submitFeedback() {
-    const form = document.getElementById('feedbackForm');
-    const formData = new FormData(form);
-    
-    fetch('api.php?action=submit_attendance_feedback', {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            closeModal('feedbackModal');
-            openModal('feedbackSuccessModal');
-            form.reset();
+function openFeedbackModal() {
+    const modal = document.getElementById('feedbackModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeFeedbackModal() {
+    const modal = document.getElementById('feedbackModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('feedbackModal');
+    if (event.target == modal) {
+        closeFeedbackModal();
+    }
+}
+
+async function submitFeedback() {
+    const btn = document.getElementById('submitBtn');
+    const form = btn.closest('form');
+    const originalText = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+
+    try {
+        const formData = new FormData(form);
+        formData.append('submit_contact', '1');
+
+        const response = await fetch('attendance_reports.php', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        const data = await response.json();
+
+        closeFeedbackModal();
+        form.reset();
+
+        const statusModal = document.getElementById('statusPopupModal');
+        
+        if (statusModal) {
+            statusModal.style.display = 'flex';
+            
+            const pTag = statusModal.querySelector('p');
+            const h3Tag = statusModal.querySelector('h3');
+            
+            if (pTag) pTag.innerText = data.message;
+            if (h3Tag) h3Tag.innerText = data.success ? 'Report Submitted' : 'Submission Failed';
+            
+            document.body.style.overflow = 'hidden';
         } else {
-            alert('Error submitting feedback. Please try again.');
+
+            alert(data.message);
         }
-    });
+
+    } catch (err) {
+        console.error("Popup Logic Error:", err);
+        alert("Report sent successfully! (Note: Success modal was not found in this file).");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }
 
 function toggleAccordion(contentId, toggleEl) {
@@ -484,7 +624,6 @@ window.closeDtrModal = function() {
     document.getElementById('dtrFrame').src = 'about:blank';
 };
 
-// Handle closing modals by clicking outside
 window.onclick = function(event) {
     if (event.target.classList.contains('modal')) {
         const id = event.target.id;
@@ -493,5 +632,4 @@ window.onclick = function(event) {
     }
 };
 </script>
-
 <?php require_once __DIR__ . '/partials/footer.php'; ?>

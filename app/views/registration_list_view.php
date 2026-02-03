@@ -3,7 +3,6 @@ require_once __DIR__ . '/partials/header.php';
 ?>
 
 <style>
-/* Clickable stats styling */
 .clickable-stat {
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
@@ -13,7 +12,6 @@ require_once __DIR__ . '/partials/header.php';
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
 
-/* Modal Table Styling */
 .report-table {
     width: 100%;
     border-collapse: separate;
@@ -38,7 +36,6 @@ require_once __DIR__ . '/partials/header.php';
 }
 .report-table tr:hover { background: #f8fafc; }
 
-/* Status Badges */
 .status-pill {
     padding: 4px 12px;
     border-radius: 50px;
@@ -46,10 +43,14 @@ require_once __DIR__ . '/partials/header.php';
     font-weight: 700;
     display: inline-block;
 }
-.status-pill.registered { background: #dcfce7; color: #166534; border: 1px solid #10b981; }
-.status-pill.pending { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+.status-pill.registered { 
+    background: #dcfce7; color: #166534; border: 1px solid #10b981; 
+}
 
-/* Professional Enroll Button */
+.status-pill.pending { 
+    background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; 
+}
+
 .btn-emerald-vibrant {
     background-color: #10b981 !important;
     color: white !important;
@@ -57,12 +58,12 @@ require_once __DIR__ . '/partials/header.php';
     border: none !important;
     transition: all 0.3s ease !important;
 }
+
 .btn-emerald-vibrant:hover {
     background-color: #059669 !important;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
 }
 
-/* Consistent Card Grid */
 .user-cards-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -70,23 +71,40 @@ require_once __DIR__ . '/partials/header.php';
     width: 100%;
 }
 
-/* Modal sizing */
 #reportModal .modal-content {
-    max-width: 1000px; /* Larger Modal */
+    max-width: 1000px;
     width: 95%;
 }
 </style>
 
-<div class="main-body registration-page">
+<div class="main-body fingerprint-registration">
+    <div class="info-card-header" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; display: flex; align-items: center; gap: 20px;">
+        <div style="background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
+            <i class="fa-solid fa-fingerprint"></i>
+        </div>
+        <div>
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Biometric Enrollment Center</h2>
+            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Register unique biometric templates and link hardware IDs to faculty accounts.</p>
+        </div>
+    </div>
+
+    <div class="info-guide-wrapper" style="margin-bottom: 2.5rem; padding: 0 5px;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: #eef2ff; color: #4338ca; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                <i class="fa-solid fa-microchip"></i>
+            </div>
+            <div style="flex: 1;">
+                <p style="margin: 0; font-size: 0.92rem; color: #475569; line-height: 1.6;">
+                    <span style="font-weight: 700; color: #1e293b; margin-right: 5px;">Enrollment Guide:</span>
+                    Select a <span style="color: #6366f1; font-weight: 600;">Faculty Profile</span> to begin. Ensure the scanner is clear before initializing the <span style="color: #6366f1; font-weight: 600;">Sensor Scan</span> sequence.
+                </p>
+            </div>
+        </div>
+    </div>
 
     <?php if (isset($_GET['success'])): ?>
         <div class="alert alert-success">Action completed successfully.</div>
     <?php endif; ?>
-
-    <div class="search-bar-container">
-        <i class="fa-solid fa-search search-icon"></i>
-        <input type="text" id="userSearchInput" class="search-input" placeholder="Search by name, faculty ID, or email...">
-    </div>
 
     <div class="registration-stats-grid">
         <div class="reg-stat-card total-users clickable-stat" onclick="openStaffReport('all', 'Master Staff Directory')">
@@ -110,6 +128,11 @@ require_once __DIR__ . '/partials/header.php';
                 <span class="reg-stat-value"><?= $pendingCount ?></span>
             </div>
         </div>
+    </div>
+
+    <div class="search-bar-container">
+        <i class="fa-solid fa-search search-icon"></i>
+        <input type="text" id="userSearchInput" class="search-input" placeholder="Search by name, faculty ID, or email...">
     </div>
 
     <div class="card pending-registrations-section">
@@ -215,11 +238,8 @@ require_once __DIR__ . '/partials/header.php';
         </div>
     </div>
 </div>
-
 <script>
-/**
- * Professional Modal Directory Handler
- */
+
 function openStaffReport(type, title) {
     document.getElementById('reportTitle').innerText = title;
     document.getElementById('reportContent').innerHTML = '<div style="padding: 50px; text-align: center;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><p>Synchronizing directory data...</p></div>';

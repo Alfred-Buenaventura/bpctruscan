@@ -123,18 +123,15 @@ $currentYear = date("Y");
     scanName.textContent = data.name;
     scanStatus.textContent = data.status;
     
-    // Time/Date logic...
     let scanTimeObj = new Date(); 
     scanTime.textContent = scanTimeObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     scanDate.textContent = scanTimeObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-    // Reset classes
     scanIcon.className = 'icon-badge';
     scanStatus.className = 'scan-status';
 
-    // Handle Status Styles
     if (data.is_warning) {
-        // NEW: Handle "Already Timed In" or "Already Timed Out"
+        //"Already Timed In" or "Already Timed Out"
         scanIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
         scanIcon.classList.add('warning');
         scanStatus.classList.add('warning');
@@ -159,46 +156,49 @@ $currentYear = date("Y");
 
     hideCardTimer = setTimeout(() => {
         scanCard.classList.remove('show');
-    }, 4000); // Reduced to 4s for faster flow
+    }, 4000);
 }
 
-        function recordAttendance(userId) {
-            console.log("📤 Recording attendance for user ID:", userId);
-            
-            fetch("api/record_attendance.php", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: userId })
-            })
-            .then(response => {
-                console.log("📥 Response status:", response.status);
-                return response.json();
-            })
-            .then(data => {
-                console.log("📊 Backend response:", data);
-                
-                if (data.success && data.data) {
-                    showScanEvent(data.data);
-                } else {
-                    console.error("❌ Backend error:", data.message);
-                    const now = new Date();
-                    showScanEvent({
-                        name: "System Error",
-                        status: data.message || "Contact Admin",
-                        // Removed timestamp dependency
-                    });
-                }
-            })
-            .catch(err => {
-                console.error("❌ Network error:", err);
-                const now = new Date();
-                showScanEvent({
-                    name: "Network Error",
-                    status: "Check Connection",
-                    // Removed timestamp dependency
-                });
+    function recordAttendance(userId) {
+    console.log("📤 Recording attendance for user ID:", userId);
+    
+    // Use an absolute path to avoid "Not Found" or routing errors
+    const apiUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/api/record_attendance.php');
+
+    fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId })
+    })
+    .then(async response => {
+        const text = await response.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            // If the server sends "Invalid Token" as text, we catch it here
+            throw new Error(text || "Server Error");
+        }
+    })
+    .then(data => {
+        if (data.success && data.data) {
+            showScanEvent(data.data);
+        } else {
+            showScanEvent({
+                name: "System Error",
+                status: data.message || "Invalid Response",
+                is_warning: true 
             });
         }
+    })
+    .catch(err => {
+        console.error("❌ Debug Details:", err);
+        showScanEvent({
+            name: "Critical Error",
+            status: err.message.substring(0, 20), // Shows "Invalid Token" or "Failed to fetch"
+            is_warning: true
+        });
+    });
+}
 
         // WebSocket Connection
         function connectWebSocket() {
@@ -233,7 +233,6 @@ $currentYear = date("Y");
                         showScanEvent({
                             name: "Scan Failed",
                             status: "Finger not recognized",
-                            // Removed timestamp dependency
                         });
                     }
                     else if (data.status === "info") {
@@ -272,7 +271,6 @@ $currentYear = date("Y");
             return socket;
         }
 
-        // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
             console.log("🚀 Display page loaded, connecting to scanner...");
             connectWebSocket();

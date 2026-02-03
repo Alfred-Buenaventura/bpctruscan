@@ -1,9 +1,6 @@
 <?php 
 require_once __DIR__ . '/partials/header.php';
 
-
-
-// Helper function to render schedule tables (User View / Simple Tables)
 if (!function_exists('renderScheduleTable')) {
     function renderScheduleTable($schedules, $nested, $isAdmin) {
         // Use the new specific class for the table
@@ -38,7 +35,6 @@ if (!function_exists('renderScheduleTable')) {
             echo '<td><span class="day-badge">' . $sched['day_of_week'] . '</span></td>';
             echo '<td style="font-weight: 600; color: #1e293b;">' . htmlspecialchars($sched['subject']) . '</td>';
             echo '<td><span class="type-pill ' . $typeClass . '"><i class="fa-solid ' . $typeIcon . '"></i> ' . htmlspecialchars($type) . '</span></td>';
-            // Applied the Blue Time Styling
             echo '<td class="col-time-blue"><i class="fa-regular fa-clock" style="margin-right: 5px; opacity: 0.6;"></i>' . 
                  date('g:i A', strtotime($sched['start_time'])) . ' - ' . 
                  date('g:i A', strtotime($sched['end_time'])) . '</td>';
@@ -67,7 +63,92 @@ if (!function_exists('renderScheduleTable')) {
 ?>
 <link rel="stylesheet" href="css/schedule.css">
 
-<div class="main-body">
+<div class="main-body schedule-management">
+
+<?php if (!$isAdmin): ?>
+    <div class="info-card-header">
+        <div style="background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
+            <i class="fa-solid fa-calendar-days"></i>
+        </div>
+        <div>
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">My Duty Schedules</h2>
+            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Manage and monitor your approved and pending class or office duty sessions.</p>
+        </div>
+    </div>
+    
+    <div class="info-guide-wrapper" style="margin-bottom: 2.5rem; padding: 0 5px;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: #f1f5f9; color: #64748b; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <div style="flex: 1;">
+                <p style="margin: 0; font-size: 0.92rem; color: #475569; line-height: 1.6;">
+                    <span style="font-weight: 700; color: #1e293b; margin-right: 5px;">Planning Note:</span>
+                    Define standard <span style="color: #6366f1; font-weight: 600;">Work Hours</span> or 
+                    <span style="color: #6366f1; font-weight: 600;">Office Duties</span> below to automate attendance calculations.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-guide-wrapper" style="margin-bottom: 2.5rem; padding: 0 5px;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: #f1f5f9; color: #64748b; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <div style="flex: 1;">
+                <p style="margin: 0; font-size: 0.92rem; color: #475569; line-height: 1.6;">
+                    <span style="font-weight: 700; color: #1e293b; margin-right: 5px;">Quick Guide:</span> 
+                    Ensure your schedules are accurate for correct biometric attendance tracking. 
+                    New schedules require <span style="color: #6366f1; font-weight: 600;">Administrative Approval</span> 
+                    before they appear in your active duty logs.
+                </p>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!$isAdmin): ?>
+    <div class="filter-export-section card" style="border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+    <div class="card-header" style="background: #059669; color: white; border-radius: 12px 12px 0 0; padding: 1rem 1.5rem;">
+        <h3 style="margin:0; font-size: 1.1rem;"><i class="fa-solid fa-calendar-check"></i> Schedule Filter Options</h3>
+    </div>
+    <div class="card-body" style="padding: 1.5rem;">
+        <form method="GET" action="schedule_management.php">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; align-items: flex-end;">
+                
+                <div class="form-group">
+                    <label style="font-weight: 700; color: #475569; display: block; margin-bottom: 8px;">
+                        <i class="fa-solid fa-layer-group"></i> Category
+                    </label>
+                    <select name="category" class="form-control">
+                        <option value="">-- All Categories --</option>
+                        <option value="Academic" <?= ($filters['category'] ?? '') == 'Academic' ? 'selected' : '' ?>>Academic</option>
+                        <option value="Administrative" <?= ($filters['category'] ?? '') == 'Administrative' ? 'selected' : '' ?>>Administrative</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight: 700; color: #475569; display: block; margin-bottom: 8px;">
+                        <i class="fa-solid fa-calendar-days"></i> Specific Date Range
+                    </label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($filters['start_date'] ?? '') ?>" style="flex: 1;">
+                        <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($filters['end_date'] ?? '') ?>" style="flex: 1;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; background: #059669; border: none; padding: 10px; font-weight: 700; border-radius: 8px;">
+                        <i class="fa-solid fa-magnifying-glass"></i> Apply Calendar Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+    <?php endif; ?>
+
     <?php if ($error): ?> <div class="alert alert-error"><?= htmlspecialchars($error) ?></div> <?php endif; ?>
     <?php if ($success): ?> <div class="alert alert-success"><?= htmlspecialchars($success) ?></div> <?php endif; ?>
 
@@ -485,12 +566,10 @@ function triggerConfirmModal(config) {
     const iconContainer = document.getElementById('modalIconContainer');
     const icon = document.getElementById('modalIcon');
 
-    // Set Text Content
     title.textContent = config.title;
     msg.innerHTML = config.message;
     btn.textContent = config.buttonText;
-    
-    // Set Visual Theme
+
     iconContainer.className = 'modal-icon-circle ' + (config.type === 'approve' ? 'modal-icon-success' : 'modal-icon-danger');
     icon.className = 'fa-solid ' + (config.type === 'approve' ? 'fa-check' : 'fa-xmark');
     btn.className = 'btn ' + (config.type === 'approve' ? 'btn-success' : 'btn-danger');
@@ -501,19 +580,17 @@ function triggerConfirmModal(config) {
     openModal('genericConfirmModal');
 }
 
-// Updated Bulk Action Trigger
 function openBulkActionModal(action) {
     const checkboxes = document.querySelectorAll('input[name="selected_schedules[]"]:checked');
     if (checkboxes.length === 0) {
-        // Reuse the modal for an alert-style message if nothing is selected
         triggerConfirmModal({
             title: 'No Selection',
             message: 'Please select at least one schedule to perform a batch action.',
             buttonText: 'Got it',
-            type: 'decline', // Uses the red theme for alerts
+            type: 'decline',
             actionType: 'none'
         });
-        document.getElementById('confirmActionBtn').style.display = 'none'; // Hide confirm if just an alert
+        document.getElementById('confirmActionBtn').style.display = 'none';
         return;
     }
     
@@ -598,6 +675,50 @@ function openAddModal() {
     openModal('addScheduleModal');
 }
 
+function setQuickDates(period) {
+    if (!period) return;
+
+    const startInput = document.getElementById('startDate');
+    const endInput = document.getElementById('endDate');
+    const today = new Date();
+    
+    let start = new Date();
+    let end = new Date();
+
+    switch (period) {
+        case 'today':
+            // start and end are already 'today'
+            break;
+        case 'yesterday':
+            start.setDate(today.getDate() - 1);
+            end.setDate(today.getDate() - 1);
+            break;
+        case 'this_week':
+            const day = today.getDay(); // 0 (Sun) to 6 (Sat)
+            const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+            start = new Date(today.setDate(diff));
+            end = new Date(); // Up to today
+            break;
+        case 'this_month':
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            break;
+        case 'last_month':
+            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            end = new Date(today.getFullYear(), today.getMonth(), 0);
+            break;
+        case 'year_to_date':
+            start = new Date(today.getFullYear(), 0, 1);
+            end = new Date();
+            break;
+    }
+
+    const formatDate = (date) => date.toISOString().split('T')[0];
+    
+    startInput.value = formatDate(start);
+    endInput.value = formatDate(end);
+}
+
 function addScheduleRow() {
     const list = document.getElementById('schedule-entry-list');
     const div = document.createElement('div');
@@ -618,8 +739,7 @@ function addScheduleRow() {
 
 function openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = 'auto'; }
-
-// Handling Conflicts
+//handles the schedule conflicts when user sets schedules of the same data as othernusers
 document.getElementById('addScheduleForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const schedules = Array.from(this.querySelectorAll('.schedule-entry-row')).map(row => ({
@@ -673,27 +793,30 @@ function checkConflicts(schedules, form) {
     .then(data => {
         if (data.has_conflict) {
             const c = data.conflict_details;
-            
-            // POPULATE THE NEW MODAL FIELDS
             document.getElementById('conflictUser').textContent = c.first_name + ' ' + c.last_name;
             document.getElementById('conflictID').textContent = c.faculty_id;
             document.getElementById('conflictDay').textContent = c.day_of_week;
             document.getElementById('conflictSubject').textContent = c.subject;
             document.getElementById('conflictTime').textContent = convertTime(c.start_time) + ' - ' + convertTime(c.end_time);
             document.getElementById('conflictRoom').textContent = c.room;
-
             openModal('conflictWarningModal');
         } else {
-            // No conflict, proceed with real submission
             formToSubmit.submit();
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        // Fallback: submit anyway if check fails? Or alert error?
-        // formToSubmit.submit(); 
     });
 
+function filterScheduleRealTime() {
+    const input = document.getElementById("scheduleSearchInput").value.toLowerCase();
+    const rows = document.querySelectorAll(".user-approved-table tbody tr, .user-pending-table tbody tr");
+    rows.forEach(row => {
+        if (row.classList.contains('empty-state')) return;
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(input) ? "" : "none";
+    });
+}
 
 function convertTime(timeStr) {
     const [hours, minutes] = timeStr.split(':');
