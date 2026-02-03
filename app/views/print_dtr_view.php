@@ -2,6 +2,7 @@
 $middleInitial = !empty($user['middle_name']) ? ' ' . strtoupper(substr($user['middle_name'], 0, 1)) . '.' : '';
 $fullName = strtoupper($user['last_name'] . ', ' . $user['first_name'] . $middleInitial);
 $facultyId = $user['faculty_id'];
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -12,12 +13,20 @@ $facultyId = $user['faculty_id'];
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="css/print.css">
 </head>
-
+<style>
+    /* Add this to keep the times on one line */
+    .attendance-table td {
+        white-space: nowrap;
+    }
+    .holiday-text {
+        font-size: 9px;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: #d32f2f;
+    }
+</style>
 <body class="dtr-body">
     <div class="print-controls">
-        <button type="button" class="btn-dtr" onclick="window.parent.closeDtrModal();">
-            <i class="fa-solid fa-arrow-left"></i> Back
-        </button>
         <button type="button" class="btn-dtr btn-dtr-success" onclick="window.print();">
             <i class="fa-solid fa-print"></i> Print DTR
         </button>
@@ -54,9 +63,9 @@ $facultyId = $user['faculty_id'];
                     $totalHours = 0; $totalMinutes = 0;
                     for ($day = 1; $day <= 31; $day++):
                         $rec = $dtrRecords[$day] ?? null;
-                        
-                        // RESTORED CUTOFF LOGIC: Show logs only if they fall within the specific copy's period
-                        $isTargetPeriod = ($copy === 0 && $day <= 15) || ($copy === 1 && $day >= 16 && $day <= $lastDay);
+                        // day1-15 cutoff and 16-31 cutoff
+                        // Remove the $lastDay constraint so the loop always runs to 31
+$isTargetPeriod = ($copy === 0 && $day <= 15) || ($copy === 1 && $day >= 16 && $day <= 31);
 
                         $am_in = ($isTargetPeriod && $rec && !empty($rec['am_in'])) ? date('h:i', strtotime($rec['am_in'])) : '';
                         $am_out = ($isTargetPeriod && $rec && !empty($rec['am_out'])) ? date('h:i', strtotime($rec['am_out'])) : '';
@@ -72,19 +81,21 @@ $facultyId = $user['faculty_id'];
                             $totalHours += $h; $totalMinutes += $m;
                         }
                         
-                        // HOLIDAYS: Always show regardless of cutoff period if it's a holiday and no entry was made
+                        //Always show regardless of cutoff period if it's a holiday and no entry was made
                         $isHoliday = ($rec && !empty($rec['remarks']) && empty($am_in) && empty($pm_in));
                     ?>
                     <tr>
-                        <td><?= $day > $lastDay ? '' : $day ?></td>
-                        <?php if ($day <= $lastDay && $isHoliday): ?>
-                            <td colspan="4" class="holiday-text"><?= htmlspecialchars($rec['remarks']) ?></td>
-                        <?php else: ?>
-                            <td><?= $am_in ?></td><td><?= $am_out ?></td>
-                            <td><?= $pm_in ?></td><td><?= $pm_out ?></td>
-                        <?php endif; ?>
-                        <td><?= $day_h ?></td><td><?= $day_m ?></td>
-                    </tr>
+    <td><?= $day ?></td>
+    
+    <?php if ($day <= $lastDay && $isHoliday): ?>
+        <td colspan="4" class="holiday-text"><?= htmlspecialchars($rec['remarks']) ?></td>
+    <?php else: ?>
+        <td><?= $am_in ?></td><td><?= $am_out ?></td>
+        <td><?= $pm_in ?></td><td><?= $pm_out ?></td>
+    <?php endif; ?>
+    
+    <td><?= $day_h ?></td><td><?= $day_m ?></td>
+</tr>
                     <?php endfor; ?>
                     <?php 
                         $totalHours += floor($totalMinutes / 60);

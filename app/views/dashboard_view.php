@@ -2,13 +2,24 @@
 require_once __DIR__ . '/partials/header.php'; 
 ?>
 <style>
-    /* Modern Pill Badges */
+.info-card-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
 .ud-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     padding: 6px 14px;
-    border-radius: 9999px; /* Pill shape */
+    border-radius: 9999px;
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -17,26 +28,24 @@ require_once __DIR__ . '/partials/header.php';
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-/* Status Variants */
 .ud-badge.completed {
-    background-color: #ecfdf5; /* Emerald 50 */
-    color: #059669;            /* Emerald 600 */
-    border-color: #a7f3d0;     /* Emerald 200 */
+    background-color: #ecfdf5;
+    color: #059669; 
+    border-color: #a7f3d0; 
 }
 
 .ud-badge.pending {
-    background-color: #fffbeb; /* Amber 50 */
-    color: #d97706;            /* Amber 600 */
-    border-color: #fde68a;     /* Amber 200 */
+    background-color: #fffbeb;
+    color: #d97706;           
+    border-color: #fde68a;   
 }
 
 .ud-badge.not-present {
-    background-color: #f8fafc; /* Slate 50 */
-    color: #64748b;            /* Slate 600 */
-    border-color: #e2e8f0;     /* Slate 200 */
+    background-color: #f8fafc; 
+    color: #64748b;            
+    border-color: #e2e8f0;   
 }
 
-/* Row Styling for better spacing */
 .ud-card-row {
     display: flex;
     justify-content: space-between;
@@ -50,17 +59,42 @@ require_once __DIR__ . '/partials/header.php';
 }
 
 .ud-badge.absent {
-    background-color: #fef2f2; /* Red 50 */
-    color: #dc2626;            /* Red 600 */
-    border-color: #fecaca;     /* Red 200 */
+    background-color: #fef2f2;
+    color: #dc2626;            
+    border-color: #fecaca;  
 }
 </style>
+
 <?php if ($isAdmin): ?>
 
     <div class="main-body admin-dashboard">
-        
+    <div class="info-card-header" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; display: flex; align-items: center; gap: 20px;">
+        <div style="background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
+            <i class="fa-solid fa-gauge-high"></i>
+        </div>
+        <div>
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">System Administrator Dashboard</h2>
+            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Real-time overview of faculty attendance, system health, and pending requests.</p>
+        </div>
+    </div>
+
+    <div class="info-guide-wrapper" style="margin-bottom: 2.5rem; padding: 0 5px;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: #f1f5f9; color: #64748b; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <div style="flex: 1;">
+                <p style="margin: 0; font-size: 0.92rem; color: #475569; line-height: 1.6;">
+                    <span style="font-weight: 700; color: #1e293b; margin-right: 5px;">Admin Tip:</span>
+                    Quickly view today's active sessions and total headcount. For detailed corrections, navigate to the 
+                    <span style="color: #6366f1; font-weight: 600;">Attendance Reports</span> section.
+                </p>
+            </div>
+        </div>
+    </div>
+
         <div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
-            <a href="display.php" target="_blank" class="btn btn-primary" style="background-color: var(--blue-600); border-color: var(--blue-600);">
+            <a href="display.php?key=BPC_TRUSCAN_KIOSK_2026" target="_blank" class="btn btn-primary" style="background-color: var(--blue-600); border-color: var(--blue-600);">
                 <i class="fa-solid fa-desktop"></i> Launch Attendance Display
             </a>
         </div>
@@ -154,18 +188,31 @@ require_once __DIR__ . '/partials/header.php';
 
 <?php else: ?>
     <div class="main-body user-dashboard-body">
- 
-        <div class="page-hint-card" style="margin-top: 2rem; margin-bottom: 2rem;">
-    <div class="page-hint-icon">
-        <i class="fa-solid fa-lightbulb"></i>
+
+    <div class="info-card-header">
+        <div style="background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
+            <i class="fa-solid fa-house-user"></i>
+        </div>
+        <div>
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Dashboard</h2>
+            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Welcome back! Here is a snapshot of your current attendance and registration status.</p>
+        </div>
     </div>
-    <div class="page-hint-content">
-        <h4>Note!</h4>
-        <p>
-            This dashboard provides a snapshot of your current status. The cards below summarize your total attendance activity for today. For a full breakdown, please visit your Attendance History.
-        </p>
+
+    <div class="info-guide-wrapper" style="margin-bottom: 2.5rem; padding: 0 5px;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: #f1f5f9; color: #64748b; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <div style="flex: 1;">
+                <p style="margin: 0; font-size: 0.92rem; color: #475569; line-height: 1.6;">
+                    <span style="font-weight: 700; color: #1e293b; margin-right: 5px;">Notice:</span> 
+                    The cards below summarize your activity for today. For a comprehensive breakdown of all past records, 
+                    please visit your <span style="color: #6366f1; font-weight: 600;">Attendance History</span> page.
+                </p>
+            </div>
+        </div>
     </div>
-</div>
 
 <div class="stats-grid">
     <div class="stat-card">
@@ -207,7 +254,6 @@ require_once __DIR__ . '/partials/header.php';
         $badgeClass = 'not-present';
         $icon = 'fa-circle-xmark';
 
-        // Map status to vibrant badge designs
         if ($status === 'Present' || $status === 'On-time') {
             $badgeClass = 'completed';
             $icon = 'fa-circle-check';

@@ -396,8 +396,7 @@ usort($row['logs'], function($a, $b) {
                 <iframe id="dtrFrame" src="about:blank"></iframe>
             </div>
             <div class="modal-footer" style="background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between;">
-                <p style="font-size: 0.8rem; color: #64748b;">*Use the print icon within the preview to finalize the document.</p>
-                <button class="btn btn-secondary" onclick="closeModal('dtrPreviewModal')">Close Preview</button>
+                <p style="font-size: 0.8rem; color: #64748b;">*This is a preview of your DTR Record. Print DTR by pressing the Print button at the top.</p>
             </div>
         </div>
     </div>
