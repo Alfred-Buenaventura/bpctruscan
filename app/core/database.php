@@ -3,13 +3,13 @@ class Database {
     private static $instance = null;
     public $conn;
 
-    // UPDATE YOUR CREDENTIALS HERE
     private $host = 'localhost';
     private $user = 'root';
     private $pass = '';
     private $dbname = 'bpc_attendance'; 
 
     private function __construct() {
+        // start up the connection to the mysql server
         $this->conn = new mysqli($this->host, $this->user, $this->pass, $this->dbname);
         if ($this->conn->connect_error) {
             die("Database Connection Failed: " . $this->conn->connect_error);
@@ -18,13 +18,13 @@ class Database {
     }
 
     public static function getInstance() {
+        // we use a singleton here so we don't open a thousand connections at once
         if (!self::$instance) {
             self::$instance = new Database();
         }
         return self::$instance;
     }
 
-    // --- THIS IS THE MISSING METHOD CAUSING YOUR ERROR ---
     public function query($sql, $params = [], $types = "") {
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -32,7 +32,7 @@ class Database {
         }
 
         if (!empty($params)) {
-            // Check if types string is provided, otherwise generate it (s = string, i = int)
+            // if we didn't specify types, we just assume everything is a string by default
             if (empty($types)) {
                 $types = str_repeat('s', count($params)); 
             }
