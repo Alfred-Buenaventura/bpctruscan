@@ -42,6 +42,48 @@ class AttendanceController extends Controller {
         $this->view('attendance_view', $data);
     }
 
+    public function history() {
+    $this->requireLogin();
+    $attModel = $this->model('Attendance');
+    
+    $userId = $_SESSION['user_id'];
+    $filters = [
+        'start_date' => $_GET['start_date'] ?? date('Y-m-01'),
+        'end_date'   => $_GET['end_date']   ?? date('Y-m-d'),
+        'status_type' => $_GET['status_type'] ?? ''
+    ];
+
+    // Fetch records using the model's history method
+    $allRecords = $attModel->getUserHistory($userId, $filters);
+
+    $summary = [
+        'present' => 0,
+        'late'    => 0,
+        'absent'  => 0,
+        'office'  => 0
+    ];
+
+    foreach ($allRecords as $rec) {
+        if (stripos($rec['status'], 'Late') !== false) $summary['late']++;
+        elseif ($rec['status'] === 'Present') $summary['present']++;
+        elseif ($rec['status'] === 'Absent') $summary['absent']++;
+
+        if (isset($rec['duty_type']) && (stripos($rec['duty_type'], 'Office') !== false)) {
+            $summary['office']++;
+        }
+    }
+
+    $data = [
+        'pageTitle'    => 'Attendance History',
+        'pageSubtitle' => 'Categorized summary of your performance',
+        'records'      => $allRecords,
+        'summary'      => $summary,
+        'filters'      => $filters
+    ];
+
+    $this->view('attendance_history_view', $data);
+}
+
     private function calculateClampedHours($log, $dateStr) {
         if (empty($log['time_in']) || empty($log['time_out'])) return 0;
         if (empty($log['sched_start']) || empty($log['sched_end'])) return 0;

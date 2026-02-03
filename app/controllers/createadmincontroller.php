@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../core/controller.php';
-require_once __DIR__ . '/../core/mailer.php'; // Ensure Mailer is loaded
+require_once __DIR__ . '/../core/mailer.php';
 
 class AccountAdminController extends Controller {
 

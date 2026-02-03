@@ -6,10 +6,7 @@ class HolidayController extends Controller {
     public function index() {
         $this->requireLogin(); //
         if (!Helper::isAdmin()) { die("Access Denied"); }
-
         $holidayModel = $this->model('Holiday');
-        
-        // Collect all filters from the GET request
         $filters = [
             'search'     => $_GET['search'] ?? '',
             'start_date' => $_GET['start_date'] ?? '',
@@ -25,7 +22,6 @@ class HolidayController extends Controller {
             'success' => ''
         ];
 
-        // Handle POST Actions
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($_POST['add_holiday'])) {
                 $date = $_POST['holiday_date'];

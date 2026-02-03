@@ -13,7 +13,6 @@ class ScheduleController extends Controller {
         $notifModel = $this->model('Notification');
         $logModel = $this->model('ActivityLog');
 
-        // --- AJAX: CHECK FOR CONFLICTS ---
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['check_conflict'])) {
             header('Content-Type: application/json');
             
@@ -33,6 +32,7 @@ class ScheduleController extends Controller {
             foreach ($checks as $check) {
                 if (empty($check['room']) || empty($check['start']) || empty($check['end'])) continue;
 
+                // check if the requested time slot is already taken by someone else
                 $conflict = $scheduleModel->checkOverlap(
                     $check['day'], 
                     $check['start'], 
@@ -55,6 +55,7 @@ class ScheduleController extends Controller {
             exit;
         }
 
+        // prepare all the variables we need for the frontend dashboard
         $data = [
             'pageTitle' => 'Schedule Management', 
             'pageSubtitle' => 'Manage and monitor class schedules',
@@ -83,7 +84,6 @@ class ScheduleController extends Controller {
         try {
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
-                // --- APPROVAL / DECLINE ACTIONS ---
                 if (isset($_POST['approve_schedule']) || isset($_POST['decline_schedule']) || isset($_POST['bulk_action_type'])) {
                     $this->requireAdmin();
                     $itemsToProcess = [];
@@ -112,7 +112,7 @@ class ScheduleController extends Controller {
                                 $success = false;
 
                                 if ($action === 'approve') {
-                                    // 1. SAFETY CHECK: Check overlap before approving
+                                    // re-run the overlap check just to be safe before hitting the database
                                     $conflict = $scheduleModel->checkOverlap(
                                         $schedInfo['day_of_week'],
                                         $schedInfo['start_time'],
@@ -126,12 +126,10 @@ class ScheduleController extends Controller {
                                         continue; 
                                     }
 
-                                    // 2. APPROVE
                                     $success = $scheduleModel->updateStatus($schedId, 'approved');
 
-                                    // 3. AUTO-DECLINE / CLEANUP LOGIC
                                     if ($success) {
-                                        // Find pending conflicts
+                                        // find all other pending requests that now conflict with this newly approved one
                                         $pendingConflicts = $scheduleModel->getPendingConflicts(
                                             $schedInfo['day_of_week'],
                                             $schedInfo['start_time'],
@@ -142,25 +140,22 @@ class ScheduleController extends Controller {
 
                                         if (!empty($pendingConflicts)) {
                                             foreach ($pendingConflicts as $pc) {
-                                                // A. Send Dashboard Notification
                                                 $timeRange = date('g:i A', strtotime($pc['start_time'])) . ' - ' . date('g:i A', strtotime($pc['end_time']));
                                                 $msg = "Update: Your schedule request for {$pc['day_of_week']} ($timeRange) at {$pc['room']} is no longer available and has been removed.";
                                                 Notification::create($pc['user_id'], $msg, 'error');
                                                 
-                                                // B. Send Professional Email
                                                 $loserUser = $userModel->findById($pc['user_id']);
                                                 if ($loserUser && !empty($loserUser['email'])) {
                                                     $this->sendAutoDeclineEmail($loserUser, $pc);
                                                 }
 
-                                                // C. Delete the conflicting schedule
+                                                // remove the losing requests since the slot is now filled
                                                 $scheduleModel->delete($pc['id'], $pc['user_id'], true);
                                             }
                                         }
                                     }
 
                                 } else {
-                                    // Manual Decline
                                     $success = $scheduleModel->delete($schedId, $schedInfo['user_id'], true);
                                 }
 
@@ -169,7 +164,7 @@ class ScheduleController extends Controller {
                                     if (!isset($usersToNotify[$schedInfo['user_id']])) {
                                         $usersToNotify[$schedInfo['user_id']] = ['days' => [], 'schedules' => []];
                                         $actionVerb = ($action === 'approve') ? 'Approved' : 'Declined';
-        $logModel->log($schedInfo['user_id'], "Schedule $actionVerb", "Your request for {$schedInfo['day_of_week']} has been $action" . "d.");      
+                                        $logModel->log($schedInfo['user_id'], "Schedule $actionVerb", "Your request for {$schedInfo['day_of_week']} has been $action" . "d.");      
                                     }
                                     $usersToNotify[$schedInfo['user_id']]['days'][] = $schedInfo['day_of_week'];
                                     $usersToNotify[$schedInfo['user_id']]['schedules'][] = [
@@ -183,7 +178,6 @@ class ScheduleController extends Controller {
                             }
                         }
 
-                        // Notifications for the Primary Action (Approve/Decline)
                         foreach ($usersToNotify as $uId => $userData) {
                             $user = $userModel->findById($uId);
                             if (!$user) continue;
@@ -220,8 +214,6 @@ class ScheduleController extends Controller {
                     }
                 }
                 
-                // ... (Add Schedule, Delete Schedule, Edit Schedule blocks remain the same) ...
-                // --- ADD SCHEDULE ---
                 elseif (isset($_POST['add_schedule'])) {
                     $userId = $_POST['user_id'] ?? $_SESSION['user_id'];
                     $schedules = [];
@@ -238,30 +230,35 @@ class ScheduleController extends Controller {
                         if ($scheduleModel->create($userId, $schedules, $data['isAdmin'])) {
                             $data['success'] = "Schedule(s) added successfully.";
                             $sessionCount = count($schedules);
-        $logModel->log($userId, 'Schedule Submitted', "Submitted $sessionCount session(s) for approval.");
-        
-        if (!$data['isAdmin']) { $this->notifyAdminsOfPendingSchedule($userId, $schedules); 
+                            $logModel->log($userId, 'Schedule Submitted', "Submitted $sessionCount session(s) for approval.");
+                            
+                            if (!$data['isAdmin']) { 
+                                $this->notifyAdminsOfPendingSchedule($userId, $schedules); 
+                            }
                         } else { 
                             $data['error'] = "Failed to add schedule(s)."; 
                         }
                     }
                 }
-                // --- DELETE SCHEDULE ---
+
                 elseif (isset($_POST['delete_schedule'])) {
                      if ($scheduleModel->delete($_POST['schedule_id_delete'], $_POST['user_id_delete'], $data['isAdmin'])) {
                         $data['success'] = "Schedule deleted successfully.";
                         $logModel->log($_SESSION['user_id'], 'Schedule Removed', "Deleted a schedule entry from the system.");
-    }
-                    } else { $data['error'] = "Failed to delete schedule."; }
+                    } else { 
+                        $data['error'] = "Failed to delete schedule."; 
+                    }
                 }
-                // --- EDIT SCHEDULE ---
+
                 elseif (isset($_POST['edit_schedule'])) {
                     $this->requireAdmin();
                     $conflict = $scheduleModel->checkOverlap($_POST['day_of_week_edit'], $_POST['start_time_edit'], $_POST['end_time_edit'], $_POST['room_edit'], $_POST['schedule_id_edit']);
                     if (!$conflict) {
                         if ($scheduleModel->update($_POST['schedule_id_edit'], $_POST['day_of_week_edit'], $_POST['subject_edit'], $_POST['start_time_edit'], $_POST['end_time_edit'], $_POST['room_edit'])) {
                             $data['success'] = "Schedule updated successfully.";
-                        } else { $data['error'] = "Failed to update schedule."; }
+                        } else { 
+                            $data['error'] = "Failed to update schedule."; 
+                        }
                     } else {
                         $data['error'] = "Cannot update: Conflict detected with " . $conflict['first_name'] . " " . $conflict['last_name'];
                     }
@@ -271,6 +268,7 @@ class ScheduleController extends Controller {
             $data['error'] = 'System error: ' . $e->getMessage();
         }
 
+        // load up all the necessary data depending on whether the user is an admin or not
         if ($data['isAdmin']) {
             $data['allUsers'] = $userModel->getAllActive(); 
             $data['stats'] = $scheduleModel->getAdminStats();
@@ -295,6 +293,7 @@ class ScheduleController extends Controller {
         $this->view('schedule_view', $data);
     }
 
+    // send an email to a user when their request is automatically declined due to a conflict
     private function sendAutoDeclineEmail($user, $scheduleDetails) {
         $firstName = htmlspecialchars($user['first_name']);
         $emailSubject = "Schedule Request Update - BPC Attendance System";
@@ -338,7 +337,7 @@ class ScheduleController extends Controller {
         return sendEmail($user['email'], $emailSubject, $emailBody);
     }
 
-    // ... [Existing sendApprovalEmail, sendDeclineEmail, and notifyAdminsOfPendingSchedule methods remain unchanged] ...
+    // shoot an email to the user letting them know their new schedule has been approved
     private function sendApprovalEmail($user, $schedules) {
         $firstName = htmlspecialchars($user['first_name']);
         $emailSubject = "Schedule Approved - BPC Attendance System";
@@ -362,6 +361,7 @@ class ScheduleController extends Controller {
         return sendEmail($user['email'], $emailSubject, $emailBody);
     }
 
+    // handle sending emails for when a schedule is manually declined by an admin
     private function sendDeclineEmail($user, $daysString) {
         $firstName = htmlspecialchars($user['first_name']);
         $emailSubject = "Schedule Declined - BPC Attendance System";
@@ -369,6 +369,7 @@ class ScheduleController extends Controller {
         return sendEmail($user['email'], $emailSubject, $emailBody);
     }
 
+    // let all active admins know that someone has just submitted a schedule that needs their attention
     private function notifyAdminsOfPendingSchedule($userId, $schedules) {
         $userModel = $this->model('User');
         $db = Database::getInstance();

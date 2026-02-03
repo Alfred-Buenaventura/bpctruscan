@@ -3,7 +3,6 @@ require_once __DIR__ . '/../core/controller.php';
 
 class RegistrationController extends Controller {
 
-    // 1. The List View
     public function index() {
         $this->requireAdmin();
         $userModel = $this->model('User');
@@ -21,7 +20,7 @@ class RegistrationController extends Controller {
         $this->view('registration_list_view', $data);
     }
 
-    // 2. The Enrollment Logic
+    // fingerprint registration process
     public function enroll() {
         $this->requireAdmin();
         $userModel = $this->model('User');
@@ -50,7 +49,6 @@ class RegistrationController extends Controller {
 
         $data = [
             'pageTitle' => "Fingerprint Registration",
-            // FIX: Explicitly set subtitle to prevent "Welcome back!" default
             'pageSubtitle' => "Fingerprint Registration Process", 
             'targetUser' => $targetUser,
             'registeredFingers' => $registeredFingers
@@ -59,9 +57,7 @@ class RegistrationController extends Controller {
         $this->view('registration_view', $data);
     }
 
-    /**
-     * AJAX endpoint to fetch data for the staff report modal
-     */
+     // AJAX endpoint to fetch data for the staff report modal
     public function getStaffReport() {
         $this->requireAdmin();
         $userModel = $this->model('User');
@@ -81,7 +77,7 @@ class RegistrationController extends Controller {
         exit;
     }
 
-    // 3. The Notification API
+    //notification api for pending fingerprint registration
     public function notify() {
         $this->requireAdmin();
         $userModel = $this->model('User');

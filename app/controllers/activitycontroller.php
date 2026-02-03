@@ -2,17 +2,13 @@
 require_once __DIR__ . '/../core/controller.php';
 
 class ActivityController extends Controller {
-    
-    // Replace the index() method in app/controllers/activitycontroller.php
-
+//this function is mostly for the activity logs in the dashboard of users and admin
 public function index() {
-    $this->requireLogin(); // Changed from requireAdmin() to allow staff
+    $this->requireLogin();
 
     $logModel = $this->model('ActivityLog');
     $isAdmin = ($_SESSION['role'] === 'Admin');
-    $userId = $isAdmin ? null : $_SESSION['user_id']; // Only filter if NOT admin
-
-    // Pagination Logic
+    $userId = $isAdmin ? null : $_SESSION['user_id'];
     $limit = 15;
     $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
     $offset = ($page - 1) * $limit;
@@ -24,7 +20,7 @@ public function index() {
         'pageTitle' => 'Activity Logs',
         'pageSubtitle' => $isAdmin ? 'Monitoring system-wide user actions' : 'Reviewing your account activity',
         'logs' => $logs,
-        'page' => $page, // <--- Change 'currentPage' to 'page'
+        'page' => $page,
         'totalPages' => ceil($totalLogs / $limit),
         'isAdmin' => $isAdmin
     ];

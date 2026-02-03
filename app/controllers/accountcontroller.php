@@ -4,7 +4,7 @@ require_once __DIR__ . '/../core/controller.php';
 class AccountController extends Controller {
 
     public function index() {
-        $this->requireAdmin(); // Security Check
+        $this->requireAdmin();
 
         $userModel = $this->model('User');
         $logModel = $this->model('ActivityLog');
@@ -18,30 +18,23 @@ class AccountController extends Controller {
             'flashMessage' => $_SESSION['flash_message'] ?? null,
             'flashType' => $_SESSION['flash_type'] ?? null
         ];
-        // Clear flash session
         unset($_SESSION['flash_message'], $_SESSION['flash_type']);
-
-        // --- HANDLE POST REQUESTS ---
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            
-            // 1. Handle CSV Import
+            // this code line handles the csv bulk import function
             if (isset($_FILES['csvFile'])) {
                 $this->handleCsvImport($_FILES['csvFile'], $userModel, $logModel, $notifModel);
             }
-            
-            // 2. Handle Single User Creation
+            // this is for the individual account creation
             if (isset($_POST['create_user'])) {
                 $this->handleCreateUser($_POST, $userModel, $logModel, $notifModel);
             }
-
-            // 3. Handle User Edits
+            // user editing
             if (isset($_POST['edit_user'])) {
                 $userModel->update($_POST['user_id'], clean($_POST['first_name']), clean($_POST['last_name']), clean($_POST['middle_name']), clean($_POST['email']), clean($_POST['phone']));
                 $logModel->log($_SESSION['user_id'], 'User Updated', "Updated user ID: " . $_POST['user_id']);
                 $this->setFlash('User information updated successfully!', 'success', 'view');
             }
-
-            // 4. Handle Archive/Restore/Delete
+            // user management function for archives, restoring and deleting
             if (isset($_POST['archive_user'])) {
                 $userModel->setStatus($_POST['user_id'], 'archived');
                 $logModel->log($_SESSION['user_id'], 'User Archived', "Archived user ID: " . $_POST['user_id']);
@@ -59,7 +52,6 @@ class AccountController extends Controller {
             }
         }
 
-        // --- PREPARE DATA FOR VIEW ---
         $data['stats'] = $userModel->getStats();
         $data['activeUsers'] = $userModel->getAllActive();
         $data['archivedUsers'] = $userModel->getAllArchived();
@@ -67,8 +59,7 @@ class AccountController extends Controller {
         $this->view('account_view', $data);
     }
 
-    // --- HELPER METHODS ---
-
+    // Handles the user account creation page
     private function handleCreateUser($post, $userModel, $logModel, $notifModel) {
         try {
             $facultyId = clean($post['faculty_id']);
@@ -96,7 +87,7 @@ class AccountController extends Controller {
             ];
 
             $newId = $userModel->create($userData);
-            
+            // email notification for newly created user accounts
             if ($newId) {
             $logModel->log($_SESSION['user_id'], 'User Created', "Created user: $facultyId");
             $notifModel->create($newId, "Welcome! Your account has been created.", 'success');
@@ -140,21 +131,15 @@ class AccountController extends Controller {
         }
 
         $handle = fopen($file['tmp_name'], 'r');
-        fgetcsv($handle); // Skip header
+        fgetcsv($handle);
         
         $imported = 0; 
         $skipped = 0;
 
         while (($data = fgetcsv($handle)) !== false) {
-            // Adjusted count check since we removed 1 column
             if (count($data) < 7) continue; 
             
             $facultyId = clean($data[0]);
-            
-            // CSV Structure:
-            // 0: Faculty ID, 1: Last, 2: First, 3: Middle, 4: Role, 5: Email, 6: Phone
-            
-            // Logic: Username is same as Faculty ID
             $username = $facultyId;
 
             if ($userModel->exists($facultyId) || strtolower(clean($data[4])) === 'admin') {
@@ -167,18 +152,17 @@ class AccountController extends Controller {
                 'last_name' => clean($data[1]),
                 'first_name' => clean($data[2]),
                 'middle_name' => clean($data[3]),
-                'username' => $username, // Auto-set
-                'role' => clean($data[4]), // Shifted index
-                'email' => clean($data[5]), // Shifted index
-                'phone' => $data[6] ?? '',  // Shifted index
-                'password' => password_hash('@defaultpass123', PASSWORD_DEFAULT) // UPDATED PASSWORD
+                'username' => $username,
+                'role' => clean($data[4]), 
+                'email' => clean($data[5]), 
+                'phone' => $data[6] ?? '',  
+                'password' => password_hash('@defaultpass123', PASSWORD_DEFAULT)
             ];
 
             $newId = $userModel->create($userData);
             if ($newId) {
                 $imported++;
                 $notifModel->create($newId, "Welcome! Please change your password.", 'success');
-                // Updated Email to not show random username but ID
                 sendEmail($userData['email'], "Your BPC Account", "Welcome! Credentials: {$userData['username']} / @defaultpass123");
             }
         }
@@ -187,7 +171,7 @@ class AccountController extends Controller {
         $logModel->log($_SESSION['user_id'], 'CSV Import', "Imported $imported users.");
         $this->setFlash("Successfully imported $imported users. Skipped $skipped.", 'success', 'csv');
     }
-
+    // this function is for the downloadable tempate in the account creation tab
     public function downloadTemplate() {
         $this->requireAdmin();
 

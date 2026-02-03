@@ -7,10 +7,10 @@ class ProfileController extends Controller {
         $this->requireLogin();
         $userModel = $this->model('User');
         $logModel = $this->model('ActivityLog');
-        $attendanceModel = $this->model('Attendance'); // Load the attendance model
+        $attendanceModel = $this->model('Attendance');
         $userId = $_SESSION['user_id'];
 
-        // --- 1. HANDLE AJAX CROPPER UPLOAD ---
+        // ajax chopper css for handling the photo image editing/dragging
         if (isset($_GET['action']) && $_GET['action'] === 'upload_photo' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Content-Type: application/json');
             if (!isset($_FILES['croppedImage'])) { 
@@ -19,7 +19,7 @@ class ProfileController extends Controller {
             }
 
             $file = $_FILES['croppedImage'];
-            // 10MB Limit Check
+            // image/profile upload sets limit, 10mb max
             if ($file['size'] > 10485760) { 
                 echo json_encode(['success'=>false, 'message'=>'File exceeds 10MB limit.']); 
                 exit; 
@@ -40,9 +40,9 @@ class ProfileController extends Controller {
             exit;
         }
 
-        // --- 2. HANDLE STANDARD PROFILE UPDATE ---
+        // profile updating
         $data = ['pageTitle' => 'My Profile', 'pageSubtitle' => 'View and edit your information', 'error' => '', 'success' => ''];
-        // Find the POST handling section in app/controllers/profilecontroller.php
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $firstName = trim($_POST['first_name']);
     $lastName = trim($_POST['last_name']);
@@ -56,7 +56,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         $_SESSION['full_name'] = $firstName . ' ' . $lastName;
         $_SESSION['first_name'] = $firstName;
         
-        // Use the new global flash system and redirect
         $this->setFlash('Profile updated successfully!', 'success', 'profile.php');
     } else {
         $this->setFlash('Failed to update profile settings.', 'error', 'profile.php');

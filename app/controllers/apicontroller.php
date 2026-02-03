@@ -4,13 +4,8 @@ require_once __DIR__ . '/../core/controller.php';
 class ApiController extends Controller {
 
     public function __construct() {
-        // Constructor
     }
 
-    /**
-     * Records attendance from the fingerprint kiosk.
-     * Formerly: api/record_attendance.php
-     */
     public function recordAttendance() {
         header('Content-Type: application/json');
         
@@ -24,7 +19,7 @@ class ApiController extends Controller {
         $userId = (int)$data->user_id;
         $db = Database::getInstance();
 
-        // 1. Fetch User
+        // fetches the user 
         $userQuery = $db->query("SELECT * FROM users WHERE id = ?", [$userId], "i");
         $user = $userQuery->get_result()->fetch_assoc();
 
@@ -37,29 +32,22 @@ class ApiController extends Controller {
         $now = date('H:i:s');
         $status = "";
 
-        // 2. Check for existing record today
+        // checks the records for an exisiting attendance record today
         $stmt = $db->query("SELECT id, time_in FROM attendance_records WHERE user_id = ? AND date = ?", [$userId, $today], "is");
         $record = $stmt->get_result()->fetch_assoc();
 
         if ($record) {
-            // TIME OUT
             $db->query("UPDATE attendance_records SET time_out = ? WHERE id = ?", [$now, $record['id']], "si");
             $status = "Time Out";
-        // ... (inside the else block where !$record, meaning this is a new Time In) ...
-
    } else {
-    // TIME IN
-    $timeInStatus = "On-time"; // Default status
+
+    $timeInStatus = "On-time";
     $dayOfWeek = date('l'); 
 
-    // --- NEW: Fetch Configurable Grace Period from DB ---
-    // Use the existing 'late_threshold_minutes' key from your database
     $graceStmt = $db->query("SELECT setting_value FROM system_settings WHERE setting_key = 'late_threshold_minutes'");
     $graceRow = $graceStmt->get_result()->fetch_assoc();
-    $graceMinutes = $graceRow ? (int)$graceRow['setting_value'] : 15; // Default to 15 if missing
-    // ----------------------------------------------------
-
-    // Check Schedule for Lateness
+    $graceMinutes = $graceRow ? (int)$graceRow['setting_value'] : 15;
+   
     $scheduleStmt = $db->query(
         "SELECT MIN(start_time) AS first_class_start 
          FROM class_schedules 
@@ -71,8 +59,6 @@ class ApiController extends Controller {
     if ($schedule && $schedule['first_class_start']) {
         $firstClassStart = strtotime($schedule['first_class_start']);
         $currentTime = strtotime($now);
-        
-        // Use the fetched database value
         $gracePeriodSeconds = $graceMinutes * 60; 
 
         if ($currentTime > ($firstClassStart + $gracePeriodSeconds)) {
@@ -86,7 +72,6 @@ class ApiController extends Controller {
     $status = ($timeInStatus === "Late") ? "Time In (Late)" : "Time In";
 }
 
-        // 3. Return Data for Display
         echo json_encode([
             'success' => true,
             'message' => "Attendance recorded",
@@ -102,10 +87,7 @@ class ApiController extends Controller {
         exit;
     }
 
-    /**
-     * Fetches fingerprint templates for the C# Bridge.
-     * Formerly: api/get_all_templates.php
-     */
+    // this function is the one that fetches the fingerprint templates from the database to be used for the bridge app
     public function getFingerprintTemplates() {
         header('Content-Type: application/json');
         $db = Database::getInstance();
@@ -128,11 +110,7 @@ class ApiController extends Controller {
         }
         exit;
     }
-
-    /**
-     * Marks a single notification as read.
-     * Formerly: mark_notification_read.php
-     */
+    //handles the notification reading for a single notif
     public function markNotificationRead() {
         header('Content-Type: application/json');
         
@@ -157,11 +135,8 @@ class ApiController extends Controller {
         echo json_encode(['success' => true, 'message' => 'Notification marked as read']);
         exit;
     }
-
-    /**
-     * Marks ALL notifications as read for the current user
-     * NEW METHOD
-     */
+    
+    // for all notif
     public function markAllNotificationsRead() {
         header('Content-Type: application/json');
         
