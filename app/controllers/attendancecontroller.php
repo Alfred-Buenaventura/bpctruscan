@@ -199,35 +199,46 @@ class AttendanceController extends Controller {
         }
         
         foreach($records as $r) {
-            $day = (int)date('d', strtotime($r['date']));
-            foreach($r['logs'] as $log) {
-                $timeInTs = strtotime($r['date'] . ' ' . $log['time_in']);
-                $noonTs = strtotime($r['date'] . ' 12:00:00');
+    $day = (int)date('d', strtotime($r['date']));
+    foreach($r['logs'] as $log) {
+        $timeInTs = strtotime($r['date'] . ' ' . $log['time_in']);
+        $noonTs = strtotime($r['date'] . ' 12:00:00');
 
-                if ($timeInTs < $noonTs) {
-                    if (empty($dtrData[$day]['am_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['am_in'])) {
-                        $dtrData[$day]['am_in'] = $log['time_in'];
-                    }
-                    if (!empty($log['time_out'])) {
-                        $timeOutTs = strtotime($r['date'] . ' ' . $log['time_out']);
-                        if (empty($dtrData[$day]['am_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['am_out'])) {
-                            $dtrData[$day]['am_out'] = $log['time_out'];
-                        }
-                    }
-                } else {
-                    if (empty($dtrData[$day]['pm_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['pm_in'])) {
-                        $dtrData[$day]['pm_in'] = $log['time_in'];
-                    }
-                    if (!empty($log['time_out'])) {
-                        $timeOutTs = strtotime($r['date'] . ' ' . $log['time_out']);
-                        if (empty($dtrData[$day]['pm_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['pm_out'])) {
-                            $dtrData[$day]['pm_out'] = $log['time_out'];
-                        }
-                    }
+        // AM Mapping
+        if ($timeInTs < $noonTs) {
+            if (empty($dtrData[$day]['am_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['am_in'])) {
+                $dtrData[$day]['am_in'] = $log['time_in'];
+            }
+            if (!empty($log['time_out'])) {
+                $timeOutTs = strtotime($r['date'] . ' ' . $log['time_out']);
+                if (empty($dtrData[$day]['am_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['am_out'])) {
+                    $dtrData[$day]['am_out'] = $log['time_out'];
                 }
-                $dtrData[$day]['credited_seconds'] += $this->calculateClampedHours($log, $r['date']);
+            }
+        } 
+        // PM Mapping
+        else {
+            if (empty($dtrData[$day]['pm_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['pm_in'])) {
+                $dtrData[$day]['pm_in'] = $log['time_in'];
+            }
+            if (!empty($log['time_out'])) {
+                $timeOutTs = strtotime($r['date'] . ' ' . $log['time_out']);
+                if (empty($dtrData[$day]['pm_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['pm_out'])) {
+                    $dtrData[$day]['pm_out'] = $log['time_out'];
+                }
             }
         }
+
+        // IMPROVED CALCULATION: Actual time elapsed
+        if (!empty($log['time_in']) && !empty($log['time_out'])) {
+            $start = strtotime($log['time_in']);
+            $end = strtotime($log['time_out']);
+            if ($end > $start) {
+                $dtrData[$day]['credited_seconds'] += ($end - $start);
+            }
+        }
+    }
+}
 
         $user = $userModel->findById($userId);
         extract([
