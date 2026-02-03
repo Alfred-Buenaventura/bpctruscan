@@ -77,6 +77,20 @@ class Controller {
         }
     }
 
+    public function kioskView() {
+    // 1. Get key from URL
+    $accessKey = $_GET['key'] ?? '';
+    
+    // 2. Check against the constant defined in init.php
+    if (empty(KIOSK_SECRET_KEY) || $accessKey !== KIOSK_SECRET_KEY) {
+        http_response_code(403);
+        die("Unauthorized Access: Kiosk key required.");
+    }
+
+    // 3. If valid, load the view
+    $this->view('display_view'); // This calls the view method from your file
+}
+
     public function markAllNotificationsRead() {
         header('Content-Type: application/json');
         
