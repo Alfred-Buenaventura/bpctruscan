@@ -10,26 +10,34 @@ body.dtr-body {
 
 .dtr-container-wrapper {
     display: flex;
-    flex-direction: row; 
     justify-content: center;
-    align-items: flex-start;
-    gap: 20px; 
-    padding-top: 1rem;
-    transform: scale(1.39); 
-    transform-origin: top center;
-    margin-bottom: 2rem; 
+    gap: 20px;
+    padding: 30px;
+    background-color: #525659;
+    /* This allows the modal to be scrollable if the screen is small */
+    min-width: min-content; 
 }
 
 .dtr-container {
-    width: 3.5in;
-    height: 8.5in;
     background: white;
-    padding: 0.15in; 
-    border: 1px solid #000;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; 
-    box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+    padding: 20px;
+    /* Increased width for better visibility on screen */
+    width: 420px; 
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+}
+
+.dtr-table {
+    width: 100% !important; /* Force table to use all 1000px */
+    border-collapse: collapse;
+    table-layout: fixed; /* Ensures even columns */
+}
+
+.dtr-table th, .dtr-table td {
+    border: 1px solid black;
+    padding: 12px 5px; /* Taller rows for visibility */
+    text-align: center;
+    font-size: 14px;
 }
 
 .dtr-header { 
@@ -56,9 +64,18 @@ body.dtr-body {
 .info-table .value { border-bottom: 1px solid #000; width: 100%; font-weight: bold; text-align: center; }
 .faculty-id-row { text-align: center; font-size: 7.5pt; font-weight: bold; margin: 2px 0; }
 
-.attendance-table { width: 100%; border-collapse: collapse; font-size: 6.5pt; border: 1px solid #000; text-align: center; font-family: 'Arial', sans-serif; }
-.attendance-table th, .attendance-table td { border: 1px solid #000; height: 11.5px; line-height: 11.5px; }
-.attendance-table th { font-weight: bold; background: #f3f4f6; font-size: 7pt; }
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10.5px; /* Balanced size for readability and fit */
+}
+
+.attendance-table th, 
+.attendance-table td {
+    border: 1px solid black;
+    padding: 4px 2px;
+    text-align: center;
+}
 
 .dtr-footer-content { margin-top: 5px; font-size: 7pt; line-height: 1.1; font-family: 'Times New Roman', serif; flex-grow: 1; }
 .signature-block { margin-top: 10px; text-align: center; }
@@ -72,30 +89,52 @@ body.dtr-body {
 
 /* --- PRINT OVERRIDES (A4 PORTRAIT) --- */
 @media print {
-    @page { size: 
-        A4 portrait; 
-        margin: 0.2in; 
+    html, body {
+        height: 100%;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden; /* Removes the 2nd blank page */
     }
-    body.dtr-body { 
-        background: none !important; 
-        padding: 0 !important; 
-        display: block !important; 
+
+    .print-controls {
+        display: none !important;
     }
-    .dtr-container-wrapper { transform: none !important; 
-        display: flex !important; 
-        flex-direction: row !important; 
-        justify-content: center !important; 
-        gap: 0.25in !important; 
-        width: 100% !important; 
-        margin: 0 !important; 
-        min-height: 0 !important; 
+
+    .dtr-container-wrapper {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        gap: 0.2in !important; /* Standard gap between two cards */
+        width: 100% !important;
+        background: none !important;
     }
-    .dtr-container { box-shadow: none !important; 
-        border: 1px solid #000 !important; 
-        width: 3.6in !important; 
-        height: 9in !important; }
-    .print-controls { 
-        display: none !important; 
+
+    .dtr-container {
+        width: 3.5in !important;   /* Standard DTR Width */
+        height: 8.5in !important;  /* Height adjusted to fit 31 days + Signatures */
+        border: 1.2px solid black !important; /* The border wrapping everything */
+        padding: 10px !important;
+        margin: 0 !important;
+        box-sizing: border-box;    /* Keeps border from adding to width */
+        box-shadow: none !important;
+        display: flex;
+        flex-direction: column;    /* Stack contents vertically */
+        background: white !important;
+        page-break-inside: avoid;
+    }
+
+    .attendance-table {
+        font-size: 8.5pt !important;
+        width: 100% !important;
+    }
+
+    .attendance-table td, .attendance-table th {
+        padding: 2px 1px !important;
+        border: 1px solid black !important;
+    }
+
+    @page {
+        size: portrait;
+        margin: 0.5cm;
     }
 }
-
