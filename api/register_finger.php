@@ -1,7 +1,9 @@
 <?php
 header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS"); // Add POST and OPTIONS
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With"); // Add allowed headers
 header("Content-Type: application/json");
-require_once __DIR__ . '/../app/models/User.php';
+require_once __DIR__ . '/../app/models/user.php';
 
 $data = json_decode(file_get_contents("php://input"), true);
 
@@ -18,7 +20,7 @@ $template = $data['template'];
 $position = isset($data['position']) ? $data['position'] : 'Unknown';
 
 try {
-    // Add to the 'user_fingerprints' table
+    // records the fingerprint data to its table in the database
     $userModel->addFingerprint($userId, $template, $position);
     echo json_encode(["status" => "success", "message" => "$position enrolled successfully"]);
 } catch (Exception $e) {

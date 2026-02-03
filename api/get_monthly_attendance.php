@@ -1,6 +1,6 @@
 <?php
 session_start(); // Start session to access user data
-require_once __DIR__ . '/../app/init.php'; // Load .env, helpers, and constants
+require_once __DIR__ . '/../app/init.php'; // loads the constants, .env file for the authorization and helper class
 
 header('Content-Type: application/json');
 $userId = $_GET['user_id'] ?? 0;
@@ -21,7 +21,7 @@ try {
 
     $db = db();
 
-    // 1. Get all existing records for the month
+    //fetches existing records for the month
     $stmt = $db->prepare(
         "SELECT id, date, time_in, time_out, status, remarks 
          FROM attendance_records 
@@ -31,20 +31,20 @@ try {
     $stmt->execute();
     $dbRecords = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-    // 2. Process records into a day-keyed array for easy lookup
+    // processes the records into a day keyed array for easy user lookup and acess
     $attendanceData = [];
     foreach ($dbRecords as $rec) {
         $dayOfMonth = (int)(new DateTime($rec['date']))->format('j');
         $attendanceData[$dayOfMonth] = $rec;
     }
 
-    // 3. Create a full 31-day array
+    // 31 day arraw for the full month
     $fullMonthData = [];
     for ($day = 1; $day <= $daysInMonth; $day++) {
         $date = "$year-$month-" . str_pad($day, 2, '0', STR_PAD_LEFT);
         
         if (isset($attendanceData[$day])) {
-            // A record exists for this day
+            // fetches a record that exists for the day
             $rec = $attendanceData[$day];
             $fullMonthData[] = [
                 'day' => $day,
@@ -57,7 +57,7 @@ try {
                 'exists' => true
             ];
         } else {
-            // No record exists for this day
+            // for the no records of the day
             $fullMonthData[] = [
                 'day' => $day,
                 'date' => $date,
@@ -66,12 +66,12 @@ try {
                 'time_out' => null,
                 'status' => null,
                 'remarks' => null,
-                'exists' => false // Flag to show it's a new, empty row
+                'exists' => false
             ];
         }
     }
     
-    // 4. Fill in the rest of the 31 days as disabled
+    // fills in the rest of 31 days as disabled
     for ($day = $daysInMonth + 1; $day <= 31; $day++) {
          $fullMonthData[] = [
             'day' => $day,

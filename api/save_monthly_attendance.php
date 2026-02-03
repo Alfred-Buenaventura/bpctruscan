@@ -39,7 +39,7 @@ try {
             continue;
         }
         
-        // Calculate working hours
+        // calculation for the working hours of staff
         $workingHours = null;
         if ($timeIn && $timeOut) {
             $in = new DateTime($timeIn);
@@ -47,29 +47,24 @@ try {
             $span = $out->getTimestamp() - $in->getTimestamp();
             $workingHours = $span / 3600.0;
             if ($workingHours > 5) {
-                $workingHours -= 1; // 1-hour lunch break
+                $workingHours -= 1;
             }
         }
-
+        // for existing records and new records to be recorded
         if (!empty($recordId)) {
-            // This is an existing record, UPDATE it
             $stmt_update->bind_param("sssdsi", $timeIn, $timeOut, $status, $workingHours, $remarks, $recordId);
             $stmt_update->execute();
         } else {
-            // This is a new record, INSERT it
             $stmt_insert->bind_param("issssds", $userId, $date, $timeIn, $timeOut, $status, $workingHours, $remarks);
             $stmt_insert->execute();
         }
         
-        // Add to log
+        // adds it to the logs
         $logDetails[] = "Day $day: [T-In:$timeIn, T-Out:$timeOut, S:$status, R:$remarks]";
     }
-
-    // All queries succeeded, commit the transaction
     $db->commit();
-    
-    //Log the entire batch edit as one action
-require_once __DIR__ . '/../models/cctivitylog.php'; // Ensure class is loaded
+
+require_once __DIR__ . '/../models/activitylog.php';
 $activityLog = new ActivityLog();
 $activityLog->log(
     $adminId, 

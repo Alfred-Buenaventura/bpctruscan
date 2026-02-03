@@ -15,7 +15,7 @@ if (!$data || !isset($data->user_id)) {
 $db = Database::getInstance(); 
 $scannedId = (int)$data->user_id; 
 
-// Identify the user via fingerprint ID or manual entry
+// identifies the user by their fingerprint data saved on the dtabase
 $check = $db->query("SELECT user_id FROM user_fingerprints WHERE id = ?", [$scannedId], "i");
 $row = $check->get_result()->fetch_assoc();
 
@@ -25,7 +25,7 @@ if ($row) {
     $userId = $scannedId;
 }
 
-// Fetch active User details
+// gets the active user details
 $userStmt = $db->query("SELECT * FROM users WHERE id = ? AND status = 'active'", [$userId], "i");
 $user = $userStmt->get_result()->fetch_assoc();
 
@@ -34,14 +34,14 @@ if (!$user) {
     exit;
 }
 
-// Prepare recording variables
+// for recording the variables
 $today = date('Y-m-d');
 $now = date('H:i:s');
 $dayOfWeek = date('l'); 
 $status = "";
 $isWarning = false;
 
-// --- SCHEDULE LOOKUP: Link the scan to a specific approved schedule ---
+// scans for the specific approved schedules of users
 $schedQuery = "SELECT id FROM class_schedules 
                WHERE user_id = ? AND day_of_week = ? AND status = 'approved' 
                AND (ABS(TIMESTAMPDIFF(MINUTE, start_time, ?)) <= 60 
@@ -51,7 +51,7 @@ $schedStmt = $db->query($schedQuery, [$userId, $dayOfWeek, $now, $now, $now], "i
 $currentSched = $schedStmt->get_result()->fetch_assoc();
 $scheduleId = $currentSched ? $currentSched['id'] : null;
 
-// RECORD ATTENDANCE LOGIC
+// this is the logic ofr recording the attendance
 $openStmt = $db->query("SELECT id, time_in FROM attendance_records WHERE user_id = ? AND date = ? AND time_out IS NULL ORDER BY id DESC LIMIT 1", [$userId, $today], "is");
 $openRecord = $openStmt->get_result()->fetch_assoc();
 
@@ -59,7 +59,7 @@ if ($openRecord) {
     $timeInTs = strtotime($openRecord['time_in']);
     $currentTs = strtotime("$today $now");
     
-    // Prevent double punch (1 minute interval)
+    // 1 minute interval logic for preventing double attendance records (mostly because of mistakes)
     if (($currentTs - $timeInTs) < 60) {
         $status = "Already Timed In";
         $isWarning = true;
@@ -74,7 +74,7 @@ if ($openRecord) {
     $status = "Time In";
 }
 
-// EMAIL NOTIFICATION LOGIC
+// email notification logic for sending emails to users
 if (!$isWarning && !empty($user['email']) && $user['email_notifications_enabled']) {
     $formattedTime = date('h:i A', strtotime($now));
     $subject = "Attendance Notification: $status Recorded";
