@@ -16,6 +16,18 @@ require_once __DIR__ . '/core/mailer.php';
 // 4. Load .env
 Helper::loadEnv(__DIR__ . '/../.env');
 
+// Define the Admin Backup Key from the .env file
+$adminBypass = $_ENV['ADMIN_BYPASS_KEY'] ?? '';
+define('ADMIN_BYPASS_KEY', $adminBypass);
+
+$envKey = getenv('KIOSK_SECRET_KEY') ?: ($_ENV['KIOSK_SECRET_KEY'] ?? null);
+
+if (isset($_ENV['KIOSK_SECRET_KEY'])) {
+    define('KIOSK_SECRET_KEY', $_ENV['KIOSK_SECRET_KEY']);
+} else {
+    define('KIOSK_SECRET_KEY', ''); // Keep it empty if not found
+}
+
 if (!defined('API_ACCESS')) {
     define('API_ACCESS', false);
 }
