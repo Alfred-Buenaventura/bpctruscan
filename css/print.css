@@ -111,7 +111,7 @@ body.dtr-body {
 
     .dtr-container {
         width: 3.5in !important;   /* Standard DTR Width */
-        height: 8.5in !important;  /* Height adjusted to fit 31 days + Signatures */
+        height: 8.8in !important;  /* Height adjusted to fit 31 days + Signatures */
         border: 1.2px solid black !important; /* The border wrapping everything */
         padding: 10px !important;
         margin: 0 !important;
