@@ -9,35 +9,41 @@ class Schedule {
     }
     
     public function getRooms() {
+        // gets all rooms available in the system sorted by name
         $sql = "SELECT * FROM rooms ORDER BY name ASC";
         return $this->db->query($sql)->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
     public function checkOverlap($day, $startTime, $endTime, $room, $excludeScheduleId = null) {
-        $sql = "SELECT cs.*, u.first_name, u.last_name, u.faculty_id 
-                FROM class_schedules cs
-                JOIN users u ON cs.user_id = u.id
-                WHERE cs.day_of_week = ? 
-                AND cs.room = ? 
-                AND cs.status = 'approved' 
-                AND cs.start_time < ? 
-                AND cs.end_time > ?
-                AND u.status = 'active'";
-        
-        $params = [$day, $room, $endTime, $startTime];
-        $types = "ssss";
+    $sql = "SELECT cs.*, u.first_name, u.last_name, u.faculty_id 
+            FROM class_schedules cs
+            JOIN users u ON cs.user_id = u.id
+            WHERE cs.day_of_week = ? 
+            AND cs.room = ? 
+            AND cs.status = 'approved' 
+            AND cs.start_time < ? 
+            AND cs.end_time > ?
+            AND u.status = 'active'
+            /* Restriction: Only specific teaching roles block rooms */
+            AND (u.role = 'Full Time Teacher' OR u.role = 'Part Time Teacher')
+            /* Bypass: NTP duties never block any other schedule */
+            AND cs.type != 'NTP'";
+    
+    $params = [$day, $room, $endTime, $startTime];
+    $types = "ssss";
 
-        if ($excludeScheduleId) {
-            $sql .= " AND cs.id != ?";
-            $params[] = $excludeScheduleId;
-            $types .= "i";
-        }
-
-        $stmt = $this->db->query($sql, $params, $types);
-        return $stmt->get_result()->fetch_assoc();
+    if ($excludeScheduleId) {
+        $sql .= " AND cs.id != ?";
+        $params[] = $excludeScheduleId;
+        $types .= "i";
     }
 
+    $stmt = $this->db->query($sql, $params, $types);
+    return $stmt->get_result()->fetch_assoc();
+}
+
     public function getPendingConflicts($day, $startTime, $endTime, $room, $excludeScheduleId) {
+        // finds pending requests that would clash with a schedule currently being approved
         $sql = "SELECT cs.*, u.first_name, u.last_name, u.email, u.id as user_id
                 FROM class_schedules cs
                 JOIN users u ON cs.user_id = u.id
@@ -59,6 +65,7 @@ class Schedule {
     }
 
     public function update($id, $day, $subject, $start, $end, $room, $type = 'Class') {
+        // updates an existing schedule entry with new time or location
         $sql = "UPDATE class_schedules 
                 SET day_of_week = ?, subject = ?, start_time = ?, end_time = ?, room = ?, type = ?
                 WHERE id = ?";
@@ -67,6 +74,7 @@ class Schedule {
     }
 
     public function create($userId, $schedules, $isAdmin) {
+        // creates multiple schedule entries at once, auto-approving if done by an admin
         $status = $isAdmin ? 'approved' : 'pending';
         $sql = "INSERT INTO class_schedules (user_id, day_of_week, subject, start_time, end_time, room, type, status) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -82,6 +90,7 @@ class Schedule {
     }
 
     public function delete($scheduleId, $userId, $isAdmin) {
+        // removes a schedule from the system while checking permissions
         $sql = "DELETE FROM class_schedules WHERE id = ?";
         if (!$isAdmin) {
             $sql .= " AND user_id = ?";
@@ -93,6 +102,7 @@ class Schedule {
     }
 
     public function updateStatus($scheduleId, $status) {
+        // simple status change for approval or rejection workflows
         $sql = "UPDATE class_schedules SET status = ? WHERE id = ?";
         $stmt = $this->db->query($sql, [$status, $scheduleId], "si");
         return $stmt->affected_rows > 0;
@@ -114,6 +124,7 @@ class Schedule {
     }
     
     public function getGroupedSchedulesByStatus($status, $search = null) {
+        // organizes schedules by user for easy reading in admin tables
         $sql = "SELECT cs.*, u.first_name, u.last_name, u.faculty_id, u.id as u_id 
                 FROM class_schedules cs
                 JOIN users u ON cs.user_id = u.id
@@ -160,6 +171,7 @@ class Schedule {
     }
 
     public function getAdminStats() {
+        // calculates system-wide stats like total approved schedules
         $sql_schedules = "SELECT COUNT(cs.id) as total 
                           FROM class_schedules cs 
                           JOIN users u ON cs.user_id = u.id 
@@ -179,6 +191,7 @@ class Schedule {
     }
     
     public function getUserStats($userId) {
+        // calculates individual stats like total working hours per week
         $sql = "SELECT start_time, end_time FROM class_schedules WHERE user_id = ? AND status='approved'";
         $schedules = $this->db->query($sql, [$userId], "i")->get_result()->fetch_all(MYSQLI_ASSOC);
         
