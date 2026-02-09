@@ -23,11 +23,11 @@
         <?php if (Helper::isAdmin()): ?>
         <a href="create_account.php" class="nav-item">
             <i class="fa-solid fa-user-plus nav-icon"></i>
-            <span class="nav-text">Create User Account</span>
+            <span class="nav-text">Manage User Accounts</span>
         </a>
         <a href="create_admin.php" class="nav-item">
             <i class="fa-solid fa-user-shield nav-icon"></i>
-            <span class="nav-text">Create Admin Account</span>
+            <span class="nav-text">Manage Admin Accounts</span>
         </a>
         <a href="complete_registration.php" class="nav-item">
              <i class="fa-solid fa-fingerprint nav-icon"></i>
@@ -45,9 +45,20 @@
         </a>
         <?php if (Helper::isAdmin()): ?>
             <a href="holiday_management.php" class="nav-item"> <i class="fa-solid fa-umbrella-beach nav-icon"></i>
-            <span class="nav-text">Holiday Management</span>
+            <span class="nav-text">DTR Management</span>
         </a>
         <?php endif; ?>
+
+<style>
+.kiosk-link {
+    background: rgba(5, 150, 105, 0.1); /* Subtle green highlight */
+    border-left: 4px solid #059669;
+    margin-top: 10px;
+}
+.kiosk-link:hover {
+    background: rgba(5, 150, 105, 0.2) !important;
+}
+</style>
         
         <button type="button" class="nav-item nav-item-button" onclick="openModal('notificationsModal')" id="notificationsBtn">
             <i class="fa-solid fa-bell nav-icon"></i>

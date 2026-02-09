@@ -64,7 +64,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         openModal('operationStatusModal');
-        // Clear flash after showing
         <?php unset($_SESSION['flash_message'], $_SESSION['flash_type']); ?>
     }
 });
