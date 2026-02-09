@@ -13,10 +13,20 @@ class ScheduleController extends Controller {
         $notifModel = $this->model('Notification');
         $logModel = $this->model('ActivityLog');
 
+        $validateTypeByRole = function($userId, $type) use ($userModel) {
+        $targetUser = $userModel->findById($userId);
+        $role = $targetUser['role'] ?? '';
+
+        if ($role === 'Part Time Teacher' && $type === 'Office') {
+            return false;
+        }
+        return true;
+    };
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['check_conflict'])) {
-            header('Content-Type: application/json');
-            
-            $checks = [];
+        header('Content-Type: application/json');
+        
+        $checks = [];
             if (isset($_POST['schedules']) && is_array($_POST['schedules'])) {
                 $checks = $_POST['schedules'];
             } else {
@@ -31,17 +41,18 @@ class ScheduleController extends Controller {
             }
 
             foreach ($checks as $check) {
-                if (empty($check['room']) || empty($check['start']) || empty($check['end'])) continue;
+            $targetUserId = $check['user_id'] ?? $_SESSION['user_id'];
+            $type = $check['type'] ?? 'Class';
 
-                // Restriction Rule: Only check for conflicts if the user is a teacher
-                $targetUserId = $check['user_id'] ?? $_SESSION['user_id'];
-                $targetUser = $userModel->findById($targetUserId);
-                $role = $targetUser['role'] ?? '';
-                
-                if ($role !== 'Full Time Teacher' && $role !== 'Part Time Teacher') {
-                    continue; 
-                }
-
+            // 1. Apply Teacher-Type Restriction
+            if (!$validateTypeByRole($targetUserId, $type)) {
+                echo json_encode([
+                    'has_conflict' => true, 
+                    'error' => "Restricted: Part-time teachers cannot be assigned Office Duty.",
+                    'restriction_violation' => true
+                ]);
+                exit;
+            }
                 // check if the requested time slot is already taken by another teacher
                 $conflict = $scheduleModel->checkOverlap(
                     $check['day'], 
@@ -227,31 +238,53 @@ class ScheduleController extends Controller {
                 }
                 
                 elseif (isset($_POST['add_schedule'])) {
-                    $userId = $_POST['user_id'] ?? $_SESSION['user_id'];
-                    $schedules = [];
-                    if(isset($_POST['day_of_week']) && is_array($_POST['day_of_week'])) {
-                        for ($i = 0; $i < count($_POST['day_of_week']); $i++) {
-                            $schedules[] = [ 
-                                'day' => $_POST['day_of_week'][$i], 
-                                'subject' => $_POST['subject'][$i], 
-                                'start' => $_POST['start_time'][$i], 
-                                'end' => $_POST['end_time'][$i], 
-                                'room' => $_POST['room'][$i] 
-                            ];
-                        }
-                        if ($scheduleModel->create($userId, $schedules, $data['isAdmin'])) {
-                            $data['success'] = "Schedule(s) added successfully.";
-                            $sessionCount = count($schedules);
-                            $logModel->log($userId, 'Schedule Submitted', "Submitted $sessionCount session(s) for approval.");
-                            
-                            if (!$data['isAdmin']) { 
-                                $this->notifyAdminsOfPendingSchedule($userId, $schedules); 
-                            }
-                        } else { 
-                            $data['error'] = "Failed to add schedule(s)."; 
-                        }
-                    }
+    $userId = $_POST['user_id'] ?? $_SESSION['user_id'];
+    $schedules = [];
+    
+    // 1. Fetch user data to check their role/employment status
+    $targetUser = $userModel->findById($userId);
+    $role = $targetUser['role'] ?? '';
+    $validationError = null;
+
+    if (isset($_POST['day_of_week']) && is_array($_POST['day_of_week'])) {
+        for ($i = 0; $i < count($_POST['day_of_week']); $i++) {
+            $type = $_POST['type'][$i] ?? 'Class';
+
+            // 2. Apply Strict Restriction: 
+            // Part-time teachers are restricted to 'Class' types only.
+            if ($role === 'Part Time Teacher' && $type === 'Office') {
+                $validationError = "Access Denied: Part-time teachers cannot be assigned Office Duty.";
+                break;
+            }
+
+            $schedules[] = [ 
+                'day' => $_POST['day_of_week'][$i], 
+                'subject' => $_POST['subject'][$i], 
+                'start' => $_POST['start_time'][$i], 
+                'end' => $_POST['end_time'][$i], 
+                'room' => $_POST['room'][$i],
+                'type' => $type // Ensure the type is included in the array
+            ];
+        }
+
+        // 3. Proceed only if the role-based validation passed
+        if ($validationError) {
+            $data['error'] = $validationError;
+        } else {
+            if ($scheduleModel->create($userId, $schedules, $data['isAdmin'])) {
+                $data['success'] = "Schedule(s) added successfully.";
+                $sessionCount = count($schedules);
+                $logModel->log($userId, 'Schedule Submitted', "Submitted $sessionCount session(s) for approval.");
+                
+                if (!$data['isAdmin']) { 
+                    $this->notifyAdminsOfPendingSchedule($userId, $schedules); 
                 }
+            } else { 
+                $data['error'] = "Failed to add schedule(s)."; 
+            }
+        }
+    }
+}
 
                 elseif (isset($_POST['delete_schedule'])) {
                      if ($scheduleModel->delete($_POST['schedule_id_delete'], $_POST['user_id_delete'], $data['isAdmin'])) {
