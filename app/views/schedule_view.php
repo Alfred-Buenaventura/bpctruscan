@@ -63,6 +63,173 @@ if (!function_exists('renderScheduleTable')) {
 ?>
 <link rel="stylesheet" href="css/schedule.css">
 
+<style>
+/* Conflict Modal Specific Styles */
+/* Custom System Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.system-modal-card {
+    background: #fff;
+    width: 100%;
+    max-width: 550px;
+    border-radius: 8px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    overflow: hidden;
+    border-top: 5px solid #dc3545; /* Red accent */
+}
+
+.system-modal-header {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.header-content i {
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+
+.modal-close-icon {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.system-modal-body {
+    padding: 25px;
+}
+
+.instruction-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+.conflict-info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.info-block label {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.info-value {
+    font-size: 1rem;
+    color: #333;
+}
+
+.info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.highlight-block {
+    background: #fff5f5;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px dashed #feb2b2;
+}
+
+.time-separator {
+    margin: 0 10px;
+    color: #ccc;
+}
+
+.system-modal-footer {
+    padding: 15px 25px;
+    background: #f8f9fa;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Button styles to match system buttons */
+.btn-system-secondary {
+    padding: 8px 18px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-system-danger {
+    padding: 8px 18px;
+    border: none;
+    background: #dc3545;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-system-danger:hover {
+    background: #c82333;
+}
+
+.system-modal-header.bg-danger {
+    background-color: #dc3545 !important; /* Force System Red */
+    border-bottom: 2px solid #b21f2d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+}
+
+.system-modal-header .modal-title, 
+.system-modal-header .header-content span {
+    color: #ffffff !important; /* Ensure visibility */
+    font-weight: 700;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    text-transform: uppercase;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.system-modal-header .header-content i {
+    color: #ffffff !important;
+    margin-right: 10px;
+}
+
+.modal-close-icon {
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 1.5rem;
+    line-height: 1;
+    background: transparent;
+    border: none;
+    transition: color 0.2s;
+}
+
+.modal-close-icon:hover {
+    color: #ffffff !important;
+}
+
+</style>
+
 <div class="main-body schedule-management">
 
 <?php if (!$isAdmin): ?>
@@ -536,24 +703,56 @@ if (!function_exists('renderScheduleTable')) {
     </div>
 </div>
 
-<div id="conflictWarningModal" class="modal">
-    <div class="modal-content">
-        <div class="email-like-header"><h2>⚠ Schedule Overlap</h2></div>
-        <div class="email-like-body">
-            <div class="warning-box"><strong>Notice:</strong> The schedule conflicts with an existing approved schedule.</div>
-            <table class="conflict-table">
-                <tr><th>Conflict With</th><td id="conflictUser"></td></tr>
-                <tr><th>Faculty ID</th><td id="conflictID"></td></tr>
-                <tr><th>Day</th><td id="conflictDay"></td></tr>
-                <tr><th>Subject</th><td id="conflictSubject"></td></tr>
-                <tr><th>Time</th><td id="conflictTime"></td></tr>
-                <tr><th>Room / Location</th><td id="conflictRoom" style="font-weight:bold; color:#dc2626;"></td></tr>
-            </table>
+<div id="conflictWarningModal" class="modal-overlay" style="display:none;">
+    <div class="system-modal-card border-danger">
+        <div class="system-modal-header bg-danger text-white">
+            <div class="header-content">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>SCHEDULE CONFLICT DETECTED</span>
+            </div>
+            <button class="modal-close-icon" onclick="closeModal('conflictWarningModal')">&times;</button>
         </div>
-        <div class="email-like-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('conflictWarningModal')">Close & Edit</button></div>
+        
+        <div class="system-modal-body">
+            <p class="instruction-label text-danger">The slot you are trying to assign is already occupied:</p>
+            
+            <div class="conflict-info-grid">
+                <div class="info-block">
+                    <label>Faculty Member</label>
+                    <div class="info-value">
+                        <span id="conflictUser" class="font-bold"></span> 
+                        <span class="text-muted">(ID: <span id="conflictID"></span>)</span>
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-block">
+                        <label>Subject / Duty</label>
+                        <div class="info-value text-danger font-bold" id="conflictSubject"></div>
+                    </div>
+                    <div class="info-block">
+                        <label>Room</label>
+                        <div class="info-value" id="conflictRoom"></div>
+                    </div>
+                </div>
+
+                <div class="info-block highlight-block">
+                    <label>Existing Schedule</label>
+                    <div class="info-value">
+                        <i class="far fa-calendar-alt"></i> <span id="conflictDay"></span>
+                        <span class="time-separator">|</span>
+                        <i class="far fa-clock"></i> <span id="conflictTime"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="system-modal-footer">
+            <button class="btn-system-secondary" onclick="closeModal('conflictWarningModal')">Close</button>
+            <button class="btn-system-danger" onclick="closeModal('conflictWarningModal')">Adjust Schedule</button>
+        </div>
     </div>
 </div>
-
 <script>
 let pendingActionType = '';
 let pendingActionId = null;
@@ -818,12 +1017,23 @@ function filterScheduleRealTime() {
     });
 }
 
-function convertTime(timeStr) {
-    const [hours, minutes] = timeStr.split(':');
-    const h = parseInt(hours, 10);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const h12 = h % 12 || 12;
-    return `${h12}:${minutes} ${ampm}`;
+function convertTime(time) {
+    if (!time) return 'N/A';
+    const [hours, minutes] = time.split(':');
+    const h = hours % 12 || 12;
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    return `${h}:${minutes} ${ampm}`;
+}
+
+// Example: Client-side hint
+function updateTypeOptions(role) {
+    const typeSelect = document.getElementById('scheduleType');
+    if (role === 'Part Time Teacher') {
+        typeSelect.value = 'Class';
+        typeSelect.options[1].disabled = true; // Disable 'Office Duty'
+    } else {
+        typeSelect.options[1].disabled = false;
+    }
 }
 </script>
 <?php require_once __DIR__ . '/partials/footer.php'; ?>

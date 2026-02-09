@@ -106,14 +106,16 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 8px;">Quick Search</label>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'Admin'): ?>
+                    <div class="form-group">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 8px;">Quick Search</label>
                     <div style="position: relative;">
                         <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
                         <input type="text" id="historyLiveSearch" onkeyup="filterHistoryTable()" placeholder="Name, ID, or Status..." 
-                            style="width: 100%; padding: 10px 10px 10px 35px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                        style="width: 100%; padding: 10px 10px 10px 35px; border: 1px solid #cbd5e1; border-radius: 8px;">
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <div style="display: flex; gap: 10px;">
                     <button type="submit" class="btn" style="flex: 1; background: #059669; color: white; padding: 11px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">
