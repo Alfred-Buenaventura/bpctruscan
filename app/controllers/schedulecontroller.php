@@ -25,6 +25,7 @@ class ScheduleController extends Controller {
                     'start' => $_POST['start'],
                     'end' => $_POST['end'],
                     'room' => $_POST['room'],
+                    'user_id' => $_POST['user_id'] ?? null,
                     'id' => $_POST['id'] ?? null
                 ];
             }
@@ -32,7 +33,16 @@ class ScheduleController extends Controller {
             foreach ($checks as $check) {
                 if (empty($check['room']) || empty($check['start']) || empty($check['end'])) continue;
 
-                // check if the requested time slot is already taken by someone else
+                // Restriction Rule: Only check for conflicts if the user is a teacher
+                $targetUserId = $check['user_id'] ?? $_SESSION['user_id'];
+                $targetUser = $userModel->findById($targetUserId);
+                $role = $targetUser['role'] ?? '';
+                
+                if ($role !== 'Full Time Teacher' && $role !== 'Part Time Teacher') {
+                    continue; 
+                }
+
+                // check if the requested time slot is already taken by another teacher
                 $conflict = $scheduleModel->checkOverlap(
                     $check['day'], 
                     $check['start'], 
@@ -55,7 +65,6 @@ class ScheduleController extends Controller {
             exit;
         }
 
-        // prepare all the variables we need for the frontend dashboard
         $data = [
             'pageTitle' => 'Schedule Management', 
             'pageSubtitle' => 'Manage and monitor class schedules',
@@ -112,14 +121,20 @@ class ScheduleController extends Controller {
                                 $success = false;
 
                                 if ($action === 'approve') {
-                                    // re-run the overlap check just to be safe before hitting the database
-                                    $conflict = $scheduleModel->checkOverlap(
-                                        $schedInfo['day_of_week'],
-                                        $schedInfo['start_time'],
-                                        $schedInfo['end_time'],
-                                        $schedInfo['room'],
-                                        $schedInfo['id']
-                                    );
+                                    // Restriction Rule: Only block if the user is a teacher and has a conflict
+                                    $schedUser = $userModel->findById($schedInfo['user_id']);
+                                    $isTeacher = ($schedUser['role'] === 'Full Time Teacher' || $schedUser['role'] === 'Part Time Teacher');
+                                    
+                                    $conflict = false;
+                                    if ($isTeacher) {
+                                        $conflict = $scheduleModel->checkOverlap(
+                                            $schedInfo['day_of_week'],
+                                            $schedInfo['start_time'],
+                                            $schedInfo['end_time'],
+                                            $schedInfo['room'],
+                                            $schedInfo['id']
+                                        );
+                                    }
 
                                     if ($conflict) {
                                         $failedCount++;
@@ -129,7 +144,6 @@ class ScheduleController extends Controller {
                                     $success = $scheduleModel->updateStatus($schedId, 'approved');
 
                                     if ($success) {
-                                        // find all other pending requests that now conflict with this newly approved one
                                         $pendingConflicts = $scheduleModel->getPendingConflicts(
                                             $schedInfo['day_of_week'],
                                             $schedInfo['start_time'],
@@ -148,8 +162,6 @@ class ScheduleController extends Controller {
                                                 if ($loserUser && !empty($loserUser['email'])) {
                                                     $this->sendAutoDeclineEmail($loserUser, $pc);
                                                 }
-
-                                                // remove the losing requests since the slot is now filled
                                                 $scheduleModel->delete($pc['id'], $pc['user_id'], true);
                                             }
                                         }
@@ -207,7 +219,7 @@ class ScheduleController extends Controller {
                         }
                         
                         if ($failedCount > 0) {
-                            $data['error'] = "Warning: $failedCount schedule(s) could not be approved because they now conflict with existing schedules.";
+                            $data['error'] = "Warning: $failedCount schedule(s) could not be approved because they now conflict with existing teacher schedules.";
                         }
                         
                         $data['activeTab'] = 'pending';
@@ -252,9 +264,18 @@ class ScheduleController extends Controller {
 
                 elseif (isset($_POST['edit_schedule'])) {
                     $this->requireAdmin();
-                    $conflict = $scheduleModel->checkOverlap($_POST['day_of_week_edit'], $_POST['start_time_edit'], $_POST['end_time_edit'], $_POST['room_edit'], $_POST['schedule_id_edit']);
+                    $schedId = $_POST['schedule_id_edit'];
+                    $schedInfo = $scheduleModel->findById($schedId);
+                    $schedUser = $userModel->findById($schedInfo['user_id']);
+                    $isTeacher = ($schedUser['role'] === 'Full Time Teacher' || $schedUser['role'] === 'Part Time Teacher');
+                    
+                    $conflict = false;
+                    if ($isTeacher) {
+                        $conflict = $scheduleModel->checkOverlap($_POST['day_of_week_edit'], $_POST['start_time_edit'], $_POST['end_time_edit'], $_POST['room_edit'], $schedId);
+                    }
+
                     if (!$conflict) {
-                        if ($scheduleModel->update($_POST['schedule_id_edit'], $_POST['day_of_week_edit'], $_POST['subject_edit'], $_POST['start_time_edit'], $_POST['end_time_edit'], $_POST['room_edit'])) {
+                        if ($scheduleModel->update($schedId, $_POST['day_of_week_edit'], $_POST['subject_edit'], $_POST['start_time_edit'], $_POST['end_time_edit'], $_POST['room_edit'])) {
                             $data['success'] = "Schedule updated successfully.";
                         } else { 
                             $data['error'] = "Failed to update schedule."; 
@@ -268,24 +289,19 @@ class ScheduleController extends Controller {
             $data['error'] = 'System error: ' . $e->getMessage();
         }
 
-        // load up all the necessary data depending on whether the user is an admin or not
         if ($data['isAdmin']) {
             $data['allUsers'] = $userModel->getAllActive(); 
             $data['stats'] = $scheduleModel->getAdminStats();
-            
             $allPending = $scheduleModel->getAllByStatus('pending');
             $data['pendingCount'] = count($allPending);
-
             $data['groupedApprovedSchedules'] = $scheduleModel->getGroupedSchedulesByStatus('approved', $data['searchQuery']);
             $data['groupedPendingSchedules'] = $scheduleModel->getGroupedSchedulesByStatus('pending', $data['searchQuery']);
-            
         } else {
             $userId = $_SESSION['user_id'];
             $data['approvedSchedules'] = $scheduleModel->getByUser($userId, 'approved');
             $pendingRaw = $scheduleModel->getByUser($userId, 'pending');
             $data['pendingCount'] = count($pendingRaw);
             $data['pendingSchedules'] = $pendingRaw; 
-            
             $data['userStats'] = $scheduleModel->getUserStats($userId);
             $data['selectedUserInfo'] = $userModel->findById($userId);
         }
@@ -293,61 +309,20 @@ class ScheduleController extends Controller {
         $this->view('schedule_view', $data);
     }
 
-    // send an email to a user when their request is automatically declined due to a conflict
     private function sendAutoDeclineEmail($user, $scheduleDetails) {
         $firstName = htmlspecialchars($user['first_name']);
         $emailSubject = "Schedule Request Update - BPC Attendance System";
-        
         $day = htmlspecialchars($scheduleDetails['day_of_week']);
         $time = date('g:i A', strtotime($scheduleDetails['start_time'])) . ' - ' . date('g:i A', strtotime($scheduleDetails['end_time']));
         $room = htmlspecialchars($scheduleDetails['room']);
-
-        $emailBody = "<!DOCTYPE html>";
-        $emailBody .= "<html><head><style>";
-        $emailBody .= "body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }";
-        $emailBody .= ".container { max-width: 600px; margin: 0 auto; padding: 20px; }";
-        $emailBody .= ".header { background: #dc2626; color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; }";
-        $emailBody .= ".content { background: #ffffff; padding: 40px 30px; border: 1px solid #e5e7eb; border-top: none; }";
-        $emailBody .= ".warning-box { background: #fef2f2; border-left: 4px solid #dc2626; padding: 20px; margin: 25px 0; border-radius: 4px; color: #7f1d1d; }";
-        $emailBody .= ".details-list { background: #f9fafb; padding: 15px; border-radius: 6px; margin-top: 10px; border: 1px solid #e5e7eb; }";
-        $emailBody .= ".footer { background: #f3f4f6; padding: 25px; text-align: center; font-size: 13px; color: #6b7280; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; }";
-        $emailBody .= "</style></head><body>";
-        
-        $emailBody .= "<div class='container'>";
-        $emailBody .= "<div class='header'><h2 style='margin:0; font-weight:600;'>Schedule Update</h2></div>";
-        
-        $emailBody .= "<div class='content'>";
-        $emailBody .= "<p style='margin-top:0;'>Dear <strong>{$firstName}</strong>,</p>";
-        $emailBody .= "<p>We are writing to inform you regarding your recent schedule request.</p>";
-        
-        $emailBody .= "<div class='warning-box'>";
-        $emailBody .= "<p style='margin-top:0; font-weight:bold;'>Notice of Schedule Unavailability</p>";
-        $emailBody .= "<p style='margin-bottom:0;'>The schedule slot you requested for <strong>{$day}</strong> at <strong>{$time}</strong> in <strong>{$room}</strong> is no longer available as it has been allocated to another faculty member.</p>";
-        $emailBody .= "</div>";
-        
-        $emailBody .= "<p>Consequently, your pending request for this specific slot has been automatically removed from the system to maintain schedule accuracy.</p>";
-        $emailBody .= "<p>We apologize for any inconvenience this may cause. Please review the updated schedule availability and submit a new request for an alternative time or room.</p>";
-        $emailBody .= "</div>";
-        
-        $emailBody .= "<div class='footer'>";
-        $emailBody .= "<p style='margin:0 0 10px 0;'><strong>Bulacan Polytechnic College</strong><br>Attendance Monitoring System</p>";
-        $emailBody .= "<p style='margin:0;'>This is an automated notification. Please do not reply directly to this email.</p>";
-        $emailBody .= "</div></div></body></html>";
-        
+        $emailBody = "<!DOCTYPE html><html><head><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; } .container { max-width: 600px; margin: 0 auto; padding: 20px; } .header { background: #dc2626; color: white; padding: 25px; text-align: center; border-radius: 8px 8px 0 0; } .content { background: #ffffff; padding: 40px 30px; border: 1px solid #e5e7eb; border-top: none; } .warning-box { background: #fef2f2; border-left: 4px solid #dc2626; padding: 20px; margin: 25px 0; border-radius: 4px; color: #7f1d1d; } .footer { background: #f3f4f6; padding: 25px; text-align: center; font-size: 13px; color: #6b7280; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; }</style></head><body><div class='container'><div class='header'><h2 style='margin:0; font-weight:600;'>Schedule Update</h2></div><div class='content'><p>Dear <strong>{$firstName}</strong>,</p><p>We are writing to inform you regarding your recent schedule request.</p><div class='warning-box'><p style='margin-top:0; font-weight:bold;'>Notice of Schedule Unavailability</p><p style='margin-bottom:0;'>The schedule slot you requested for <strong>{$day}</strong> at <strong>{$time}</strong> in <strong>{$room}</strong> is no longer available as it has been allocated to another faculty member.</p></div><p>Consequently, your pending request for this specific slot has been automatically removed from the system.</p></div><div class='footer'><p><strong>Bulacan Polytechnic College</strong></p></div></div></body></html>";
         return sendEmail($user['email'], $emailSubject, $emailBody);
     }
 
-    // shoot an email to the user letting them know their new schedule has been approved
     private function sendApprovalEmail($user, $schedules) {
         $firstName = htmlspecialchars($user['first_name']);
         $emailSubject = "Schedule Approved - BPC Attendance System";
-        $emailBody = "<!DOCTYPE html><html><head><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; } .container { max-width: 600px; margin: 0 auto; padding: 20px; } .header { background: #059669; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; } .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; } .schedule-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; } .schedule-table th { background: #ecfdf5; color: #065f46; padding: 12px; text-align: left; border-bottom: 2px solid #059669; } .schedule-table td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; } .footer { background: #f3f4f6; padding: 20px; text-align: center; font-size: 14px; color: #6b7280; border-radius: 0 0 8px 8px; } .success-badge { display: inline-block; background: #10b981; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 10px 0; }</style></head><body><div class='container'><div class='header'><h1 style='margin: 0;'>✓ Schedule Approved</h1></div><div class='content'><p>Dear <strong>{$firstName}</strong>,</p><p>Great news! Your class schedule has been <span class='success-badge'>APPROVED</span></p><p>Below are the details of your approved schedule:</p><table class='schedule-table'><thead><tr><th>Day</th><th>Subject</th><th>Time</th><th>Room</th></tr></thead><tbody>";
-        
-        $dayOrder = ['Monday'=>1, 'Tuesday'=>2, 'Wednesday'=>3, 'Thursday'=>4, 'Friday'=>5, 'Saturday'=>6];
-        usort($schedules, function($a, $b) use ($dayOrder) {
-            return ($dayOrder[$a['day']] ?? 7) - ($dayOrder[$b['day']] ?? 7);
-        });
-        
+        $emailBody = "<!DOCTYPE html><html><head><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; } .container { max-width: 600px; margin: 0 auto; padding: 20px; } .header { background: #059669; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; } .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; } .schedule-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; } .schedule-table th { background: #ecfdf5; color: #065f46; padding: 12px; text-align: left; border-bottom: 2px solid #059669; } .schedule-table td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; } .footer { background: #f3f4f6; padding: 20px; text-align: center; font-size: 14px; color: #6b7280; border-radius: 0 0 8px 8px; } .success-badge { display: inline-block; background: #10b981; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 10px 0; }</style></head><body><div class='container'><div class='header'><h1 style='margin: 0;'>✓ Schedule Approved</h1></div><div class='content'><p>Dear <strong>{$firstName}</strong>,</p><p>Great news! Your class schedule has been <span class='success-badge'>APPROVED</span></p><table class='schedule-table'><thead><tr><th>Day</th><th>Subject</th><th>Time</th><th>Room</th></tr></thead><tbody>";
         foreach ($schedules as $schedule) {
             $day = htmlspecialchars($schedule['day']);
             $subject = htmlspecialchars($schedule['subject']);
@@ -356,20 +331,17 @@ class ScheduleController extends Controller {
             $room = htmlspecialchars($schedule['room']);
             $emailBody .= "<tr><td><strong>{$day}</strong></td><td>{$subject}</td><td>{$startTime} - {$endTime}</td><td>{$room}</td></tr>";
         }
-        
-        $emailBody .= "</tbody></table><p style='margin-top: 20px;'>Your schedule is now active.</p></div><div class='footer'><p><strong>Bulacan Polytechnic College</strong></p></div></div></body></html>";
+        $emailBody .= "</tbody></table></div><div class='footer'><p><strong>Bulacan Polytechnic College</strong></p></div></div></body></html>";
         return sendEmail($user['email'], $emailSubject, $emailBody);
     }
 
-    // handle sending emails for when a schedule is manually declined by an admin
     private function sendDeclineEmail($user, $daysString) {
         $firstName = htmlspecialchars($user['first_name']);
         $emailSubject = "Schedule Declined - BPC Attendance System";
-        $emailBody = "<!DOCTYPE html><html><head><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; } .container { max-width: 600px; margin: 0 auto; padding: 20px; } .header { background: #dc2626; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; } .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; } .footer { background: #f3f4f6; padding: 20px; text-align: center; font-size: 14px; color: #6b7280; border-radius: 0 0 8px 8px; } .warning-box { background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; }</style></head><body><div class='container'><div class='header'><h1 style='margin: 0;'>⚠ Schedule Declined</h1></div><div class='content'><p>Dear <strong>{$firstName}</strong>,</p><div class='warning-box'><p style='margin: 0;'><strong>Your schedule submission for {$daysString} has been declined.</strong></p></div><p>Please contact the administration office for more details.</p></div><div class='footer'><p><strong>Bulacan Polytechnic College</strong></p></div></div></body></html>";
+        $emailBody = "<!DOCTYPE html><html><head><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; } .container { max-width: 600px; margin: 0 auto; padding: 20px; } .header { background: #dc2626; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; } .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; } .footer { background: #f3f4f6; padding: 20px; text-align: center; font-size: 14px; color: #6b7280; border-radius: 0 0 8px 8px; } .warning-box { background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; }</style></head><body><div class='container'><div class='header'><h1 style='margin: 0;'>⚠ Schedule Declined</h1></div><div class='content'><p>Dear <strong>{$firstName}</strong>,</p><div class='warning-box'><p style='margin: 0;'><strong>Your schedule submission for {$daysString} has been declined.</strong></p></div></div><div class='footer'><p><strong>Bulacan Polytechnic College</strong></p></div></div></body></html>";
         return sendEmail($user['email'], $emailSubject, $emailBody);
     }
 
-    // let all active admins know that someone has just submitted a schedule that needs their attention
     private function notifyAdminsOfPendingSchedule($userId, $schedules) {
         $userModel = $this->model('User');
         $db = Database::getInstance();

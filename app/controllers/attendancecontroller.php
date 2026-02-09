@@ -1,5 +1,8 @@
 <?php
 require_once __DIR__ . '/../core/controller.php';
+require_once __DIR__ . '/../libraries/SimpleXLSXGen.php';
+
+use Shuchkin\SimpleXLSXGen;
 
 class AttendanceController extends Controller {
 
@@ -27,6 +30,10 @@ class AttendanceController extends Controller {
             'search'     => $_GET['search']     ?? '',
             'user_id'    => $_GET['user_id']    ?? ''
         ];
+
+        if (isset($_GET['action']) && $_GET['action'] === 'export_csv') {
+            $this->exportHistoryExcel();
+        }
 
         if ($data['isAdmin']) {
             $data['allUsers'] = $userModel->getAllStaff();
@@ -166,90 +173,221 @@ class AttendanceController extends Controller {
         exit;
     }
 
+public function exportHistoryExcel() {
+    $this->requireAdmin();
+    $attModel = $this->model('Attendance');
+    $userModel = $this->model('User');
+
+    // 1. Date Context
+    $startDate = $_GET['start_date'] ?? date('Y-m-01');
+    $monthStart = date('Y-m-01', strtotime($startDate));
+    $monthEnd = date('Y-m-t', strtotime($startDate));
+    $monthLabel = date('F Y', strtotime($monthStart));
+    $lastDay = (int)date('t', strtotime($monthStart));
+
+    // 2. Fetch and Process Data
+    $allStaff = $userModel->getAllStaff();
+    $rawRecords = $attModel->getRecords(['start_date' => $monthStart, 'end_date' => $monthEnd]);
+    
+    $processed = [];
+    foreach ($rawRecords as $rec) {
+        $uid = $rec['user_id'];
+        $day = (int)date('d', strtotime($rec['date']));
+        $ins = array_filter(array_column($rec['logs'], 'time_in'));
+        $outs = array_filter(array_column($rec['logs'], 'time_out'));
+        if (!empty($ins)) {
+            $processed[$uid][$day] = date('g:i A', strtotime(min($ins))) . " - " . (!empty($outs) ? date('g:i A', strtotime(max($outs))) : 'No Out');
+        }
+    }
+
+    // 3. Style Definitions (Hyper-Specific Order)
+    // Emerald Green Title
+    $titleStyle  = '<style bgcolor="#148038" color="#FFFFFF" align="center" valign="center"><b>';
+    // Gray Column Headers
+    $columnStyle = '<style bgcolor="#D3D3D3" align="center" valign="center"><b>';
+    // Center-Aligned Data
+    $centerStyle = '<style align="center" valign="center">';
+
+    $data = [];
+
+    // ROW 1: TITLE (The cell A1 MUST have the style for the merge to center)
+    $row1 = [$titleStyle . "ATTENDANCE HISTORY (" . strtoupper($monthLabel) . ")</b></style>"];
+    for ($i = 1; $i < $lastDay + 2; $i++) { $row1[] = ""; }
+    $data[] = $row1;
+
+    // ROW 2 & 3: Empty placeholders for the vertical title merge
+    $data[] = array_fill(0, $lastDay + 2, "");
+    $data[] = array_fill(0, $lastDay + 2, "");
+
+    // ROW 4: DATES
+    $row4 = [
+        $columnStyle . "ID</b></style>", 
+        $columnStyle . "NAME</b></style>"
+    ];
+    for ($d = 1; $d <= $lastDay; $d++) {
+        $currentDate = date('M d', strtotime("$monthStart + " . ($d - 1) . " days"));
+        $row4[] = $columnStyle . strtoupper($currentDate) . "</b></style>";
+    }
+    $data[] = $row4;
+
+    // ROW 5: SUB-HEADERS
+    $row5 = ["", ""];
+    for ($i = 1; $i <= $lastDay; $i++) { 
+        $row5[] = $columnStyle . "TIME IN - TIME OUT</b></style>"; 
+    }
+    $data[] = $row5;
+
+    // ROW 6+: PERSONNEL DATA
+    foreach ($allStaff as $staff) {
+        $rowData = [
+            $centerStyle . $staff['faculty_id'] . "</style>",
+            $centerStyle . strtoupper($staff['last_name'] . ', ' . $staff['first_name']) . "</style>"
+        ];
+        for ($d = 1; $d <= $lastDay; $d++) {
+            $rowData[] = $centerStyle . ($processed[$staff['id']][$d] ?? '---') . "</style>";
+        }
+        $data[] = $rowData;
+    }
+
+    // 4. Generate XLSX
+    $xlsx = SimpleXLSXGen::fromArray($data);
+    
+    // Calculate last column letter
+    $totalCols = $lastDay + 2;
+    $idx = $totalCols - 1;
+    $lastCol = "";
+    while ($idx >= 0) {
+        $lastCol = chr(($idx % 26) + 65) . $lastCol;
+        $idx = floor($idx / 26) - 1;
+    }
+
+    // Apply Merges
+    $xlsx->mergeCells('A1:' . $lastCol . '3'); // Title
+    $xlsx->mergeCells('A4:A5');                // ID
+    $xlsx->mergeCells('B4:B5');                // Name
+
+    // Set Column Widths (Required for centering to look correct)
+    $xlsx->setColWidth(1, 12); // ID width
+    $xlsx->setColWidth(2, 35); // Name width
+    for ($c = 3; $c <= $totalCols; $c++) {
+        $xlsx->setColWidth($c, 22); // Date columns width
+    }
+
+    $xlsx->downloadAs("Attendance_History.xlsx");
+    exit();
+}
+
     public function printDtr() {
-        $this->requireLogin();
-        $userId = $_GET['user_id'] ?? $_SESSION['user_id'];
-        if (!isAdmin() && $userId != $_SESSION['user_id']) { die('Access Denied'); }
+    $this->requireLogin();
+    $userId = $_GET['user_id'] ?? $_SESSION['user_id'];
+    if (!Helper::isAdmin() && $userId != $_SESSION['user_id']) { die('Access Denied'); }
 
-        $userModel = $this->model('User');
-        $attModel = $this->model('Attendance');
-        
-        $baseDate = $_GET['start_date'] ?? date('Y-m-01');
-        $fullMonthStart = date('Y-m-01', strtotime($baseDate));
-        $fullMonthEnd   = date('Y-m-t', strtotime($baseDate));
-        
-        $monthName = date('F', strtotime($fullMonthStart));
-        $year = date('Y', strtotime($fullMonthStart));
-        $lastDay = (int)date('t', strtotime($fullMonthStart));
+    $userModel = $this->model('User');
+    $attModel = $this->model('Attendance');
+    $holidayModel = $this->model('Holiday');
+    $scheduleModel = $this->model('Schedule'); // Ensure you have this model
+    
+    $baseDate = $_GET['start_date'] ?? date('Y-m-01');
+    $fullMonthStart = date('Y-m-01', strtotime($baseDate));
+    $fullMonthEnd   = date('Y-m-t', strtotime($baseDate));
+    
+    $monthName = date('F', strtotime($fullMonthStart));
+    $year = date('Y', strtotime($fullMonthStart));
+    $lastDay = (int)date('t', strtotime($fullMonthStart));
 
-        $filters = ['start_date' => $fullMonthStart, 'end_date' => $fullMonthEnd, 'user_id' => $userId];
-        $records = $attModel->getRecords($filters);
-        $holidays = $attModel->getHolidaysInRange($fullMonthStart, $fullMonthEnd);
-        
-        $dtrData = [];
-        for ($dayNum = 1; $dayNum <= $lastDay; $dayNum++) {
-            $dateStr = sprintf("%s-%02d-%02d", $year, date('m', strtotime($fullMonthStart)), $dayNum);
-            $dtrData[$dayNum] = [
-                'date' => $dateStr, 
-                'am_in' => '', 'am_out' => '', 
-                'pm_in' => '', 'pm_out' => '', 
-                'credited_seconds' => 0, 
-                'remarks' => $holidays[$dateStr] ?? ''
-            ];
-        }
-        
-        foreach($records as $r) {
-    $day = (int)date('d', strtotime($r['date']));
-    foreach($r['logs'] as $log) {
-        $timeInTs = strtotime($r['date'] . ' ' . $log['time_in']);
-        $noonTs = strtotime($r['date'] . ' 12:00:00');
+    // 1. Fetch all Raw Data
+    $user = $userModel->findById($userId);
+    $settings = $holidayModel->getSystemSettings();
+    $holidays = $attModel->getHolidaysInRange($fullMonthStart, $fullMonthEnd);
+    $logs = $attModel->getUserHistory($userId, ['start_date' => $fullMonthStart, 'end_date' => $fullMonthEnd]);
+    $approvedSchedules = $scheduleModel->getByUser($userId, 'approved');
 
-        // AM Mapping
-        if ($timeInTs < $noonTs) {
-            if (empty($dtrData[$day]['am_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['am_in'])) {
-                $dtrData[$day]['am_in'] = $log['time_in'];
-            }
-            if (!empty($log['time_out'])) {
-                $timeOutTs = strtotime($r['date'] . ' ' . $log['time_out']);
-                if (empty($dtrData[$day]['am_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['am_out'])) {
-                    $dtrData[$day]['am_out'] = $log['time_out'];
+    // 2. Process Daily Data
+    $dtrRecords = [];
+    for ($day = 1; $day <= $lastDay; $day++) {
+        $currentDate = sprintf("%s-%02d-%02d", $year, date('m', strtotime($fullMonthStart)), $day);
+        $dayOfWeek = date('l', strtotime($currentDate));
+        
+        // Find all logs for this specific date
+        $dayLogs = array_filter($logs, function($l) use ($currentDate) {
+            return date('Y-m-d', strtotime($l['date'])) === $currentDate;
+        });
+
+        // Initialize DTR Row
+        $dtrRecords[$day] = [
+            'am_in' => '', 'am_out' => '', 'pm_in' => '', 'pm_out' => '',
+            'credited_seconds' => 0,
+            'remarks' => $holidays[$currentDate] ?? ''
+        ];
+
+        if (!empty($dayLogs)) {
+            // Plotting Logic: Absolute First In and Last Out
+            $ins = array_filter(array_column($dayLogs, 'time_in'));
+            $outs = array_filter(array_column($dayLogs, 'time_out'));
+
+            if (!empty($ins)) {
+                $firstIn = min($ins);
+                $lastIn = max($ins);
+                
+                // Plot AM In (First of day)
+                if (strtotime($firstIn) < strtotime('12:00:00')) {
+                    $dtrRecords[$day]['am_in'] = $firstIn;
+                } else {
+                    $dtrRecords[$day]['pm_in'] = $firstIn;
                 }
             }
-        } 
-        // PM Mapping
-        else {
-            if (empty($dtrData[$day]['pm_in']) || $timeInTs < strtotime($r['date'] . ' ' . $dtrData[$day]['pm_in'])) {
-                $dtrData[$day]['pm_in'] = $log['time_in'];
-            }
-            if (!empty($log['time_out'])) {
-                $timeOutTs = strtotime($r['date'] . ' ' . $log['time_out']);
-                if (empty($dtrData[$day]['pm_out']) || $timeOutTs > strtotime($r['date'] . ' ' . $dtrData[$day]['pm_out'])) {
-                    $dtrData[$day]['pm_out'] = $log['time_out'];
+
+            if (!empty($outs)) {
+                $lastOut = max($outs);
+                // Plot PM Out (Last of day)
+                if (strtotime($lastOut) >= strtotime('12:00:00')) {
+                    $dtrRecords[$day]['pm_out'] = $lastOut;
+                } else {
+                    $dtrRecords[$day]['am_out'] = $lastOut;
                 }
             }
-        }
 
-        // IMPROVED CALCULATION: Actual time elapsed
-        if (!empty($log['time_in']) && !empty($log['time_out'])) {
-            $start = strtotime($log['time_in']);
-            $end = strtotime($log['time_out']);
-            if ($end > $start) {
-                $dtrData[$day]['credited_seconds'] += ($end - $start);
+            // CALCULATION LOGIC: The "Presence Mask"
+            // Find approved schedule blocks for this day of the week
+            $todaySchedules = array_filter($approvedSchedules, function($s) use ($dayOfWeek) {
+                return $s['day_of_week'] === $dayOfWeek;
+            });
+
+            // If there is no schedule, credited_seconds remains 0 (as per analysis)
+            foreach ($todaySchedules as $sched) {
+                $schedStart = strtotime($sched['start_time']);
+                $schedEnd = strtotime($sched['end_time']);
+
+                // For each physical log window, calculate overlap with this schedule block
+                foreach ($dayLogs as $log) {
+                    if (empty($log['time_in']) || empty($log['time_out'])) continue;
+
+                    $presenceIn = strtotime($log['time_in']);
+                    $presenceOut = strtotime($log['time_out']);
+
+                    // Find intersection: max of starts and min of ends
+                    $overlapStart = max($schedStart, $presenceIn);
+                    $overlapEnd = min($schedEnd, $presenceOut);
+
+                    if ($overlapEnd > $overlapStart) {
+                        $dtrRecords[$day]['credited_seconds'] += ($overlapEnd - $overlapStart);
+                    }
+                }
             }
         }
     }
-}
 
-        $user = $userModel->findById($userId);
-        extract([
-            'user' => $user,
-            'monthName' => $monthName,
-            'year' => $year,
-            'lastDay' => $lastDay,
-            'dtrRecords' => $dtrData
-        ]);
-        
-        require_once __DIR__ . '/../views/print_dtr_view.php';
-        exit();
+    $data = [
+        'user' => $user,
+        'monthName' => $monthName,
+        'year' => $year,
+        'lastDay' => $lastDay,
+        'dtrRecords' => $dtrRecords,
+        'settings' => $settings
+    ];
+
+    extract($data);
+    require_once __DIR__ . '/../views/print_dtr_view.php';
+    exit();
     }
 }
