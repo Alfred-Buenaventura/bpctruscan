@@ -196,16 +196,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
         </div>
     </div>
 
-<div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem; gap: 10px;">
-    <a href="attendance_history.php" class="btn" style="background: #6366f1; color: white; border-radius: 50px; padding: 8px 20px; font-weight: 600; text-decoration: none; transition: 0.3s;">
-        <i class="fa-solid fa-clock-rotate-left"></i> Attendance History
-    </a>
-
-    <button class="btn btn-feedback" onclick="openModal('feedbackModal')">
-            <i class="fa-solid fa-comment-dots"></i> Report Discrepancy
-        </button>
-</div>
-
     <div class="report-stats-grid">
         <div class="report-stat-card" onclick="openAttendanceDetail('entries', 'Today\'s Total Entries')">
             <div class="stat-icon-bg bg-emerald-100 text-emerald-600"><i class="fa-solid fa-arrow-right-to-bracket"></i></div>
@@ -235,6 +225,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 <span class="stat-value"><?= $stats['late'] ?? 0 ?></span>
             </div>
         </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem; gap: 10px;">
+        <a href="attendance_history.php" class="btn" style="background: #6366f1; color: white; border-radius: 50px; padding: 8px 20px; font-weight: 600; text-decoration: none; transition: 0.3s;">
+        <i class="fa-solid fa-clock-rotate-left"></i> Attendance History
+        </a>
+        <button class="btn btn-feedback" onclick="openModal('feedbackModal')">
+            <i class="fa-solid fa-comment-dots"></i> Report Discrepancy
+        </button>
     </div>
 
     <div class="filter-export-section card">
@@ -274,7 +273,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                 <div class="filter-actions-new" style="align-items: center; margin-top: 1rem;">
                     <button type="submit" class="btn btn-primary btn-sm apply-filter-btn"><i class="fa-solid fa-check"></i> Apply Filters</button>
                     <button type="button" class="btn btn-warning btn-sm" onclick="handlePrintDTR()">
-                        <i class="fa-solid fa-file-invoice"></i> Preview & Generate DTR
+                        <i class="fa-solid fa-file-invoice"></i> Generate DTR
                     </button>
                 </div>
             </form>
@@ -297,72 +296,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
                         </tr>
                     </thead>
                     <tbody>
-                        <?php $idx = 0; foreach ($records as $row): $idx++; ?>
-                        <tr class="accordion-toggle" onclick="toggleAccordion('details-<?= $idx ?>', this)">
-                            <td style="text-align: center;"><i class="fa-solid fa-chevron-right toggle-icon"></i></td>
-                            <td>
-                                <div class="user-cell">
-                                    <span class="user-name" style="font-weight:700; color:#1e293b;"><?= htmlspecialchars($row['name']) ?></span>
-                                    <span class="user-id" style="display:block; font-size:0.75rem; color:#64748b;">ID: <?= htmlspecialchars($row['faculty_id']) ?></span>
-                                </div>
-                            </td>
-                            <td><span class="date-cell"><?= date('M d, Y', strtotime($row['date'])) ?></span></td>
-                            <td><span class="session-pill"><?= count($row['logs']) ?> Class Block(s)</span></td>
-                            <td style="vertical-align: middle;">
-                                <span class="status-label status-<?= strtolower(str_replace(' ', '-', $row['status'])) ?>">
-                                    <?= htmlspecialchars($row['status']) ?>
-                                </span>
-                            </td>
-                        </tr>
-                        <tr id="details-<?= $idx ?>" class="accordion-content" style="display: none; background-color: #f8fafc;">
-                            <td colspan="5" style="padding: 0;">
-                                <div class="duty-breakdown-wrapper" style="padding: 20px 20px 20px 60px;">
-                                    <h4 style="font-size: 0.9rem; color: #475569; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
-                                        <i class="fa-solid fa-fingerprint"></i> Duty Scan Breakdown
-                                    </h4>
-                                    <?php 
-// Sort the logs for this specific row by time (earliest to latest) before displaying
-usort($row['logs'], function($a, $b) {
-    return strtotime($a['time_in']) - strtotime($b['time_in']); //
-}); 
-?>
+    <?php $idx = 0; foreach ($records as $row): $idx++; ?>
+    <tr class="accordion-toggle" onclick="toggleAccordion('details-<?= $idx ?>', this)">
+        <td style="text-align: center;"><i class="fa-solid fa-chevron-right toggle-icon"></i></td>
+        <td>
+            <div class="user-cell">
+                <span class="user-name" style="font-weight:700; color:#1e293b;"><?= htmlspecialchars($row['name']) ?></span>
+                <span class="user-id" style="display:block; font-size:0.75rem; color:#64748b;">ID: <?= htmlspecialchars($row['faculty_id']) ?></span>
+            </div>
+        </td>
+        <td><span class="date-cell"><?= date('M d, Y', strtotime($row['date'])) ?></span></td>
+        <td><span class="session-pill"><?= count($row['logs']) ?> Scan Record(s)</span></td>
+        <td style="vertical-align: middle;">
+            <span class="status-label status-<?= strtolower(str_replace(' ', '-', $row['status'])) ?>">
+                <?= htmlspecialchars($row['status']) ?>
+            </span>
+        </td>
+    </tr>
+    
+    <tr id="details-<?= $idx ?>" class="accordion-content" style="display: none; background-color: #f8fafc;">
+        <td colspan="5" style="padding: 0;">
+            <div class="duty-breakdown-wrapper" style="padding: 20px 20px 20px 60px;">
+                <h4 style="font-size: 0.9rem; color: #475569; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                    <i class="fa-solid fa-fingerprint"></i> Duty Scan Breakdown (AM/PM Summary)
+                </h4>
 
-<div class="scan-logs-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px;">
-    <?php foreach ($row['logs'] as $log): ?>
-        <div class="scan-log-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <div class="time-block">
-                    <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">In</span>
-                    <span style="display: block; font-size: 1.05rem; font-weight: 600; color: #2563eb;">
-                        <?= !empty($log['time_in']) ? date('g:i A', strtotime($log['time_in'])) : '---' ?>
-                    </span>
-                </div>
-                <div style="color: #cbd5e1;"><i class="fa-solid fa-arrow-right-long"></i></div>
-                <div class="time-block" style="text-align: right;">
-                    <span style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase;">Out</span>
-                    <span style="display: block; font-size: 1.05rem; font-weight: 600; color: #2563eb;">
-                        <?= !empty($log['time_out']) ? date('g:i A', strtotime($log['time_out'])) : '---' ?>
-                    </span>
+                <div class="scan-logs-grid" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <?php 
+                    $am_in = null; $am_out = null;
+                    $pm_in = null; $pm_out = null;
+
+                    foreach ($row['logs'] as $log) {
+                        $tin = strtotime($log['time_in']);
+                        $tout = !empty($log['time_out']) ? strtotime($log['time_out']) : null;
+                        $noon = strtotime('12:00:00');
+                        $grace = strtotime('12:30:00');
+
+                        // Morning Bucket
+                        if ($tin < $noon) {
+                            if ($am_in === null || $tin < $am_in) $am_in = $tin;
+                            if ($tout && $tout <= $grace) {
+                                if ($am_out === null || $tout > $am_out) $am_out = $tout;
+                            }
+                        } else {
+                            // Afternoon Bucket
+                            if ($pm_in === null || $tin < $pm_in) $pm_in = $tin;
+                        }
+
+                        // PM Out is the absolute latest out recorded
+                        if ($tout && ($pm_out === null || $tout > $pm_out)) {
+                            $pm_out = $tout;
+                        }
+                    }
+                    ?>
+
+                    <?php if ($am_in): ?>
+                    <div class="scan-log-card" style="background: white; border: 1px solid #e2e8f0; border-left: 4px solid #059669; border-radius: 8px; padding: 12px; min-width: 220px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                        <span style="font-size: 0.7rem; font-weight: 800; color: #059669; text-transform: uppercase;">
+                            <i class="fa-solid fa-sun"></i> Morning Session
+                        </span>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                            <div><small style="color: #94a3b8;">IN</small><br><strong><?= date('g:i A', $am_in) ?></strong></div>
+                            <div><small style="color: #94a3b8;">OUT</small><br><strong><?= $am_out ? date('g:i A', $am_out) : '---' ?></strong></div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($pm_in): ?>
+                    <div class="scan-log-card" style="background: white; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; border-radius: 8px; padding: 12px; min-width: 220px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                        <span style="font-size: 0.7rem; font-weight: 800; color: #2563eb; text-transform: uppercase;">
+                            <i class="fa-solid fa-moon"></i> Afternoon Session
+                        </span>
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                            <div><small style="color: #94a3b8;">IN</small><br><strong><?= date('g:i A', $pm_in) ?></strong></div>
+                            <div><small style="color: #94a3b8;">OUT</small><br><strong><?= $pm_out ? date('g:i A', $pm_out) : '---' ?></strong></div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!$am_in && !$pm_in): ?>
+                        <span style="color: #94a3b8; font-style: italic; font-size: 0.85rem;">No session logs recorded.</span>
+                    <?php endif; ?>
                 </div>
             </div>
-            <div style="border-top: 1px dashed #e2e8f0; padding-top: 8px;">
-                <span style="font-size: 0.75rem; font-weight: 600; color: #64748b;">Class/Duty:</span>
-                <span style="font-size: 0.75rem; color: #1e293b;"><?= htmlspecialchars($log['subject']) ?></span>
-            </div>
-        </div>
+        </td>
+    </tr>
     <?php endforeach; ?>
-</div>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <div id="selectionWarningModal" class="modal">
+</tbody>
+</table>
+    <?php endif; ?> 
+    </div> 
+</div> 
+<div id="selectionWarningModal" class="modal">
         <div class="modal-content" style="max-width: 420px; text-align: center; border-top: 5px solid #059669;">
             <div class="modal-body" style="padding: 2.5rem;">
                 <i class="fa-solid fa-user-clock" style="font-size: 3.5rem; color: #059669; margin-bottom: 1rem;"></i>
@@ -631,4 +656,5 @@ window.onclick = function(event) {
     }
 };
 </script>
-<?php require_once __DIR__ . '/partials/footer.php'; ?>
+
+<?php require_once __DIR__ . '/partials/footer.php'?>

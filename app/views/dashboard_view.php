@@ -93,13 +93,7 @@ require_once __DIR__ . '/partials/header.php';
         </div>
     </div>
 
-        <div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
-            <a href="display.php?key=BPC_TRUSCAN_KIOSK_2026" target="_blank" class="btn btn-primary" style="background-color: var(--blue-600); border-color: var(--blue-600);">
-                <i class="fa-solid fa-desktop"></i> Launch Attendance Display
-            </a>
-        </div>
-
-        <div class="stats-grid">
+    <div class="stats-grid">
             <a href="create_account.php" class="stat-card clickable-card" title="Manage User Accounts">
                 <div class="stat-icon emerald">
                     <i class="fa-solid fa-users"></i>
@@ -128,6 +122,12 @@ require_once __DIR__ . '/partials/header.php';
                     <p>Pending Registration</p>
                     <div class="stat-value red"><?= $pendingRegistrations ?></div>
                 </div>
+            </a>
+        </div>
+
+        <div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
+            <a href="display.php?key=BPC_TRUSCAN_KIOSK_2026" target="_blank" class="btn btn-primary" style="background-color: var(--blue-600); border-color: var(--blue-600);">
+                <i class="fa-solid fa-desktop"></i> Launch Attendance Display
             </a>
         </div>
 

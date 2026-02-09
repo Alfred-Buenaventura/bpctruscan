@@ -66,9 +66,23 @@ require_once __DIR__ . '/partials/header.php';
 
 .user-cards-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* Increased from 280px */
     gap: 20px;
     width: 100%;
+}
+
+.user-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px; /* Ensures space between status and role */
+    padding-bottom: 10px;
+}
+
+.user-card-status {
+    white-space: nowrap; /* Prevents "NOT REGISTERED" from breaking */
+    font-size: 0.65rem;
+    font-weight: 800;
 }
 
 #reportModal .modal-content {
@@ -84,7 +98,7 @@ require_once __DIR__ . '/partials/header.php';
         </div>
         <div>
             <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Biometric Enrollment Center</h2>
-            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Register unique biometric templates and link hardware IDs to faculty accounts.</p>
+            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Register unique biometric fingerprint templates and link hardware IDs to faculty accounts.</p>
         </div>
     </div>
 

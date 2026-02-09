@@ -14,7 +14,6 @@ $facultyId = $user['faculty_id'];
     <link rel="stylesheet" href="css/print.css">
 </head>
 <style>
-    /* Add this to keep the times on one line */
     .attendance-table td {
         white-space: nowrap;
     }
@@ -24,6 +23,19 @@ $facultyId = $user['faculty_id'];
         text-transform: uppercase;
         color: #d32f2f;
     }
+
+    .signature-name-print {
+        display: block;
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 9pt;
+        margin-bottom: 2px;
+    }
+
+    .signature-label {
+        font-size: 8pt;
+    }
+
 </style>
 <body class="dtr-body">
     <div class="print-controls">
@@ -83,18 +95,23 @@ $isTargetPeriod = ($copy === 0 && $day <= 15) || ($copy === 1 && $day >= 16 && $
                         
                         //Always show regardless of cutoff period if it's a holiday and no entry was made
                         $isHoliday = ($rec && !empty($rec['remarks']) && empty($am_in) && empty($pm_in));
-                    ?>
-                    <tr>
-    <td><?= $day ?></td>
+?>
+<tr>
+    <td style="text-align: center; border: 1px solid black; font-size: 8pt;"><?= $day ?></td>
     
     <?php if ($day <= $lastDay && $isHoliday): ?>
-        <td colspan="4" class="holiday-text"><?= htmlspecialchars($rec['remarks']) ?></td>
+        <td colspan="4" class="holiday-text" style="text-align: center; border: 1px solid black; font-weight: bold; color: #d32f2f;">
+            <?= htmlspecialchars($rec['remarks']) ?>
+        </td>
     <?php else: ?>
-        <td><?= $am_in ?></td><td><?= $am_out ?></td>
-        <td><?= $pm_in ?></td><td><?= $pm_out ?></td>
+        <td style="text-align: center; border: 1px solid black; font-size: 8pt;"><?= $am_in ?></td>
+        <td style="text-align: center; border: 1px solid black; font-size: 8pt;"><?= $am_out ?></td>
+        <td style="text-align: center; border: 1px solid black; font-size: 8pt;"><?= $pm_in ?></td>
+        <td style="text-align: center; border: 1px solid black; font-size: 8pt;"><?= $pm_out ?></td>
     <?php endif; ?>
-    
-    <td><?= $day_h ?></td><td><?= $day_m ?></td>
+
+    <td style="text-align: center; border: 1px solid black; font-size: 8pt;"><?= $day_h ?></td>
+    <td style="text-align: center; border: 1px solid black; font-size: 8pt;"><?= $day_m ?></td>
 </tr>
                     <?php endfor; ?>
                     <?php 
@@ -119,9 +136,13 @@ $isTargetPeriod = ($copy === 0 && $day <= 15) || ($copy === 1 && $day >= 16 && $
             </div>
 
             <div class="signature-block">
-                <div style="border-bottom: 1px solid black; width: 80%; margin: 0 auto; padding-top: 5px;"></div>
+                <div class="signature-name-print" style="border-bottom: 1px solid black; width: 85%; margin: 0 auto; padding-top: 5px;">
+                    <?= htmlspecialchars($settings['dtr_in_charge_name'] ?? '____________________') ?>
+                </div>
                 <div class="signature-label">Verified as to the prescribed office hours</div>
-                <div class="signature-label" style="font-weight: bold; margin-top: 2px;">IN-CHARGE</div>
+                <div class="signature-label" style="font-weight: bold; margin-top: 2px;">
+                    <?= htmlspecialchars($settings['dtr_in_charge_title'] ?? 'IN-CHARGE') ?>
+                </div>
             </div>
         </div>
         <?php endfor; ?>

@@ -1,187 +1,257 @@
-<?php require_once __DIR__ . '/partials/header.php'; ?>
+<?php 
+require_once __DIR__ . '/partials/header.php'; 
+$success = $success ?? null;
+$error = $error ?? null;
+?>
 
-<div class="main-body">
-    <?php if (!empty($success)): ?>
-        <div class="alert alert-success auto-dismiss" style="margin-bottom: 1.5rem;">
-            <i class="fa-solid fa-circle-check"></i> <?= $success ?>
+<style>
+.holiday-management {
+    position: relative;
+    z-index: 1;
+}
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.7);
+    z-index: 9999 !important;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    padding: 20px;
+}
+
+.modal-overlay.active {
+    display: flex !important;
+}
+
+.modal {
+    display: none;
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 9999 !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: #ffffff;
+    width: 90%;
+    max-width: 450px;
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: modalSlideUp 0.3s ease-out;
+}
+
+@keyframes modalSlideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.holiday-management h3, 
+.holiday-management table td, 
+.holiday-management label {
+    color: #1e293b !important;
+}
+
+.btn i, .btn-sm i {
+    pointer-events: none;
+}
+
+.btn, .btn-sm {
+    position: relative;
+    z-index: 5;
+    cursor: pointer !important;
+}
+
+.status-modal-overlay {
+    display: <?= ($success || $error) ? 'flex' : 'none' ?>;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+</style>
+
+<div class="main-body holiday-management">
+    <div class="info-card-header" style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; display: flex; align-items: center; gap: 20px;">
+        <div style="background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
+            <i class="fa-solid fa-file-signature"></i>
         </div>
-    <?php endif; ?>
-
-    <?php if (!empty($error)): ?>
-        <div class="alert alert-error auto-dismiss" style="margin-bottom: 1.5rem;">
-            <i class="fa-solid fa-circle-exclamation"></i> <?= $error ?>
+        <div>
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">DTR Management</h2>
+            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Manage holidays and dynamic signatory settings.</p>
         </div>
-    <?php endif; ?>
+    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="card">
-            <div class="card-header">
-                <h3><i class="fa-solid fa-calendar-plus"></i> Add New Holiday</h3>
+    <div style="display: grid; grid-template-columns: 1fr 380px; gap: 2rem; align-items: start;">
+        
+        <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div style="padding: 1.25rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-calendar-alt" style="color: #059669;"></i> Holiday Records
+                </h3>
+                <button type="button" class="btn-sm" onclick="toggleModal('filterHolidaysModal', true)" style="background: #f1f5f9; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    <i class="fa-solid fa-filter"></i> Filters
+                </button>
             </div>
-            <div class="card-body">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f1f5f9; text-align: left;">
+                        <th style="padding: 1rem; font-size: 0.85rem; color: #64748b;">DATE</th>
+                        <th style="padding: 1rem; font-size: 0.85rem; color: #64748b;">EVENT</th>
+                        <th style="padding: 1rem; font-size: 0.85rem; color: #64748b;">TYPE</th>
+                        <th style="padding: 1rem; text-align: right; font-size: 0.85rem; color: #64748b;">ACTION</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($holidays as $h): ?>
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 1rem; font-weight: 700; color: #059669;"><?= date('M d, Y', strtotime($h['holiday_date'])) ?></td>
+                            <td style="padding: 1rem;"><?= htmlspecialchars($h['description']) ?></td>
+                            <td style="padding: 1rem;">
+                                <span style="background: <?= $h['type'] === 'Regular' ? '#dcfce7' : '#fef3c7' ?>; color: <?= $h['type'] === 'Regular' ? '#166534' : '#92400e' ?>; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">
+                                    <?= $h['type'] ?>
+                                </span>
+                            </td>
+                            <td style="padding: 1rem; text-align: right;">
+                                <button type="button" class="btn-sm" style="color: #ef4444; background: none; border: none; font-size: 1.1rem; cursor: pointer;" 
+                                        onclick="prepDelete(<?= $h['id'] ?>, '<?= htmlspecialchars($h['description']) ?>')">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            
+            <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <h3 style="margin-bottom: 1.5rem; font-weight: 700;"><i class="fa-solid fa-plus-circle" style="color: #059669; margin-right: 10px;"></i> Add New Holiday</h3>
                 <form method="POST">
-                    <div class="form-group">
-                        <label>Date</label>
-                        <input type="date" name="holiday_date" class="form-control" required>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">Date</label>
+                        <input type="date" name="holiday_date" class="form-control" required style="width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px;">
                     </div>
-                    <div class="form-group">
-                        <label>Description</label>
-                        <input type="text" name="description" class="form-control" placeholder="e.g. Independence Day" required>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">Description</label>
+                        <input type="text" name="description" class="form-control" placeholder="Independence Day" required style="width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px;">
                     </div>
-                    <div class="form-group">
-                        <label>Type</label>
-                        <select name="type" class="form-control">
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">Type</label>
+                        <select name="type" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px;">
                             <option value="Regular">Regular Holiday</option>
                             <option value="Special">Special Non-Working Day</option>
                         </select>
                     </div>
-                    <button type="submit" name="add_holiday" class="btn btn-primary btn-full-width">
-                        <i class="fa-solid fa-plus"></i> Add Holiday
-                    </button>
+                    <button type="submit" name="add_holiday" style="width: 100%; background: #059669; color: white; border: none; padding: 0.85rem; border-radius: 8px; font-weight: 700; cursor: pointer;">Save Holiday</button>
                 </form>
             </div>
-        </div>
 
-        <div class="lg:col-span-2 card">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3><i class="fa-solid fa-list-ul"></i> Holiday List</h3>
-                
-                <div style="display: flex; gap: 0.5rem;">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="openModal('filterHolidaysModal')">
-                        <i class="fa-solid fa-filter"></i> Set Filters
-                    </button>
-                    <?php if (!empty($filters['search']) || !empty($filters['start_date'])): ?>
-                        <a href="holiday_management.php" class="btn btn-sm btn-outline" title="Clear Filters">
-                            <i class="fa-solid fa-rotate-left"></i>
-                        </a>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <div class="card-body">
-                <?php if (empty($holidays)): ?>
-                    <div style="text-align: center; color: var(--gray-500); padding: 3rem;">
-                        <i class="fa-solid fa-calendar-xmark" style="font-size: 3rem; margin-bottom: 1rem; display: block;"></i>
-                        <p>No holidays match your current filters.</p>
+            <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <h3 style="margin-bottom: 1.5rem; font-weight: 700;"><i class="fa-solid fa-pen-nib" style="color: #3b82f6; margin-right: 10px;"></i> DTR Signatory</h3>
+                <form method="POST">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">In-Charge Name</label>
+                        <input type="text" name="in_charge_name" class="form-control" value="<?= htmlspecialchars($settings['dtr_in_charge_name'] ?? '') ?>" required style="width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px;">
                     </div>
-                <?php else: ?>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Description</th>
-                                <th>Type</th>
-                                <th style="text-align: right;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($holidays as $h): ?>
-                                <tr>
-                                    <td>
-                                        <strong><?= date('F d', strtotime($h['holiday_date'])) ?></strong>
-                                        <div style="font-size: 0.75rem; color: var(--gray-500);"><?= date('Y', strtotime($h['holiday_date'])) ?></div>
-                                    </td>
-                                    <td><?= htmlspecialchars($h['description']) ?></td>
-                                    <td>
-                                        <span class="ud-badge <?= $h['type'] === 'Regular' ? 'completed' : 'pending' ?>">
-                                            <?= $h['type'] ?>
-                                        </span>
-                                    </td>
-                                    <td style="text-align: right;">
-                                        <button type="button" class="btn btn-sm" style="color: var(--red-600);" 
-                                                onclick="confirmDeleteHoliday(<?= $h['id'] ?>, '<?= htmlspecialchars($h['description']) ?>')">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">Designation/Title</label>
+                        <input type="text" name="in_charge_title" class="form-control" value="<?= htmlspecialchars($settings['dtr_in_charge_title'] ?? '') ?>" required style="width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    </div>
+                    <button type="submit" name="update_signatory" style="width: 100%; background: #334155; color: white; border: none; padding: 0.85rem; border-radius: 8px; font-weight: 700; cursor: pointer;">Update DTR Signature</button>
+                </form>
             </div>
+            
         </div>
     </div>
 </div>
 
 <div id="filterHolidaysModal" class="modal">
-    <div class="modal-content modal-small">
-        <div class="modal-header">
-            <h3><i class="fa-solid fa-filter"></i> Filter Holidays</h3>
-            <button type="button" class="modal-close" onclick="closeModal('filterHolidaysModal')">&times;</button>
+    <div class="modal-content">
+        <div style="padding: 0 0 1rem; border-bottom: 1px solid #f1f5f9; margin-bottom: 1.5rem;">
+            <h3 style="margin: 0;"><i class="fa-solid fa-filter" style="color: #059669; margin-right: 8px;"></i> Filter Records</h3>
         </div>
-        <form method="GET">
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Keyword Search</label>
-                    <input type="text" name="search" class="form-control" placeholder="Search by description..." value="<?= htmlspecialchars($filters['search']) ?>">
+        <form method="GET" action="holiday_management.php">
+            <div style="margin-bottom: 1rem;">
+                <label>Keyword Search</label>
+                <input type="text" name="search" class="form-control" value="<?= htmlspecialchars($filters['search']) ?>" style="width:100%; padding:0.75rem; border:1px solid #e2e8f0; border-radius:8px;">
+            </div>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="flex:1;">
+                    <label>Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($filters['start_date']) ?>" style="width:100%; padding:0.75rem; border:1px solid #e2e8f0; border-radius:8px;">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="form-group">
-                        <label>Start Date</label>
-                        <input type="date" name="start_date" class="form-control" value="<?= htmlspecialchars($filters['start_date']) ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>End Date</label>
-                        <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($filters['end_date']) ?>">
-                    </div>
+                <div style="flex:1;">
+                    <label>End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="<?= htmlspecialchars($filters['end_date']) ?>" style="width:100%; padding:0.75rem; border:1px solid #e2e8f0; border-radius:8px;">
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="submit" class="btn btn-primary">Apply Filters</button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal('filterHolidaysModal')">Cancel</button>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button type="submit" style="width: 100%; background: #059669; color: white; border: none; padding: 0.85rem; border-radius: 10px; font-weight: 700;">Apply Filters</button>
+                <button type="button" onclick="toggleModal('filterHolidaysModal', false)" style="background: none; border: none; color: #64748b; font-weight: 600; cursor: pointer;">Cancel</button>
             </div>
         </form>
     </div>
 </div>
 
-<div id="deleteHolidayModal" class="modal">
-    <div class="modal-content modal-small">
-        <div class="modal-header" style="border-bottom: none;">
-            <div style="background: var(--red-100); color: var(--red-600); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; font-size: 1.5rem;">
-                <i class="fa-solid fa-exclamation-triangle"></i>
-            </div>
-            <h3 style="text-align: center; width: 100%;">Delete Holiday?</h3>
-            <button type="button" class="modal-close" onclick="closeModal('deleteHolidayModal')">&times;</button>
-        </div>
-        <div class="modal-body" style="text-align: center; padding-top: 0;">
-            <p>Are you sure you want to remove <strong id="delete_holiday_name"></strong>?</p>
-            <p style="color: var(--gray-500); font-size: 0.875rem; margin-top: 0.5rem;">This action cannot be undone and will affect attendance reporting.</p>
-        </div>
-        <div class="modal-footer" style="border-top: none; justify-content: center; gap: 1rem;">
-            <form method="POST">
-                <input type="hidden" name="id" id="delete_holiday_id">
-                <button type="submit" name="delete_holiday" class="btn" style="background-color: var(--red-600); color: white;">Yes, Delete</button>
-            </form>
-            <button type="button" class="btn btn-secondary" onclick="closeModal('deleteHolidayModal')">No, Cancel</button>
-        </div>
+<style>
+#filterHolidaysModal {
+    display: none; 
+}
+
+#filterHolidaysModal[style*="display: flex"] {
+    display: flex !important;
+}
+</style>
+
+<div id="deleteHolidayModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; padding:2rem; border-radius:12px; width:400px; text-align:center;">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size:3rem; color:#ef4444; margin-bottom:1rem;"></i>
+        <h3>Delete Holiday?</h3>
+        <p id="del_name" style="color:#64748b; margin:1rem 0;"></p>
+        <form method="POST">
+            <input type="hidden" name="id" id="del_id">
+            <button type="submit" name="delete_holiday" style="width:100%; background:#ef4444; color:white; padding:0.75rem; border:none; border-radius:8px;">Yes, Delete</button>
+            <button type="button" onclick="toggleModal('deleteHolidayModal', false)" style="width:100%; margin-top:0.5rem; background:none; border:none; color:#64748b;">Cancel</button>
+        </form>
     </div>
 </div>
 
-<script>
-/**
- * Auto-dismiss alerts after 5 seconds
- */
-document.addEventListener('DOMContentLoaded', function() {
-    const alerts = document.querySelectorAll('.auto-dismiss');
-    alerts.forEach(alert => {
-        setTimeout(() => {
-            // Start fading out
-            alert.style.transition = 'opacity 0.5s ease';
-            alert.style.opacity = '0';
-            // Remove from DOM after fade
-            setTimeout(() => {
-                alert.remove();
-            }, 500);
-        }, 5000); // 5 seconds
-    });
-});
+<?php if ($success || $error): ?>
+<div id="statusPopupModal" class="modal-overlay active">
+    <div class="modal-content" style="background: white; width: 100%; max-width: 400px; border-radius: 24px; padding: 2.5rem; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.2);">
+        <div style="background: <?= $success ? '#ecfdf5' : '#fee2e2' ?>; color: <?= $success ? '#059669' : '#ef4444' ?>; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2.5rem;">
+            <i class="fa-solid <?= $success ? 'fa-circle-check' : 'fa-circle-xmark' ?>"></i>
+        </div>
+        <h3 style="color: #1e293b; font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem;"><?= $success ? 'Success!' : 'Oops!' ?></h3>
+        <p style="color: #64748b; margin-bottom: 2rem;"><?= htmlspecialchars(($success ?? $error) ?? '') ?></p>
+        <button onclick="this.closest('.modal-overlay').classList.remove('active')" style="width: 100%; background: #1e293b; color: white; border: none; padding: 1rem; border-radius: 12px; font-weight: 700; cursor: pointer;">Continue</button>
+    </div>
+</div>
+<?php endif; ?>
 
-/**
- * Triggers the styled delete modal
- */
-function confirmDeleteHoliday(id, description) {
-    document.getElementById('delete_holiday_id').value = id;
-    document.getElementById('delete_holiday_name').textContent = description;
-    openModal('deleteHolidayModal');
+<script>
+function toggleModal(id, show) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? 'flex' : 'none';
+}
+
+function prepDelete(id, name) {
+    document.getElementById('del_id').value = id;
+    document.getElementById('del_name').textContent = "Are you sure you want to remove '" + name + "'?";
+    toggleModal('deleteHolidayModal', true);
 }
 </script>
 
