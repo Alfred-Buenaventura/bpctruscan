@@ -1,0 +1,148 @@
+/* --- responsive.css --- */
+
+@media screen and (max-width: 992px) {
+    /* 1. The Sidebar: Must be the absolute highest layer */
+    .sidebar {
+        position: fixed !important;
+        top: 0;
+        left: 0 !important;
+        width: 280px !important;
+        height: 100vh !important;
+        background: #1a1a1a !important; /* Ensure a solid background color */
+        
+        /* This high number ensures it stays above modals and overlays */
+        z-index: 99999 !important; 
+        
+        /* We use transform for a smoother 'slide' feel on mobile */
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        display: block !important;
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+        box-shadow: 10px 0 30px rgba(0,0,0,0.5) !important;
+    }
+
+    /* 2. The Overlay: One layer below the sidebar */
+    #sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 99998 !important; 
+        display: none;
+        backdrop-filter: blur(3px); /* Makes the background look premium and accessible */
+    }
+
+    /* 3. Modal Fix: Ensure modals don't hide behind the overlay */
+    .modal, .modal-backdrop {
+        z-index: 99990 !important; /* Slightly lower than sidebar and its overlay */
+    }
+
+    /* 4. Scroll Lock: Prevents the page from moving while the menu is open */
+    body.menu-open {
+        overflow: hidden !important;
+    }
+}
+
+@media screen and (max-width: 992px) {
+
+    /* 1. Force Modals to Center and Reset Margins */
+    .modal, .modal-dialog {
+        margin: 10px auto !important; /* Centers the modal horizontally */
+        left: 0 !important;
+        right: 0 !important;
+        width: 95% !important; /* Occupy almost full width of phone */
+        max-width: none !important;
+        position: fixed !important;
+    }
+
+    .modal-content {
+        width: 100% !important;
+        border-radius: 12px !important;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.3) !important;
+    }
+
+    /* 2. Critical: Kill the "Ghost Margin" from the main container */
+    /* If your main container is pushing the modal to the right, we reset it here */
+    body.modal-open .main-content, 
+    body.modal-open .content-wrapper {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+        transform: none !important;
+    }
+
+    /* 3. Accessible Modal Tables */
+    .modal body table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+    }
+}
+
+@media screen and (max-width: 992px) {
+    /* 1. Force the Body to be a clean, non-flex container */
+    body.dtr-body {
+        display: block !important; /* Kill flex from print.css */
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: hidden !important;
+    }
+
+    /* 2. The Wrapper: The "Anchor" for centering */
+    .dtr-container-wrapper {
+        display: block !important; /* Switch to block for easier child centering */
+        width: 100% !important;
+        min-width: 0 !important; /* Overrides print.css */
+        padding: 20px 0 !important;
+        margin: 0 !important;
+        text-align: center !important; /* Helps center inline-block children */
+    }
+
+    /* 3. The DTR: Perfectly Centered Scaling */
+    .dtr-container {
+        display: inline-block !important; /* Works with text-align: center above */
+        float: none !important;
+        width: 420px !important; /* Keep original width */
+        
+        /* THE FIX: Anchor the scale to the center-top */
+        transform: scale(0.8); 
+        transform-origin: top center !important; 
+        
+        /* Remove the 'ghost' space created by scaling */
+        margin-bottom: -100px !important; 
+        
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
+    }
+
+    /* 4. Make the Modal smaller for mobile phones */
+    .modal-dialog {
+        width: 80% !important; /* Even smaller for a compact look */
+        max-width: 360px !important; /* Prevents it from feeling too wide */
+        margin: 1.5rem auto !important; /* Center horizontally with auto margins */
+        left: 0 !important;
+        right: 0 !important;
+        position: relative !important;
+    }
+
+    .modal-content {
+        width: 100% !important;
+        border-radius: 12px !important;
+        padding: 10px !important;
+    }
+}
+
+/* For very small phones (iPhone SE, etc.) */
+@media screen and (max-width: 400px) {
+    .dtr-container {
+        transform: scale(0.72);
+        margin-bottom: -140px !important;
+    }
+    .modal-dialog {
+        width: 90% !important; /* Slightly wider on tiny screens to keep text readable */
+    }
+}

@@ -5561,5 +5561,75 @@ html {
     font-size: 0.95rem;
 }
 
-.badge-teaching { background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
-.badge-non-teaching { background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+.badge-teaching { 
+    background: #dbeafe; 
+    color: #1e40af; 
+    padding: 4px 8px; 
+    border-radius: 6px; 
+    font-size: 0.8rem; 
+    font-weight: 600; 
+}
+.badge-non-teaching { 
+    background: #f3f4f6; 
+    color: #374151; 
+    padding: 4px 8px; 
+    border-radius: 6px; 
+    font-size: 0.8rem; 
+    font-weight: 600; 
+}
+
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+/* 3. Adds padding to the text area so text doesn't overlap the button */
+.password-wrapper .form-control {
+    padding-right: 40px !important;
+    width: 100%;
+}
+
+/* 4. Positions your custom button inside the textbox */
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    color: #9ca3af;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-password:hover {
+    color: #10b981; /* Emerald green on hover */
+}
+
+input::-ms-reveal,
+input::-ms-clear,
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+    display: none !important;
+}
+
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.password-wrapper .form-control {
+    padding-right: 45px !important; /* Create space for the icon */
+    width: 100%;
+}
+
+
