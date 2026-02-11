@@ -1,18 +1,26 @@
 <?php 
-// FIX: Use __DIR__ to locate the partials folder correctly
 require_once __DIR__ . '/partials/header.php'; 
 ?>
 
-<div class="main-body account-management-page">
 <style>
-/* Professional Modal Overhaul */
+.info-card-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
 .modal-content {
     border-radius: 12px;
     border: none;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-/* Larger Modal for Lists (Archive) */
 .modal-xl {
     max-width: 1100px;
     width: 95%;
@@ -47,7 +55,6 @@ require_once __DIR__ . '/partials/header.php';
     border-bottom-right-radius: 12px;
 }
 
-/* Professional Action Icon Containers */
 .action-icon-circle {
     width: 64px;
     height: 64px;
@@ -65,6 +72,30 @@ require_once __DIR__ . '/partials/header.php';
 .bg-info-light { background-color: #f0f9ff; color: #0ea5e9; }
 
 </style>
+<div class="main-body user-management">
+    <div class="info-card-header" style="background: linear-gradient(135deg, #1e293b 0%, #1e293b 100%); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; display: flex; align-items: center; gap: 20px;">
+        <div style="background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
+            <i class="fa-solid fa-users-gear"></i>
+        </div>
+        <div>
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Faculty & Staff Management</h2>
+            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Register new personnel, manage roles, and update account credentials.</p>
+        </div>
+    </div>
+
+    <div class="info-guide-wrapper" style="margin-bottom: 2.5rem; padding: 0 5px;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: #f1f5f9; color: #64748b; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div style="flex: 1;">
+                <p style="margin: 0; font-size: 0.92rem; color: #475569; line-height: 1.6;">
+                    <span style="font-weight: 700; color: #1e293b; margin-right: 5px;">Security Notice:</span>
+                    Changes to user roles or account status take effect immediately. Ensure <span style="color: #6366f1; font-weight: 600;">Faculty IDs</span> match their physical biometric records for seamless logging.
+                </p>
+            </div>
+        </div>
+    </div>
     <div id="toastContainer" class="toast-container"></div>
 
     <div class="stats-grid">
@@ -465,15 +496,15 @@ require_once __DIR__ . '/partials/header.php';
     </div>
 </div>
 
+
+
 </div>
 
 <script>
-/* Global Action Variables */
 let pendingAction = null;
 let deleteUserId = null;
 let deleteUserName = null;
 
-/* Modal Helpers */
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) modal.style.display = 'flex';
@@ -485,9 +516,6 @@ function closeModal(modalId) {
     document.body.style.overflow = 'auto';
 }
 
-/**
- * Updates confirmation modal appearance dynamically
- */
 function setModalStyle(type) {
     const container = document.getElementById('modalIconContainer');
     const icon = document.getElementById('modalIcon');
@@ -525,23 +553,19 @@ function setModalStyle(type) {
             const title = document.getElementById('statusModalTitle');
             const message = document.getElementById('statusModalMessage');
 
-            // Set content
             message.textContent = flashMessage;
 
             if (flashType === 'success') {
-                // Success Styling (Green)
                 iconContainer.className = 'action-icon-circle bg-success-light';
                 icon.className = 'fa-solid fa-circle-check';
                 title.textContent = 'Success';
                 title.style.color = '#065f46';
             } else if (flashType === 'error') {
-                // Error Styling (Red)
                 iconContainer.className = 'action-icon-circle bg-danger-light';
                 icon.className = 'fa-solid fa-circle-xmark';
                 title.textContent = 'Error';
                 title.style.color = '#991b1b';
             } else {
-                // Notice Styling (Blue)
                 iconContainer.className = 'action-icon-circle bg-info-light';
                 icon.className = 'fa-solid fa-circle-info';
                 title.textContent = 'Notice';
@@ -607,8 +631,6 @@ function editUser(id, firstName, lastName, middleName, email, phone) {
     document.getElementById('editMiddleName').value = middleName || '';
     document.getElementById('editEmail').value = email || '';
     document.getElementById('editPhone').value = phone || '';
-    
-    // Dynamic naming for the edit header
     document.getElementById('editingUserName').textContent = firstName + " " + lastName;
     
     openModal('editUserModal');
@@ -639,12 +661,14 @@ function confirmArchive(userId, userName) {
     document.getElementById('confirmMessage').textContent = `Are you sure you want to archive ${userName}? They will no longer have access to the system.`;
 
     pendingAction = function() {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="archive_user" value="1">`;
-        document.body.appendChild(form);
-        form.submit();
-    };
+    const form = document.createElement('form');
+    // Ensure the action points to the actual file
+    form.action = 'create_account.php?tab=view'; 
+    form.method = 'POST';
+    form.innerHTML = `<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="archive_user" value="1">`;
+    document.body.appendChild(form);
+    form.submit();
+};
     openModal('confirmModal');
 }
 
@@ -654,12 +678,14 @@ function confirmRestore(userId, userName) {
     document.getElementById('confirmMessage').textContent = `Are you sure you want to restore ${userName}? They will regain access to the system.`;
 
     pendingAction = function() {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="restore_user" value="1">`;
-        document.body.appendChild(form);
-        form.submit();
-    };
+    const form = document.createElement('form');
+    // Ensure the action points to the actual file
+    form.action = 'create_account.php?tab=view'; 
+    form.method = 'POST';
+    form.innerHTML = `<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="restore_user" value="1">`;
+    document.body.appendChild(form);
+    form.submit();
+};
     openModal('confirmModal');
 }
 
@@ -693,6 +719,17 @@ function closeDoubleConfirmModal() {
     deleteUserName = null;
 }
 
+function executeRestoreAction(userId) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.innerHTML = `
+        <input type="hidden" name="user_id" value="${userId}">
+        <input type="hidden" name="restore_user" value="1">
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
+
 function executeConfirmedAction() {
     if (pendingAction) pendingAction();
     closeConfirmModal();
@@ -702,7 +739,10 @@ function executeDeleteAction() {
     if (deleteUserId) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.innerHTML = `<input type="hidden" name="user_id" value="${deleteUserId}"><input type="hidden" name="delete_user" value="1">`;
+        form.innerHTML = `
+            <input type="hidden" name="user_id" value="${deleteUserId}">
+            <input type="hidden" name="delete_user" value="1">
+        `;
         document.body.appendChild(form);
         form.submit();
     }
