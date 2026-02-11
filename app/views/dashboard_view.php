@@ -100,7 +100,7 @@ require_once __DIR__ . '/partials/header.php';
                 </div>
                 <div class="stat-details">
                     <p>Total Users</p>
-                    <div class="stat-value emerald"><?= $totalUsers ?></div>
+                    <div class="stat-value emerald"><?= clean($totalUsers) ?></div>
                 </div>
             </a>
 
@@ -110,7 +110,7 @@ require_once __DIR__ . '/partials/header.php';
                 </div>
                 <div class="stat-details">
                     <p>Active Today</p>
-                    <div class="stat-value"><?= $activeToday ?></div>
+                    <div class="stat-value"><?= clean($activeToday) ?></div>
                 </div>
             </a>
 
@@ -120,13 +120,13 @@ require_once __DIR__ . '/partials/header.php';
                 </div>
                 <div class="stat-details">
                     <p>Pending Registration</p>
-                    <div class="stat-value red"><?= $pendingRegistrations ?></div>
+                    <div class="stat-value red"><?= clean($pendingRegistrations) ?></div>
                 </div>
             </a>
         </div>
 
         <div style="margin-bottom: 1.5rem; display: flex; justify-content: flex-end;">
-            <a href="display.php?key=BPC_TRUSCAN_KIOSK_2026" target="_blank" class="btn btn-primary" style="background-color: var(--blue-600); border-color: var(--blue-600);">
+            <a href="display.php?key=<?= urlencode(KIOSK_SECRET_KEY) ?>" target="_blank" class="btn btn-primary" style="background-color: var(--blue-600); border-color: var(--blue-600);">
                 <i class="fa-solid fa-desktop"></i> Launch Attendance Display
             </a>
         </div>
@@ -151,10 +151,10 @@ require_once __DIR__ . '/partials/header.php';
                         <tbody>
                             <?php foreach ($activityLogs as $log): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($log['action']) ?></td>
-                                    <td><?= htmlspecialchars($log['description']) ?></td>
-                                    <td><?= htmlspecialchars(($log['first_name'] ?? '') . ' ' . ($log['last_name'] ?? 'System')) ?></td>
-                                    <td><?= date('M d, Y g:i A', strtotime($log['created_at'])) ?></td>
+                                    <td><?= clean($log['action']) ?></td>
+                                    <td><?= clean($log['description']) ?></td>
+                                    <td><?= clean(($log['first_name'] ?? '') . ' ' . ($log['last_name'] ?? 'System')) ?></td>
+                                    <td><?= clean(date('M d, Y g:i A', strtotime($log['created_at']))) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -219,14 +219,14 @@ require_once __DIR__ . '/partials/header.php';
         <div class="stat-icon emerald"><i class="fa-solid fa-calendar-check"></i></div>
         <div class="stat-details">
             <p>Today's Entries</p>
-            <div class="stat-value emerald"><?= $stats['entries'] ?? 0 ?></div>
+            <div class="stat-value emerald"><?= clean($stats['entries'] ?? 0) ?></div>
         </div>
     </div>
     <div class="stat-card">
         <div class="stat-icon yellow"><i class="fa-solid fa-clock"></i></div>
         <div class="stat-details">
             <p>Late Arrivals</p>
-            <div class="stat-value yellow"><?= $stats['late'] ?? 0 ?></div>
+            <div class="stat-value yellow"><?= clean($stats['late'] ?? 0) ?></div>
         </div>
     </div>
     <div class="stat-card">
@@ -266,17 +266,17 @@ require_once __DIR__ . '/partials/header.php';
         }
     ?>
     <span class="ud-badge <?= $badgeClass ?>">
-        <i class="fa-solid <?= $icon ?>"></i> <?= htmlspecialchars($status) ?>
+        <i class="fa-solid <?= $icon ?>"></i> <?= clean($status) ?>
     </span>
 </div>
         <div class="ud-card-row">
             <span class="ud-card-label" style="color: #64748b;">First In</span> <span class="ud-card-value" style="font-family: monospace; font-weight: 700; color: #1e293b;">
-                <?= isset($attendance['time_in']) ? date('g:i A', strtotime($attendance['time_in'])) : '--:-- --' ?>
+                <?= isset($attendance['time_in']) ? clean(date('g:i A', strtotime($attendance['time_in']))) : '--:-- --' ?>
             </span>
         </div>
         <div class="ud-card-row">
             <span class="ud-card-label" style="color: #64748b;">Last Out</span> <span class="ud-card-value" style="font-family: monospace; font-weight: 700; color: #1e293b;">
-                <?= isset($attendance['time_out']) ? date('g:i A', strtotime($attendance['time_out'])) : '--:-- --' ?>
+                <?= isset($attendance['time_out']) ? clean(date('g:i A', strtotime($attendance['time_out']))) : '--:-- --' ?>
             </span>
         </div>
     </div>
@@ -318,11 +318,11 @@ require_once __DIR__ . '/partials/header.php';
                         <?php foreach ($activityLogs as $log): ?>
                             <div class="ud-activity-item">
                                 <div class="ud-activity-details">
-                                    <strong class="ud-activity-action"><?= htmlspecialchars($log['action']) ?></strong>
-                                    <span class="ud-activity-description"><?= htmlspecialchars($log['description']) ?></span>
+                                    <strong class="ud-activity-action"><?= clean($log['action']) ?></strong>
+                                    <span class="ud-activity-description"><?= clean($log['description']) ?></span>
                                 </div>
                                 <span class="ud-activity-time">
-                                    <?= date('M d, Y g:i A', strtotime($log['created_at'])) ?>
+                                    <?= clean(date('M d, Y g:i A', strtotime($log['created_at']))) ?>
                                 </span>
                             </div>
                         <?php endforeach; ?>

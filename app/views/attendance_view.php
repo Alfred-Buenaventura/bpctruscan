@@ -162,6 +162,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
     justify-content: space-between;
     align-items: center;
 }
+
+.stylish-input:hover { border-color: #cbd5e1 !important; background: #fff !important; }
+    .stylish-input:focus { border-color: #6366f1 !important; background: #fff !important; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1) !important; }
+    
+    .action-btn:hover { transform: translateY(-1px); filter: brightness(105%); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .action-btn:active { transform: translateY(0); }
+    
+    .date-field::-webkit-calendar-picker-indicator { cursor: pointer; filter: opacity(0.6) sepia(100%) saturate(200%) hue-rotate(190deg); }
 </style>
 
 <div class="main-body attendance-reports-page"> 
@@ -236,54 +244,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_contact'])) {
         </button>
     </div>
 
-    <div class="filter-export-section card">
-        <div class="card-header">
-            <h3><i class="fa-solid fa-filter"></i> Filter & Reports</h3>
-        </div>
-        <div class="card-body">
-            <form method="GET" action="attendance_reports.php" id="reportFilterForm" class="filter-controls-new">
-                <div class="filter-inputs" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; align-items: flex-end;">
-                    <?php if ($isAdmin): ?>
-                    <div class="form-group filter-item">
-                        <label>Select User</label>
-                        <div class="select-wrapper">
-                            <select name="user_id" id="userId" class="form-control stylish-select">
-                                <option value="">-- Select User for DTR --</option>
-                                <?php if (!empty($allUsers)): ?>
-                                    <?php foreach ($allUsers as $user): ?>
-                                        <option value="<?= $user['id'] ?>" <?= (isset($filters['user_id']) && $filters['user_id'] == $user['id']) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </select>
-                            <i class="fa-solid fa-chevron-down select-arrow"></i>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-
-                    <div class="form-group filter-item">
-                        <label>Date Range</label>
-                         <div style="display: flex; gap: 0.5rem;">
-                             <input type="date" name="start_date" id="startDate" class="form-control" value="<?= htmlspecialchars($filters['start_date'] ?? date('Y-m-01')) ?>">
-                             <input type="date" name="end_date" id="endDate" class="form-control" value="<?= htmlspecialchars($filters['end_date'] ?? date('Y-m-d')) ?>">
-                         </div>
-                    </div>
-                </div>
-                <div class="filter-actions-new" style="align-items: center; margin-top: 1rem;">
-                    <button type="submit" class="btn btn-primary btn-sm apply-filter-btn"><i class="fa-solid fa-check"></i> Apply Filters</button>
-                    <button type="button" class="btn btn-warning btn-sm" onclick="handlePrintDTR()">
-                        <i class="fa-solid fa-file-invoice"></i> Generate DTR
-                    </button>
-                </div>
-            </form>
-        </div>
+    <div class="filter-export-section card" style="border-radius: 16px; border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 2rem;">
+    <div class="card-header" style="background: #059669; border-bottom: none; padding: 1.25rem;">
+        <h3 style="margin: 0; font-size: 1.1rem; color: #ffffff; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-filter" style="color: rgba(255,255,255,0.8);"></i> Filter & Reports
+        </h3>
     </div>
+    <div class="card-body" style="padding: 1.5rem; background: white;">
+        <form method="GET" action="attendance_reports.php" id="reportFilterForm" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.5rem;">
+            
+            <?php if ($isAdmin): ?>
+            <div class="form-group" style="flex: 1; min-width: 200px;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Select User</label>
+                <div style="position: relative;">
+                    <select name="user_id" id="userId" class="stylish-input" style="width: 100%; padding: 10px 40px 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 500; color: #1e293b; background: #f8fafc; appearance: none; cursor: pointer; outline: none; transition: all 0.2s;">
+                        <option value="">-- Select User --</option>
+                        <?php if (!empty($allUsers)): ?>
+                            <?php foreach ($allUsers as $user): ?>
+                                <option value="<?= $user['id'] ?>" <?= (isset($filters['user_id']) && $filters['user_id'] == $user['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                    <i class="fa-solid fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #94a3b8; font-size: 0.8rem;"></i>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <div class="form-group" style="flex: 1.5; min-width: 280px;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">Date Range</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="date" name="start_date" id="startDate" class="stylish-input date-field" value="<?= htmlspecialchars($filters['start_date'] ?? date('Y-m-01')) ?>" style="flex: 1; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-family: 'Inter', sans-serif; outline: none; background: #f8fafc;">
+                    <span style="color: #cbd5e1; font-weight: bold;">&rarr;</span>
+                    <input type="date" name="end_date" id="endDate" class="stylish-input date-field" value="<?= htmlspecialchars($filters['end_date'] ?? date('Y-m-d')) ?>" style="flex: 1; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-family: 'Inter', sans-serif; outline: none; background: #f8fafc;">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="action-btn" style="padding: 11px 18px; background: #05865b; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap;">
+                    <i class="fa-solid fa-check"></i> Apply Filter
+                </button>
+                <button type="button" class="action-btn" onclick="handlePrintDTR()" style="padding: 11px 18px; background: #f59e0b; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap;">
+                    <i class="fa-solid fa-file-invoice"></i> Generate DTR
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
     
     <div class="card attendance-table-card">
          <div class="card-body" style="padding: 0; overflow-x: auto;"> 
             <?php if (empty($records)): ?>
-                <p style="text-align: center; color: #94a3b8; padding: 40px;">No attendance records found.</p>
+                <p style="text-align: center; color: #059669; padding: 40px;">No attendance records found.</p>
             <?php else: ?>
                 <table class="attendance-table-new accordion-table" id="attendanceMainTable" style="min-width: 1000px;">
                     <thead>

@@ -72,29 +72,33 @@ $facultyId = $user['faculty_id'];
                 </thead>
                 <tbody>
                     <?php
-                    $totalHours = 0; $totalMinutes = 0;
-                    for ($day = 1; $day <= 31; $day++):
-                        $rec = $dtrRecords[$day] ?? null;
-                        // day1-15 cutoff and 16-31 cutoff
-                        // Remove the $lastDay constraint so the loop always runs to 31
-$isTargetPeriod = ($copy === 0 && $day <= 15) || ($copy === 1 && $day >= 16 && $day <= 31);
+$totalHours = 0; $totalMinutes = 0;
+for ($day = 1; $day <= 31; $day++):
+    // 1. SAFELY get the record from the controller
+    $rec = $dtrRecords[$day] ?? null;
 
-                        $am_in = ($isTargetPeriod && $rec && !empty($rec['am_in'])) ? date('h:i', strtotime($rec['am_in'])) : '';
-                        $am_out = ($isTargetPeriod && $rec && !empty($rec['am_out'])) ? date('h:i', strtotime($rec['am_out'])) : '';
-                        $pm_in = ($isTargetPeriod && $rec && !empty($rec['pm_in'])) ? date('h:i', strtotime($rec['pm_in'])) : '';
-                        $pm_out = ($isTargetPeriod && $rec && !empty($rec['pm_out'])) ? date('h:i', strtotime($rec['pm_out'])) : '';
+    // 2. YOUR ORIGINAL SWITCHER LOGIC
+    $isTargetPeriod = ($copy === 0 && $day <= 15) || ($copy === 1 && $day >= 16 && $day <= 31);
 
-                        $dailySeconds = ($isTargetPeriod && $rec) ? ($rec['credited_seconds'] ?? 0) : 0;
-                        $day_h = ''; $day_m = '';
-                        if ($dailySeconds > 0) {
-                            $h = floor($dailySeconds / 3600);
-                            $m = floor(($dailySeconds % 3600) / 60);
-                            $day_h = $h; $day_m = $m;
-                            $totalHours += $h; $totalMinutes += $m;
-                        }
-                        
-                        //Always show regardless of cutoff period if it's a holiday and no entry was made
-                        $isHoliday = ($rec && !empty($rec['remarks']) && empty($am_in) && empty($pm_in));
+    // 3. MAP TIMESTAMPS: Only show if it's the right copy and data exists
+    $am_in  = ($isTargetPeriod && $rec && !empty($rec['am_in']))  ? date('h:i', strtotime($rec['am_in']))  : '';
+    $am_out = ($isTargetPeriod && $rec && !empty($rec['am_out'])) ? date('h:i', strtotime($rec['am_out'])) : '';
+    $pm_in  = ($isTargetPeriod && $rec && !empty($rec['pm_in']))  ? date('h:i', strtotime($rec['pm_in']))  : '';
+    $pm_out = ($isTargetPeriod && $rec && !empty($rec['pm_out'])) ? date('h:i', strtotime($rec['pm_out'])) : '';
+
+    // 4. NEW CALCULATION: Use the schedule-clamped seconds from controller
+    $dailySeconds = ($isTargetPeriod && $rec) ? ($rec['credited_seconds'] ?? 0) : 0;
+    $day_h = ''; $day_m = '';
+    
+    if ($dailySeconds > 0) {
+        $h = floor($dailySeconds / 3600);
+        $m = floor(($dailySeconds % 3600) / 60);
+        $day_h = $h; $day_m = $m;
+        $totalHours += $h; $totalMinutes += $m;
+    }
+    
+    // 5. HOLIDAY CHECK
+    $isHoliday = ($rec && !empty($rec['remarks']) && empty($am_in) && empty($pm_in));
 ?>
 <tr>
     <td style="text-align: center; border: 1px solid black; font-size: 8pt;"><?= $day ?></td>
@@ -113,16 +117,22 @@ $isTargetPeriod = ($copy === 0 && $day <= 15) || ($copy === 1 && $day >= 16 && $
     <td style="text-align: center; border: 1px solid black; font-size: 8pt;"><?= $day_h ?></td>
     <td style="text-align: center; border: 1px solid black; font-size: 8pt;"><?= $day_m ?></td>
 </tr>
-                    <?php endfor; ?>
+<?php endfor; ?>
+                    
                     <?php 
-                        $totalHours += floor($totalMinutes / 60);
-                        $totalMinutes %= 60;
-                    ?>
-                    <tr style="font-weight: bold;">
-                        <td colspan="5" style="text-align: right; padding-right: 4px;">Total</td>
-                        <td><?= $totalHours > 0 ? $totalHours : '' ?></td>
-                        <td><?= $totalMinutes > 0 ? $totalMinutes : '' ?></td>
-                    </tr>
+    // Perform the final conversion once after the day loop finishes
+    $totalHours += floor($totalMinutes / 60);
+    $totalMinutes %= 60;
+?>
+<tr style="font-weight: bold;">
+    <td colspan="5" style="text-align: right; border: 1px solid black; font-size: 8pt; padding-right: 4px;">Total</td>
+    <td style="text-align: center; border: 1px solid black; font-size: 8pt;">
+        <?= $totalHours > 0 ? $totalHours : '0' ?>
+    </td>
+    <td style="text-align: center; border: 1px solid black; font-size: 8pt;">
+        <?= ($totalMinutes > 0 || $totalHours > 0) ? $totalMinutes : '0' ?>
+    </td>
+</tr>
                 </tbody>
             </table>
 

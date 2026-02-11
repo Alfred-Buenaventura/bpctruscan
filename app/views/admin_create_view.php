@@ -3,6 +3,30 @@ require_once __DIR__ . '/partials/header.php';
 ?>
 
 <div class="main-body admin-management-page">
+    <div class="info-card-header" style="background: linear-gradient(135deg, #1e293b 0%, #1e293b 100%); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; display: flex; align-items: center; gap: 20px;">
+        <div style="background: rgba(255,255,255,0.1); width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
+            <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <div>
+            <h2 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Administrative Access Control</h2>
+            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem;">Manage system-wide privileges, security logs, and administrative credentials.</p>
+        </div>
+    </div>
+
+    <div class="info-guide-wrapper" style="margin-bottom: 2.5rem; padding: 0 5px;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: #fff1f2; color: #e11d48; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div style="flex: 1;">
+                <p style="margin: 0; font-size: 0.92rem; color: #475569; line-height: 1.6;">
+                    <span style="font-weight: 700; color: #991b1b; margin-right: 5px;">Security Alert:</span>
+                    Granting <span style="color: #e11d48; font-weight: 600;">Super Admin</span> status allows full control over the database and system logs. Review the 
+                    <span style="color: #6366f1; font-weight: 600;">Activity Logs</span> before modifying existing administrative permissions.
+                </p>
+            </div>
+        </div>
+    </div>
 
     <?php if ($error): ?>
         <div id="pageAlert" class="dismissible-alert alert-error">
@@ -53,6 +77,7 @@ require_once __DIR__ . '/partials/header.php';
                 </div>
                 
                 <form method="POST">
+                    <?php csrf_field(); ?>
                     <div class="form-group" style="margin-bottom: 1.5rem;">
                         <label style="font-weight: 700; color: #475569;">Admin ID Number <span class="required">*</span></label>
                         <input type="text" name="faculty_id" class="form-control" placeholder="e.g., ADM-001" required>
@@ -148,7 +173,6 @@ require_once __DIR__ . '/partials/header.php';
             </div>
         </div>
     </div>
-
 </div>
 
 <style>
@@ -206,14 +230,13 @@ window.addEventListener('click', function(event) {
     }
 });
 
-// Automatically hide the alert after 6 seconds
     document.addEventListener('DOMContentLoaded', function() {
         const alerts = document.querySelectorAll('.dismissible-alert');
         alerts.forEach(alert => {
             setTimeout(() => {
                 alert.style.opacity = '0';
                 setTimeout(() => alert.remove(), 500);
-            }, 6000); // 6 seconds auto-dismiss
+            }, 6000);
         });
     });
 </script>

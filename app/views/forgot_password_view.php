@@ -7,12 +7,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .password-wrapper { position: relative; display: flex; align-items: center; }
-        .password-wrapper input { padding-right: 40px !important; }
-        .toggle-password-btn { position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 1rem; padding: 0; display: flex; align-items: center; height: 100%; }
-        .toggle-password-btn:hover { color: var(--emerald-600, #059669); }
-        
-        /* New Style for Masked Email Box */
+        .password-wrapper { 
+            position: relative; display: flex; align-items: center; 
+        }
+
+        .password-wrapper input { 
+            padding-right: 40px !important; 
+        }
+
+        .toggle-password-btn { 
+            position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 1rem; padding: 0; display: flex; align-items: center; height: 100%; 
+        }
+
+        .toggle-password-btn:hover { 
+            color: var(--emerald-600, #059669); 
+        }
+
         .masked-email-box {
             background-color: #f3f4f6;
             border: 1px dashed #9ca3af;
@@ -26,10 +36,9 @@
         }
     </style>
 </head>
+
 <body class="login-page">
-    
     <div class="card login-card-new" style="max-width: 450px;">
-        
         <div class="login-new-header">
             <div class="login-logo-container">
                 <i class="fa-solid fa-key"></i>
@@ -57,6 +66,7 @@
                     To begin, please enter your unique <strong>Faculty ID</strong>.
                 </p>
                 <form method="POST">
+                    <?php csrf_field(); ?>
                     <div class="form-group">
                         <label>Faculty ID</label>
                         <input type="text" name="faculty_id" class="form-control" placeholder="e.g., FAC-001" autofocus required>
@@ -84,6 +94,7 @@
                 </p>
 
                 <form method="POST">
+                    <?php csrf_field(); ?>
                     <div class="form-group">
                         <label>Confirm Full Email Address</label>
                         <input type="email" name="email" class="form-control" placeholder="e.g., alfred2003@gmail.com" required>
@@ -102,6 +113,7 @@
                     We sent a 6-character code to your email. It expires in 5 minutes.
                 </p>
                 <form method="POST">
+                    <?php csrf_field(); ?>
                     <div class="form-group">
                         <label>Enter OTP</label>
                         <input type="text" name="otp" class="form-control" maxlength="6" placeholder="######" style="text-align: center; letter-spacing: 4px; font-size: 1.2rem;" required>
@@ -120,6 +132,7 @@
                     Identity verified. Create a new password.
                 </p>
                 <form method="POST">
+                    <?php csrf_field(); ?>
                     <div class="form-group">
                         <label>New Password</label>
                         <div class="password-wrapper">

@@ -71,6 +71,19 @@ require_once __DIR__ . '/partials/header.php';
 .bg-success-light { background-color: #f0fdf4; color: #22c55e; }
 .bg-info-light { background-color: #f0f9ff; color: #0ea5e9; }
 
+.table-row-hover:hover {
+        background-color: #f8fafc !important;
+    }
+
+    /* Action Button Hover States */
+    button:hover {
+        filter: brightness(0.95);
+        transform: translateY(-1px);
+    }
+
+    /* Professional Font Import */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 </style>
 <div class="main-body user-management">
     <div class="info-card-header" style="background: linear-gradient(135deg, #1e293b 0%, #1e293b 100%); color: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; display: flex; align-items: center; gap: 20px;">
@@ -168,6 +181,7 @@ require_once __DIR__ . '/partials/header.php';
                 </div>
 
                 <form method="POST" enctype="multipart/form-data" id="csvUploadForm">
+                    <?php csrf_field(); ?>
                     <div style="margin-bottom: 1.5rem;">
                         <label class="csv-upload-label" style="font-weight: 700; color: #475569; display: block; margin-bottom: 8px;">Upload Finalized CSV File</label>
                         <div class="csv-dropzone" id="csvDropzone" onclick="document.getElementById('csvFileInput').click()">
@@ -193,6 +207,7 @@ require_once __DIR__ . '/partials/header.php';
                 <p class="user-creation-subtitle">Create a single user account with default password: <strong>@defaultpass123</strong></p>
 
                 <form method="POST" style="margin-top: 1.5rem;">
+                    <?php csrf_field(); ?>
                     <div class="user-creation-form-grid">
                         <div class="form-group">
                             <label>Faculty/ID Number <span class="required">*</span></label>
@@ -256,68 +271,76 @@ require_once __DIR__ . '/partials/header.php';
         </div>
 
         <div id="viewTab" class="tab-content <?= $activeTab === 'view' ? 'active' : '' ?>">
-            <div class="card-body">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="margin: 0; color: #1e293b;">All Active Accounts</h3>
-                    <button class="btn btn-warning" onclick="openArchivedModal()">
-                        <i class="fa-solid fa-archive"></i> View Archive (<?= count($archivedUsers) ?>)
-                    </button>
-                </div>
+    <div class="table-container" style="background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow: hidden;">
+        
+        <div style="padding: 20px 24px; border-bottom: 1px solid #f1f5f9; background: #fafafa;">
+            <h2 style="margin: 0; font-size: 1.25rem; color: #1e293b; font-weight: 800;">All Active Accounts</h2>
+            <p style="margin: 4px 0 0; font-size: 0.85rem; color: #64748b;">
+                Managing <strong><?= count($activeUsers) ?></strong> active personnel
+            </p>
+        </div>
 
-                <table class="data-table" style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
-                    <thead>
-                        <tr style="background-color: var(--blue-700); color: white;">
-                            <th style="padding: 15px; width: 140px; border-radius: 8px 0 0 8px;">FACULTY ID</th>
-                            <th style="padding: 15px; width: 25%;">NAME</th>
-                            <th style="padding: 15px;">EMAIL</th>
-                            <th style="padding: 15px; width: 15%;">PHONE</th>
-                            <th style="padding: 15px; width: 180px;">ROLE</th>
-                            <th style="padding: 15px; border-radius: 0 8px 8px 0; text-align: center;">ACTIONS</th>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #f1f5f9;">
+                        <th style="padding: 16px 24px; font-size: 0.75rem; font-weight: 800; color: #034cb3; text-transform: uppercase;">Personnel ID</th>
+                        <th style="padding: 16px 24px; font-size: 0.75rem; font-weight: 800; color: #03742e; text-transform: uppercase;">Full Name</th>
+                        <th style="padding: 16px 24px; font-size: 0.75rem; font-weight: 800; color: #b90c00; text-transform: uppercase;">Contact Info</th>
+                        <th style="padding: 16px 24px; font-size: 0.75rem; font-weight: 800; color: #ac780a; text-transform: uppercase;">Role</th>
+                        <th style="padding: 16px 24px; font-size: 0.75rem; font-weight: 800; color: #160288; text-transform: uppercase; text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (count($activeUsers) > 0): ?>
+                        <?php foreach ($activeUsers as $user): ?>
+                        <tr class="table-row-hover" style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 16px 24px;">
+                                <span style="background: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-weight: 700; font-size: 0.85rem;">
+                                    <?= htmlspecialchars($user['faculty_id'] ?? 'N/A') ?>
+                                </span>
+                            </td>
+                            <td style="padding: 16px 24px; font-weight: 700; color: #1e293b;">
+                                <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
+                            </td>
+                            <td style="padding: 16px 24px;">
+                                <div style="font-size: 0.85rem; color: #475569;">
+                                    <div><i class="fa-solid fa-envelope" style="width: 18px; color: #cbd5e1;"></i> <?= htmlspecialchars($user['email'] ?? 'No Email') ?></div>
+                                    <div><i class="fa-solid fa-phone" style="width: 18px; color: #cbd5e1;"></i> <?= htmlspecialchars($user['phone'] ?? 'No Phone') ?></div>
+                                </div>
+                            </td>
+                            <td style="padding: 16px 24px;">
+                                <span style="background: #eff6ff; color: #3b82f6; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; border: 1px solid #dbeafe;">
+                                    <?= htmlspecialchars($user['role'] ?? 'User') ?>
+                                </span>
+                            </td>
+                            <td style="padding: 16px 24px; text-align: center;">
+                                <div style="display: flex; gap: 8px; justify-content: center;">
+                                    <button class="action-icon-btn" onclick='editUser(<?= json_encode($user) ?>)' title="Edit Account">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button class="action-icon-btn archive-btn" onclick="confirmArchive(<?= $user['id'] ?>, '<?= htmlspecialchars($user['first_name']) ?>')" title="Archive User">
+                                        <i class="fa-solid fa-box-archive"></i>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (count($activeUsers) > 0): ?>
-                            <?php foreach ($activeUsers as $user): ?>
-                                <tr style="background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-                                    <td style="padding: 12px;">
-                                        <span class="id-badge" style="background: var(--blue-50); color: var(--blue-700); padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; border: 1px solid var(--blue-200);">
-                                            <?= htmlspecialchars($user['faculty_id']) ?>
-                                        </span>
-                                    </td>
-                                    <td style="padding: 12px; font-weight: 600; color: #1e293b;"><?= htmlspecialchars($user['first_name']) ?> <?= htmlspecialchars($user['last_name']) ?></td>
-                                    <td style="padding: 12px; color: #64748b; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><?= htmlspecialchars($user['email']) ?></td>
-                                    <td style="padding: 12px; color: #64748b; font-size: 0.9rem;"><?= htmlspecialchars($user['phone']) ?></td>
-                                    <td style="padding: 12px;"><span class="role-badge" style="display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;"><?= htmlspecialchars($user['role']) ?></span></td>
-                                    <td style="padding: 12px; text-align: center; white-space: nowrap;">
-                                        <button class="btn btn-sm btn-primary" title="Edit" onclick="editUser(
-                                            <?= $user['id'] ?>, 
-                                            '<?= htmlspecialchars($user['first_name'], ENT_QUOTES) ?>', 
-                                            '<?= htmlspecialchars($user['last_name'], ENT_QUOTES) ?>', 
-                                            '<?= htmlspecialchars($user['middle_name'] ?? '', ENT_QUOTES) ?>', 
-                                            '<?= htmlspecialchars($user['email'], ENT_QUOTES) ?>', 
-                                            '<?= htmlspecialchars($user['phone'] ?? '', ENT_QUOTES) ?>'
-                                        )">
-                                            <i class="fa-solid fa-pen"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-warning" title="Archive" onclick="confirmArchive(<?= $user['id'] ?>, '<?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name'], ENT_QUOTES) ?>')">
-                                            <i class="fa-solid fa-archive"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="6" class="text-center" style="padding: 3rem; color: var(--gray-600);">
-                                    <i class="fa-solid fa-users-slash" style="font-size: 2.5rem; margin-bottom: 0.5rem; display: block; opacity: 0.5;"></i>
-                                    No active accounts found
-                                </td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr><td colspan="5" style="padding: 40px; text-align: center; color: #94a3b8;">No active accounts found.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end;">
+            <button class="btn-view-archive" onclick="openArchivedModal()" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);">
+                <i class="fa-solid fa-archive"></i> 
+                View Archive (<?= count($archivedUsers) ?>)
+            </button>
         </div>
     </div>
+</div>
 
     <div id="archivedModal" class="modal">
         <div class="modal-content modal-xl"> 
@@ -392,6 +415,7 @@ require_once __DIR__ . '/partials/header.php';
                 </div>
 
                 <form method="POST">
+                    <?php csrf_field(); ?>
                     <input type="hidden" name="user_id" id="editUserId">
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label>First Name <span class="required">*</span></label>
@@ -496,11 +520,21 @@ require_once __DIR__ . '/partials/header.php';
     </div>
 </div>
 
-
-
 </div>
+<form id="archive-form" method="POST" action="create_account.php?tab=view" style="display:none;">
+    <?php csrf_field(); ?>
+    <input type="hidden" name="user_id" id="archive-id">
+    <input type="hidden" name="archive_user" value="1">
+</form>
 
+<form id="restore-form" method="POST" action="create_account.php?tab=view" style="display:none;">
+    <?php csrf_field(); ?>
+    <input type="hidden" name="user_id" id="restore-id">
+    <input type="hidden" name="restore_user" value="1">
+</form>
 <script>
+const csrfToken = "<?= $_SESSION['csrf_token'] ?? '' ?>";
+
 let pendingAction = null;
 let deleteUserId = null;
 let deleteUserName = null;
@@ -661,14 +695,18 @@ function confirmArchive(userId, userName) {
     document.getElementById('confirmMessage').textContent = `Are you sure you want to archive ${userName}? They will no longer have access to the system.`;
 
     pendingAction = function() {
-    const form = document.createElement('form');
-    // Ensure the action points to the actual file
-    form.action = 'create_account.php?tab=view'; 
-    form.method = 'POST';
-    form.innerHTML = `<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="archive_user" value="1">`;
-    document.body.appendChild(form);
-    form.submit();
-};
+        const form = document.createElement('form');
+        form.action = 'create_account.php?tab=view'; 
+        form.method = 'POST';
+        // ADDED: csrf_token input field
+        form.innerHTML = `
+            <input type="hidden" name="csrf_token" value="${csrfToken}">
+            <input type="hidden" name="user_id" value="${userId}">
+            <input type="hidden" name="archive_user" value="1">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    };
     openModal('confirmModal');
 }
 
@@ -678,14 +716,18 @@ function confirmRestore(userId, userName) {
     document.getElementById('confirmMessage').textContent = `Are you sure you want to restore ${userName}? They will regain access to the system.`;
 
     pendingAction = function() {
-    const form = document.createElement('form');
-    // Ensure the action points to the actual file
-    form.action = 'create_account.php?tab=view'; 
-    form.method = 'POST';
-    form.innerHTML = `<input type="hidden" name="user_id" value="${userId}"><input type="hidden" name="restore_user" value="1">`;
-    document.body.appendChild(form);
-    form.submit();
-};
+        const form = document.createElement('form');
+        form.action = 'create_account.php?tab=view'; 
+        form.method = 'POST';
+        // ADDED: csrf_token input field
+        form.innerHTML = `
+            <input type="hidden" name="csrf_token" value="${csrfToken}">
+            <input type="hidden" name="user_id" value="${userId}">
+            <input type="hidden" name="restore_user" value="1">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    };
     openModal('confirmModal');
 }
 

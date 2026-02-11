@@ -89,6 +89,26 @@ require_once __DIR__ . '/partials/header.php';
     max-width: 1000px;
     width: 95%;
 }
+
+.btn-amber-vibrant {
+    background-color: #f59e0b !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border: none !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-amber-vibrant:hover {
+    background-color: #d97706 !important;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4) !important;
+    transform: translateY(-2px);
+}
+
+.card-header .btn-sm:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.6) !important;
+    transform: translateY(-1px);
+}
 </style>
 
 <div class="main-body fingerprint-registration">
@@ -150,39 +170,67 @@ require_once __DIR__ . '/partials/header.php';
     </div>
 
     <div class="card pending-registrations-section">
-        <div class="card-header card-header-flex" style="justify-content: space-between; align-items: center;">
-            <h3><i class="fa-solid fa-clock"></i> Pending Registrations (<?= $pendingCount ?>)</h3>
-            <button class="btn btn-warning btn-sm" onclick="openModal('notifyModal')" <?= empty($pendingUsers) ? 'disabled' : '' ?>>
-                <i class="fa-solid fa-bell"></i> Notify All Pending
+    <div class="card-header card-header-flex" 
+         style="background: #f89d00; border-bottom: none; padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" 
+         onclick="togglePendingUsers()">
+        
+        <h3 style="margin: 0; font-size: 1.1rem; color: #ffffff; font-weight: 700;">
+            <i class="fa-solid fa-clock" style="color: rgba(255,255,255,0.8); margin-right: 8px;"></i> 
+            Pending Registrations (<?= count($pendingUsers) ?>)
+        </h3>
+        
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn btn-sm" 
+                    onclick="event.stopPropagation(); openModal('notifyModal')" 
+                    <?= empty($pendingUsers) ? 'disabled' : '' ?> 
+                    style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 8px; transition: all 0.2s;">
+                <i class="fa-solid fa-bell"></i> Notify All
             </button>
+            <i class="fa-solid fa-chevron-up" id="pendingToggleIcon" style="color: white;"></i>
         </div>
-        <div class="card-body">
-            <?php if (empty($pendingUsers)): ?>
-                <div class="empty-state" style="padding: 3rem 0;">
-                     <i class="fa-solid fa-check-circle" style="font-size: 3rem; color: #10b981; margin-bottom: 1rem;"></i>
-                    <p style="font-size: 1.1rem; font-weight: 600; color: #475569;">Biometric Enrollment Complete</p>
-                </div>
-            <?php else: ?>
-                <div class="user-cards-container">
-                    <?php foreach ($pendingUsers as $u): ?>
-                        <div class="user-card" data-search-term="<?= strtolower(htmlspecialchars($u['first_name'] . ' ' . $u['last_name'] . ' ' . $u['faculty_id'])) ?>">
-                            <div class="user-card-header">
-                                <span class="user-card-status pending">NOT REGISTERED</span>
-                                <span class="user-card-role" style="font-size:0.65rem; background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px;"><?= htmlspecialchars(strtoupper($u['role'])) ?></span>
-                            </div>
-                            <div class="user-card-details">
-                                <p class="user-card-name"><?= htmlspecialchars($u['first_name'] . ' ' . $u['last_name']) ?></p>
-                                <p class="user-card-info">ID: <?= htmlspecialchars($u['faculty_id']) ?></p>
-                            </div>
-                            <a href="fingerprint_registration.php?user_id=<?= $u['id'] ?>" class="user-card-register-btn">
+    </div>
+
+    <div class="card-body" id="pendingUsersContainer" style="display: block;">
+        <?php if (empty($pendingUsers)): ?>
+            <div style="padding: 3rem; text-align: center; background: #f8fafc; border-radius: 12px; border: 2px dashed #e2e8f0;">
+                 <i class="fa-solid fa-circle-check" style="font-size: 3rem; color: #10b981; margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p style="font-weight: 700; color: #475569; margin: 0;">Biometric Enrollment Complete</p>
+            </div>
+        <?php else: ?>
+            <div class="user-cards-container">
+                <?php foreach ($pendingUsers as $u): ?>
+                    <div class="user-card" style="border-top: 4px solid #f59e0b;" data-search-term="<?= strtolower(htmlspecialchars($u['first_name'] . ' ' . $u['last_name'])) ?>">
+                        
+                        <div class="user-card-header">
+                            <span class="status-pill pending">NOT REGISTERED</span>
+                            <span class="user-card-role" style="font-size:0.65rem; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px;">
+                                <?= htmlspecialchars(strtoupper($u['role'] ?? 'N/A')) ?>
+                            </span>
+                        </div>
+
+                        <div class="user-card-details">
+                            <p class="user-card-name" style="font-size: 1.1rem; font-weight: 700; margin: 0;">
+                                <?= htmlspecialchars($u['first_name'] . ' ' . $u['last_name']) ?>
+                            </p>
+                            <p class="user-card-info" style="color:#64748b; font-weight:600; margin: 4px 0 0;">
+                                ID: <?= htmlspecialchars($u['faculty_id']) ?>
+                            </p>
+                            <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 10px;">
+                                <i class="fa-solid fa-calendar-minus"></i> Awaiting Registration
+                            </p>
+                        </div>
+
+                        <div class="user-card-registered-status" style="padding-top:10px;">
+                            <a href="fingerprint_registration.php?user_id=<?= $u['id'] ?>" class="btn-amber-vibrant" style="width:100%; border-radius: 8px; padding: 10px; display: inline-block; text-align: center; text-decoration: none;">
                                 <i class="fa-solid fa-fingerprint"></i> Start Enrollment
                             </a>
                         </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </div>
+</div>
 
     <div class="card registered-users-section" style="margin-top: 2rem;">
         <div class="card-header card-header-flex" style="justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleRegisteredUsers()">
@@ -238,7 +286,7 @@ require_once __DIR__ . '/partials/header.php';
             <button type="button" class="modal-close" onclick="closeModal('notifyModal')">&times;</button>
         </div>
         <div class="modal-body" style="text-align: center; padding: 2rem;">
-            <div style="background: #fff7ed; color: #ea580c; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #ffedd5;">
+            <div style="background: #fff7ed; color: #ea2d0c; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #ffedd5;">
                 <i class="fa-solid fa-envelope-circle-check" style="font-size: 2.5rem; margin-bottom: 10px;"></i>
                 <p style="font-weight: 600;">Send email reminders to all users with pending biometric registration?</p>
             </div>
@@ -319,6 +367,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function togglePendingUsers() {
+    const container = document.getElementById('pendingUsersContainer');
+    const icon = document.getElementById('pendingToggleIcon');
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+    } else {
+        container.style.display = 'none';
+        icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+    }
+}
 
 function sendNotifications() {
     const btn = document.getElementById('confirmNotifyBtn');

@@ -282,6 +282,7 @@ if (!function_exists('renderScheduleTable')) {
     </div>
     <div class="card-body" style="padding: 1.5rem;">
         <form method="GET" action="schedule_management.php">
+            <?php csrf_field(); ?>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; align-items: flex-end;">
                 
                 <div class="form-group">
@@ -347,6 +348,7 @@ if (!function_exists('renderScheduleTable')) {
         <?php if ($isAdmin): ?>
         <div style="padding: 1rem 1.5rem 0 1.5rem;">
             <form method="GET" class="schedule-filter-form" style="display: flex; gap: 10px;">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="tab" value="<?= $activeTab ?>"> 
                 <div class="form-group" style="flex: 1; margin: 0;">
                     <div class="input-icon-wrapper" style="position: relative;">
@@ -463,6 +465,7 @@ if (!function_exists('renderScheduleTable')) {
                         </div>
                     <?php else: ?>
                         <form method="POST" id="bulkActionForm">
+                            <?php csrf_field(); ?>
                             <input type="hidden" name="bulk_action_type" id="bulkActionInput">
                             
                             <div class="bulk-actions-bar" style="margin-bottom: 1rem; padding: 10px; background: #f3f4f6; border-radius: 8px; display: flex; gap: 10px; align-items: center;">
@@ -527,6 +530,7 @@ if (!function_exists('renderScheduleTable')) {
                             </div>
                         </form>
                         <form method="POST" id="singleActionForm" style="display:none;">
+                            <?php csrf_field(); ?>
                             <input type="hidden" name="schedule_id" id="single_schedule_id">
                             <input type="hidden" name="approve_schedule" id="btn_approve" disabled>
                             <input type="hidden" name="decline_schedule" id="btn_decline" disabled>
@@ -586,6 +590,7 @@ if (!function_exists('renderScheduleTable')) {
             <span class="close-btn" onclick="closeModal('addScheduleModal')">&times;</span>
         </div>
         <form method="POST" id="addScheduleForm">
+            <?php csrf_field(); ?>
             <div class="modal-body">
                 <input type="hidden" name="add_schedule" value="1">
                 <?php if ($isAdmin && isset($selectedUserId)): ?>
@@ -612,6 +617,7 @@ if (!function_exists('renderScheduleTable')) {
             <span class="close-btn" onclick="closeModal('editScheduleModal')">&times;</span>
         </div>
         <form method="POST" id="editScheduleForm">
+            <?php csrf_field(); ?>
             <div class="modal-body">
                 <input type="hidden" name="edit_schedule" value="1">
                 <input type="hidden" name="schedule_id_edit" id="editScheduleId">
@@ -671,6 +677,7 @@ if (!function_exists('renderScheduleTable')) {
             <span class="close-btn" onclick="closeModal('deleteScheduleModal')">&times;</span>
         </div>
         <form method="POST">
+            <?php csrf_field(); ?>
             <div class="modal-body">
                 <input type="hidden" name="delete_schedule" value="1">
                 <input type="hidden" name="schedule_id_delete" id="deleteScheduleId">

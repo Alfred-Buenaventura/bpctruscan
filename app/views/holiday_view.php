@@ -93,6 +93,22 @@ $error = $error ?? null;
         </div>
     </div>
 
+    <div class="info-guide-wrapper" style="margin-bottom: 2.5rem; padding: 0 5px;">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: #f1f5f9; color: #64748b; width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <div style="flex: 1;">
+                <p style="margin: 0; font-size: 0.92rem; color: #475569; line-height: 1.6;">
+                    <span style="font-weight: 700; color: #1e293b; margin-right: 5px;">Notice:</span> 
+                    <span style="color: #6366f1; font-weight: 600;">The DTR Management</span> page is used to manage the DTR for holidays and signatures. Use the 
+                    forms below to adjust <span style="color: #6366f1; font-weight: 600;">Holidays</span> 
+                    according to the calendar year or change the DTR <span style="color: #6366f1; font-weight: 600;">Signatory</span> section.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <div style="display: grid; grid-template-columns: 1fr 380px; gap: 2rem; align-items: start;">
         
         <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -140,6 +156,7 @@ $error = $error ?? null;
             <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                 <h3 style="margin-bottom: 1.5rem; font-weight: 700;"><i class="fa-solid fa-plus-circle" style="color: #059669; margin-right: 10px;"></i> Add New Holiday</h3>
                 <form method="POST">
+                    <?php csrf_field(); ?>
                     <div style="margin-bottom: 1rem;">
                         <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">Date</label>
                         <input type="date" name="holiday_date" class="form-control" required style="width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -162,6 +179,7 @@ $error = $error ?? null;
             <div class="card" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                 <h3 style="margin-bottom: 1.5rem; font-weight: 700;"><i class="fa-solid fa-pen-nib" style="color: #3b82f6; margin-right: 10px;"></i> DTR Signatory</h3>
                 <form method="POST">
+                    <?php csrf_field(); ?>
                     <div style="margin-bottom: 1rem;">
                         <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">In-Charge Name</label>
                         <input type="text" name="in_charge_name" class="form-control" value="<?= htmlspecialchars($settings['dtr_in_charge_name'] ?? '') ?>" required style="width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -184,6 +202,7 @@ $error = $error ?? null;
             <h3 style="margin: 0;"><i class="fa-solid fa-filter" style="color: #059669; margin-right: 8px;"></i> Filter Records</h3>
         </div>
         <form method="GET" action="holiday_management.php">
+            <?php csrf_field(); ?>
             <div style="margin-bottom: 1rem;">
                 <label>Keyword Search</label>
                 <input type="text" name="search" class="form-control" value="<?= htmlspecialchars($filters['search']) ?>" style="width:100%; padding:0.75rem; border:1px solid #e2e8f0; border-radius:8px;">
@@ -222,6 +241,7 @@ $error = $error ?? null;
         <h3>Delete Holiday?</h3>
         <p id="del_name" style="color:#64748b; margin:1rem 0;"></p>
         <form method="POST">
+            <?php csrf_field(); ?>
             <input type="hidden" name="id" id="del_id">
             <button type="submit" name="delete_holiday" style="width:100%; background:#ef4444; color:white; padding:0.75rem; border:none; border-radius:8px;">Yes, Delete</button>
             <button type="button" onclick="toggleModal('deleteHolidayModal', false)" style="width:100%; margin-top:0.5rem; background:none; border:none; color:#64748b;">Cancel</button>
