@@ -34,38 +34,45 @@ class Attendance {
     return $db->query($sql)->fetch_all(MYSQLI_ASSOC);
 }
 
-    public function getUserHistory($userId, $filters = []) {
-        // fetches history and joins with schedules to show specific subject details
-        $sql = "SELECT r.*, u.first_name, u.last_name, u.faculty_id, 
-                       cs.subject as duty_subject, cs.room as duty_room, cs.type as duty_type
-                FROM attendance_records r 
-                JOIN users u ON r.user_id = u.id 
-                LEFT JOIN class_schedules cs ON r.schedule_id = cs.id 
-                WHERE 1=1"; 
-        
-        $params = [];
-        $types = "";
+    public function getUserHistory($userId = null, $filters = []) {
+    $sql = "SELECT r.*, u.first_name, u.last_name, u.faculty_id, 
+                   cs.subject as duty_subject, cs.room as duty_room, cs.type as duty_type
+            FROM attendance_records r 
+            JOIN users u ON r.user_id = u.id 
+            LEFT JOIN class_schedules cs ON r.schedule_id = cs.id 
+            WHERE 1=1"; 
+    
+    $params = [];
+    $types = "";
 
-        if (!empty($userId)) {
-            $sql .= " AND r.user_id = ?";
-            $params[] = $userId;
-            $types .= "i";
-        }
+    // 1. ADMIN FILTER LOGIC
+    // If userId is 'all' or empty, we skip this to show everyone
+    if (!empty($userId) && $userId !== 'all') {
+        $sql .= " AND r.user_id = ?";
+        $params[] = $userId;
+        $types .= "i";
+    }
 
-        if (!empty($filters['status_type'])) {
-            $sql .= " AND r.status = ?";
-            $params[] = $filters['status_type'];
-            $types .= "s";
-        }
-        
-        $sql .= " AND r.date BETWEEN ? AND ? ORDER BY r.date DESC, r.time_in ASC";
+    // 2. STATUS FILTER
+    if (!empty($filters['status_type'])) {
+        $sql .= " AND r.status = ?";
+        $params[] = $filters['status_type'];
+        $types .= "s";
+    }
+    
+    // 3. DATE RANGE FILTER
+    if (!empty($filters['start_date']) && !empty($filters['end_date'])) {
+        $sql .= " AND r.date BETWEEN ? AND ?";
         $params[] = $filters['start_date'];
         $params[] = $filters['end_date'];
         $types .= "ss";
-
-        $stmt = $this->db->query($sql, $params, $types);
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
+
+    $sql .= " ORDER BY r.date DESC, r.time_in ASC";
+
+    $stmt = $this->db->query($sql, $params, $types);
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
 
     public function getRecords($filters) {
         // main query for the admin dashboard to see everyone's logs grouped by date

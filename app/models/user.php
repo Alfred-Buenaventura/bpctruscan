@@ -21,10 +21,9 @@ class User {
 
         $sql .= " ORDER BY role ASC, last_name ASC";
         
-        $result = $this->db->conn->query($sql);
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return $this->db->query($sql)->get_result()->fetch_all(MYSQLI_ASSOC);
     }
-
+    
     public function findUserByUsername($username) {
         // locates a user via their username or unique faculty id for login
         $sql = "SELECT * FROM users WHERE (username = ? OR faculty_id = ?) AND status = 'active'";
@@ -111,29 +110,44 @@ class User {
         return $this->db->conn->insert_id;
     }
 
-    public function getAllActive() {
-        $result = $this->db->conn->query("SELECT * FROM users WHERE status='active' ORDER BY created_at DESC");
-        return $result->fetch_all(MYSQLI_ASSOC);
+    public function findUserById($id) {
+        $sql = "SELECT id, faculty_id, first_name, last_name, email, role FROM users WHERE id = ?";
+        $res = $this->db->query($sql, [$id], "i");
+        return $res->get_result()->fetch_assoc();
     }
+
+    public function getAllActive() {
+    $sql = "SELECT id, faculty_id, first_name, last_name, middle_name, email, phone, role FROM users WHERE status = 'active' ORDER BY last_name ASC";
+    
+    // Using your db query method which returns a mysqli_stmt
+    $stmt = $this->db->query($sql);
+    
+    // Get the result set from the statement
+    $result = $stmt->get_result();
+    
+    // Fetch all rows as an associative array
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
 
     public function getAllArchived() {
-        $result = $this->db->conn->query("SELECT * FROM users WHERE status='archived' ORDER BY created_at DESC");
-        return $result->fetch_all(MYSQLI_ASSOC);
-    }
+    $sql = "SELECT id, faculty_id, first_name, last_name, middle_name, email, phone, role FROM users WHERE status = 'archived' ORDER BY last_name ASC";
+    
+    $stmt = $this->db->query($sql);
+    $result = $stmt->get_result();
+    
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
 
     public function getAllStaff() {
-        $result = $this->db->conn->query("SELECT id, faculty_id, first_name, last_name FROM users WHERE status='active' AND role != 'Admin' ORDER BY first_name");
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return $this->db->query("SELECT id, faculty_id, first_name, last_name FROM users WHERE status='active' AND role != 'Admin' ORDER BY first_name")->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
     public function getPendingUsers() {
-        $result = $this->db->conn->query("SELECT * FROM users WHERE status='active' AND fingerprint_registered=0 ORDER BY created_at DESC");
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return $this->db->query("SELECT * FROM users WHERE status='active' AND fingerprint_registered=0 ORDER BY created_at DESC")->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
     public function getRegisteredUsers() {
-        $result = $this->db->conn->query("SELECT * FROM users WHERE status='active' AND fingerprint_registered=1 ORDER BY first_name ASC");
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return $this->db->query("SELECT * FROM users WHERE status='active' AND fingerprint_registered=1 ORDER BY first_name ASC")->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
     public function getStats() {
