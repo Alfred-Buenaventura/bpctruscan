@@ -60,18 +60,18 @@
 }
 </style>
         
-        <button type="button" class="nav-item nav-item-button" onclick="openModal('notificationsModal')" id="notificationsBtn">
-            <i class="fa-solid fa-bell nav-icon"></i>
-            <span class="nav-text">Notifications</span>
-            <?php
-            $db = Database::getInstance();
-            $stmt = $db->query("SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0", [$_SESSION['user_id']], "i");
-            $unreadCount = $stmt->get_result()->fetch_assoc()['count'] ?? 0;
-            if ($unreadCount > 0):
-            ?>
-            <span class="notification-badge"><?= $unreadCount ?></span>
-            <?php endif; ?>
-        </button>
+        <button type="button" class="nav-item nav-item-button" onclick="openModal('notificationsModal'); markAllAsRead();" id="notificationsBtn">
+    <i class="fa-solid fa-bell nav-icon"></i>
+    <span class="nav-text">Notifications</span>
+    <?php
+    $db = Database::getInstance();
+    $stmt = $db->query("SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0", [$_SESSION['user_id']], "i");
+    $unreadCount = $stmt->get_result()->fetch_assoc()['count'] ?? 0;
+    if ($unreadCount > 0):
+    ?>
+    <span class="notification-badge" id="notif-badge"><?= $unreadCount ?></span>
+    <?php endif; ?>
+</button>
     </nav>
 
     <div class="sidebar-footer">
@@ -179,14 +179,11 @@
                 </div>
             <?php endif; ?>
         </div>
-        <div class="modal-footer">
-            <?php if (!empty($notifications)): ?>
-            <button type="button" class="btn btn-primary" onclick="markAllAsRead()">
-                <i class="fa-solid fa-check-double"></i> Mark All as Read
-            </button>
-            <?php endif; ?>
-            <button type="button" class="btn btn-secondary" onclick="closeModal('notificationsModal')">Close</button>
-        </div>
+        <div class="modal-footer" style="border-top: 1px solid #f1f5f9; padding: 1rem 1.5rem;">
+    <button type="button" class="btn btn-secondary" onclick="closeModal('notificationsModal')" style="border-radius: 8px; font-weight: 600;">
+        Close
+    </button>
+</div>
     </div>
 </div>
 
