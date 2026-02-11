@@ -42,6 +42,12 @@ class Helper {
         }
     }
 
+    public static function csrfInput() {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $token = $_SESSION['csrf_token'] ?? '';
+        echo '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($token) . '">';
+    }
+
     public static function clean($data) {
         // strip whitespace and convert special characters to stop xss attacks
         return htmlspecialchars(trim($data), ENT_QUOTES, 'UTF-8');

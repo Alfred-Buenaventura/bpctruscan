@@ -1,6 +1,56 @@
 <?php
 class Controller {
-    
+
+    public function __construct() {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $this->checkSessionTimeout();
+    }
+
+    private function checkSessionTimeout() {
+        // We only care about this if the user is logged in
+        // AND they didn't check "Remember Me"
+        if (isset($_SESSION['user_id']) && !isset($_COOKIE['remember_me'])) {
+            $now = time();
+            
+            if (isset($_SESSION['last_activity']) && ($now - $_SESSION['last_activity'] > SESSION_TIMEOUT)) {
+                // Too much time has passed!
+                session_unset();
+                session_destroy();
+                header("Location: login.php?timeout=1");
+                exit;
+            }
+            
+            // User is active, update the timestamp
+            $_SESSION['last_activity'] = $now;
+        }
+    }
+
+    /**
+     * Generates a secure CSRF token and stores it in the session if not already present.
+     */
+    public function generateCsrfToken() {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['csrf_token'];
+    }
+
+    /**
+     * Verifies if the submitted CSRF token matches the one stored in the session.
+     */
+    public function verifyCsrfToken() {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        
+        $submittedToken = $_POST['csrf_token'] ?? '';
+        $storedToken = $_SESSION['csrf_token'] ?? '';
+
+        if (empty($storedToken) || !hash_equals($storedToken, $submittedToken)) {
+            die("Security Violation: CSRF token mismatch.");
+        }
+        return true;
+    }
+
     public function view($viewName, $data = []) {
         extract($data);
         
@@ -42,12 +92,14 @@ class Controller {
     }
 
     public function requireLogin() {
-        // kick the user back to the login page if they aren't authenticated
-        if (!isset($_SESSION['user_id'])) {
-            header('Location: login.php');
-            exit;
-        }
-        
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    
+    if (!isset($_SESSION['user_id'])) {
+        header('Location: login.php');
+        exit;
+    }
+
+    
         $currentPage = basename($_SERVER['PHP_SELF']);
         // check if the user needs to update their password before they can do anything else
         if (isset($_SESSION['force_password_change']) && $_SESSION['force_password_change'] === 1) {

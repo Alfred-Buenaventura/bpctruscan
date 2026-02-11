@@ -3,22 +3,31 @@ class Database {
     private static $instance = null;
     public $conn;
 
-    private $host = 'localhost';
-    private $user = 'root';
-    private $pass = '';
-    private $dbname = 'bpc_attendance'; 
+    // These properties will now be populated dynamically from your .env file
+    private $host;
+    private $user;
+    private $pass;
+    private $dbname;
 
     private function __construct() {
-        // start up the connection to the mysql server
+        // Assign values from environment variables loaded by Helper::loadEnv in init.php
+        $this->host   = $_ENV['DB_HOST'] ?? 'localhost';
+        $this->user   = $_ENV['DB_USER'] ?? 'root';
+        $this->pass   = $_ENV['DB_PASS'] ?? '';
+        $this->dbname = $_ENV['DB_NAME'] ?? 'bpc_attendance';
+
+        // Start up the connection to the MySQL server
         $this->conn = new mysqli($this->host, $this->user, $this->pass, $this->dbname);
+        
         if ($this->conn->connect_error) {
             die("Database Connection Failed: " . $this->conn->connect_error);
         }
+        
         $this->conn->set_charset("utf8");
     }
 
     public static function getInstance() {
-        // we use a singleton here so we don't open a thousand connections at once
+        // Singleton pattern to prevent opening multiple connections simultaneously
         if (!self::$instance) {
             self::$instance = new Database();
         }
@@ -32,7 +41,7 @@ class Database {
         }
 
         if (!empty($params)) {
-            // if we didn't specify types, we just assume everything is a string by default
+            // Default to string 's' for each parameter if types are not specified
             if (empty($types)) {
                 $types = str_repeat('s', count($params)); 
             }
