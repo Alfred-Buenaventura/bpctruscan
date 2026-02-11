@@ -3,18 +3,65 @@ require_once __DIR__ . '/../core/controller.php';
 
 class AuthController extends Controller {
 
+    private function checkBruteForce() {
+        $ip = $_SERVER['REMOTE_ADDR'];
+        $db = Database::getInstance();
+        $limit = 5; // Max failed attempts
+        $lockoutTime = 15; // Minutes to wait after being blocked
+
+        $stmt = $db->query(
+            "SELECT attempts, last_attempt FROM login_attempts WHERE ip_address = ?",
+            [$ip], "s"
+        );
+        $record = $stmt->get_result()->fetch_assoc();
+
+        if ($record && $record['attempts'] >= $limit) {
+            $lastAttempt = strtotime($record['last_attempt']);
+            $diff = (time() - $lastAttempt) / 60;
+
+            if ($diff < $lockoutTime) {
+                $wait = ceil($lockoutTime - $diff);
+                die("Too many failed login attempts. Please try again in $wait minutes.");
+            } else {
+                // Reset after lockout period expires
+                $db->query("DELETE FROM login_attempts WHERE ip_address = ?", [$ip], "s");
+            }
+        }
+    }
+
+    private function recordLoginFailure() {
+        $ip = $_SERVER['REMOTE_ADDR'];
+        $db = Database::getInstance();
+        
+        $db->query(
+            "INSERT INTO login_attempts (ip_address, attempts) VALUES (?, 1) 
+             ON DUPLICATE KEY UPDATE attempts = attempts + 1, last_attempt = CURRENT_TIMESTAMP",
+            [$ip], "s"
+        );
+    }
+
+    private function clearLoginAttempts() {
+        $ip = $_SERVER['REMOTE_ADDR'];
+        $db = Database::getInstance();
+        $db->query("DELETE FROM login_attempts WHERE ip_address = ?", [$ip], "s");
+    }
+
     public function login() {
         $data = ['error' => ''];
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
+            $this->verifyCsrfToken(); // SECURED: CSRF Check added previously
+            $this->checkBruteForce(); // SECURED: Brute-Force check
             $username = trim($_POST['username']);
             $password = $_POST['password'];
+            $remember = isset($_POST['remember']);
 
             if (!empty($username) && !empty($password)) {
                 $userModel = $this->model('User'); 
                 $user = $userModel->findUserByUsername($username);
 
                 if ($user && password_verify($password, $user['password'])) {
+                    $this->clearLoginAttempts();
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['faculty_id'] = $user['faculty_id'];
                     $_SESSION['role'] = $user['role'];
@@ -27,6 +74,22 @@ class AuthController extends Controller {
                     $logModel = $this->model('ActivityLog');
                     $logModel->log($user['id'], 'Login', 'User logged in successfully');
 
+                    if ($remember) {
+                    // Create a secure token
+                    $token = bin2hex(random_bytes(32));
+                    $db = Database::getInstance();
+                    $db->query("UPDATE users SET remember_token = ? WHERE id = ?", [$token, $user['id']], "si");
+
+                    // Set cookie for 30 days
+                    setcookie('remember_me', $token, [
+                        'expires' => time() + (86400 * 30),
+                        'path' => '/',
+                        'httponly' => true,
+                        'secure' => true, // Set to false if not using HTTPS
+                        'samesite' => 'Lax'
+                    ]);
+                    }
+
                     if ($_SESSION['force_password_change']) {
                         header('Location: change_password.php');
                     } else {
@@ -34,6 +97,7 @@ class AuthController extends Controller {
                     }
                     exit;
                 } else {
+                    $this->recordLoginFailure();
                     $data['error'] = 'Invalid username or password.';
                 }
             } else {
@@ -48,7 +112,11 @@ class AuthController extends Controller {
         if (isset($_SESSION['user_id'])) {
             $logModel = $this->model('ActivityLog');
             $logModel->log($_SESSION['user_id'], 'Logout', 'User logged out');
+            $db = Database::getInstance();
+            $db->query("UPDATE users SET remember_token = NULL WHERE id = ?", [$_SESSION['user_id']], "i");
         }
+        setcookie('remember_me', '', time() - 3600, '/');
+
         session_unset();
         session_destroy();
         header('Location: login.php');
@@ -68,18 +136,26 @@ class AuthController extends Controller {
         ];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // SECURED: CSRF Check added in previous turn
+            $this->verifyCsrfToken(); 
+
             $current = $_POST['current_password'];
             $new = $_POST['new_password'];
             $confirm = $_POST['confirm_password'];
             
             $user = $userModel->findById($_SESSION['user_id']);
 
+            // Human-Friendly Validation Logic
             if (!password_verify($current, $user['password'])) {
-                $data['error'] = 'Current password is incorrect.';
+                $data['error'] = 'The current password you entered is incorrect. Please try again.';
             } elseif ($new !== $confirm) {
-                $data['error'] = 'New passwords do not match.';
-            } elseif (strlen($new) < 8) {
-                $data['error'] = 'Password must be at least 8 characters.';
+                $data['error'] = 'The new passwords do not match. Please make sure you typed them correctly in both fields.';
+            } elseif (strlen($new) < 12) {
+                $data['error'] = 'For better security, your new password should be at least 12 characters long. Try using a short sentence or phrase.';
+            } elseif (!preg_match('/[0-9]/', $new)) {
+                $data['error'] = 'Please include at least one number (0-9) in your new password to make it stronger.';
+            } elseif ($new === $current) {
+                $data['error'] = 'Your new password cannot be the same as your old one. Please choose a different one.';
             } else {
                 $hashed = password_hash($new, PASSWORD_DEFAULT);
                 $db = Database::getInstance();
@@ -89,9 +165,10 @@ class AuthController extends Controller {
                 $logModel->log($_SESSION['user_id'], 'Password Changed', 'User changed password');
                 
                 if ($data['firstLogin']) {
-                    header('Location: index.php'); exit;
+                    header('Location: index.php'); 
+                    exit;
                 }
-                $data['success'] = 'Password changed successfully!';
+                $data['success'] = 'Success! Your password has been updated. You can now use your new password next time you log in.';
             }
         }
         $this->view('change_password_view', $data);
@@ -120,6 +197,7 @@ class AuthController extends Controller {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->verifyCsrfToken();
             if (isset($_POST['verify_id'])) {
                 $facultyId = trim($_POST['faculty_id']);
                 $db = Database::getInstance();

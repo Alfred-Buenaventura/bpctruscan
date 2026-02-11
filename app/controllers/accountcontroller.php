@@ -4,7 +4,11 @@ require_once __DIR__ . '/../core/controller.php';
 class AccountController extends Controller {
 
     public function index() {
-        $this->requireAdmin();
+        $this->requireLogin();
+        if ($_SESSION['role'] !== 'Admin') {
+        header('Location: index.php');
+        exit;
+        }
 
         $userModel = $this->model('User');
         $logModel = $this->model('ActivityLog');
@@ -13,14 +17,27 @@ class AccountController extends Controller {
         $data = [
             'pageTitle' => 'Account Management',
             'pageSubtitle' => 'Manage user accounts individually or import in bulk via CSV',
-            'activeTab' => $_GET['tab'] ?? 'view',
+            'activeTab' => $_GET['tab'] ?? 'csv',
             'flashMessage' => $_SESSION['flash_message'] ?? null,
             'flashType' => $_SESSION['flash_type'] ?? null
         ];
         unset($_SESSION['flash_message'], $_SESSION['flash_type']);
 
+        if (isset($_GET['action']) && $_GET['action'] === 'mark_read_all') {
+    $this->verifyCsrfToken(); // Security check
+    
+    $userModel = $this->model('User');
+    $db = Database::getInstance();
+    
+    // Simple update query to clear the notifications
+    $db->query("UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0", [$_SESSION['user_id']], "i");
+    
+    echo json_encode(['status' => 'success']);
+    exit;
+}
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            
+            $this->verifyCsrfToken();
             // 1. Bulk CSV Import
             if (isset($_FILES['csvFile'])) {
                 $this->handleCsvImport($_FILES['csvFile'], $userModel, $logModel, $notifModel);
@@ -73,7 +90,6 @@ class AccountController extends Controller {
 
         $this->view('account_view', $data);
     }
-
     private function handleCreateUser($post, $userModel, $logModel, $notifModel) {
         try {
             $facultyId = clean($post['faculty_id']);

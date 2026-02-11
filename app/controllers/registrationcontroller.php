@@ -35,6 +35,7 @@ class RegistrationController extends Controller {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fingerprint_data'])) {
+            $this->verifyCsrfToken();
             $fingerName = $_POST['finger_name'] ?? 'Unknown Finger';
             $fingerData = $_POST['fingerprint_data'];
 

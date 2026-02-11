@@ -13,7 +13,7 @@ class HolidayController extends Controller {
 
         // Handle Form Submissions
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            
+            $this->verifyCsrfToken();
             // 1. Update DTR Signatory Settings
             if (isset($_POST['update_signatory'])) {
                 $holidayModel->updateSystemSetting('dtr_in_charge_name', $_POST['in_charge_name']);

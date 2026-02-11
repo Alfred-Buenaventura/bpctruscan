@@ -24,8 +24,9 @@ class AccountAdminController extends Controller {
         $data['stats'] = $userModel->getStats();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $defaultPass = "@adminpass123"; 
-        $adminData = [
+            $this->verifyCsrfToken();
+            $defaultPass = "@adminpass123"; 
+            $adminData = [
             'faculty_id' => clean($_POST['faculty_id']),
             'username' => strtolower(clean($_POST['faculty_id'])),
             'password' => password_hash($defaultPass, PASSWORD_DEFAULT),

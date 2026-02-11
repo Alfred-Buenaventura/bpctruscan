@@ -52,40 +52,45 @@ class AttendanceController extends Controller {
     public function history() {
     $this->requireLogin();
     $attModel = $this->model('Attendance');
-    
-    $userId = $_SESSION['user_id'];
+    $userModel = $this->model('User'); 
+
+    $isAdmin = ($_SESSION['role'] === 'Admin');
+
+    // 1. STANDARD NAME: Change 'user_filter' to 'user_id' to match your view line 69
     $filters = [
-        'start_date' => $_GET['start_date'] ?? date('Y-m-01'),
-        'end_date'   => $_GET['end_date']   ?? date('Y-m-d'),
-        'status_type' => $_GET['status_type'] ?? ''
+        'start_date'  => $_GET['start_date'] ?? date('Y-m-01'),
+        'end_date'    => $_GET['end_date']   ?? date('Y-m-d'),
+        'status_type' => $_GET['status_type'] ?? '',
+        'user_id'     => ($isAdmin) ? ($_GET['user_id'] ?? 'all') : $_SESSION['user_id']
     ];
 
-    // Fetch records using the model's history method
-    $allRecords = $attModel->getUserHistory($userId, $filters);
+    // 2. EXPORT GATEKEEPER: This catches the button click before any HTML starts
+    if (isset($_GET['action']) && $_GET['action'] === 'export_csv') {
+        if (ob_get_length()) ob_end_clean(); // Clears hidden spaces that cause "refreshing"
+        $this->exportHistoryExcel();
+        exit(); 
+    }
 
-    $summary = [
-        'present' => 0,
-        'late'    => 0,
-        'absent'  => 0,
-        'office'  => 0
-    ];
+    // Fetch records using your existing logic
+    $allRecords = $attModel->getUserHistory($filters['user_id'], $filters);
 
+    // Summary calculation (Preserved original functionality)
+    $summary = ['present' => 0, 'late' => 0, 'absent' => 0, 'office' => 0];
     foreach ($allRecords as $rec) {
         if (stripos($rec['status'], 'Late') !== false) $summary['late']++;
         elseif ($rec['status'] === 'Present') $summary['present']++;
         elseif ($rec['status'] === 'Absent') $summary['absent']++;
-
-        if (isset($rec['duty_type']) && (stripos($rec['duty_type'], 'Office') !== false)) {
-            $summary['office']++;
-        }
+        if (isset($rec['duty_type']) && (stripos($rec['duty_type'], 'Office') !== false)) $summary['office']++;
     }
 
     $data = [
         'pageTitle'    => 'Attendance History',
-        'pageSubtitle' => 'Categorized summary of your performance',
+        'pageSubtitle' => 'View a comprehensive record logs of all user attendance records.',
         'records'      => $allRecords,
         'summary'      => $summary,
-        'filters'      => $filters
+        'filters'      => $filters, // This passes 'user_id' to the view
+        'isAdmin'      => $isAdmin,
+        'allUsers'     => $isAdmin ? $userModel->getAllActive() : [] 
     ];
 
     $this->view('attendance_history_view', $data);
@@ -129,10 +134,16 @@ class AttendanceController extends Controller {
         exit;
     }
 
+    
+
     public function submitFeedback() {
         $this->requireLogin();
         $userModel = $this->model('User');
         $db = Database::getInstance();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $this->verifyCsrfToken();
+    }
         
         $userId = $_SESSION['user_id'];
         $userName = $_SESSION['first_name'] . ' ' . $_SESSION['last_name'];
@@ -174,25 +185,44 @@ class AttendanceController extends Controller {
     }
 
 public function exportHistoryExcel() {
-    $this->requireAdmin();
+    // 1. Security Check
+    $this->requireLogin();
+    $isAdmin = (isset($_SESSION['role']) && $_SESSION['role'] === 'Admin');
+    
     $attModel = $this->model('Attendance');
     $userModel = $this->model('User');
 
-    // 1. Date Context
+    // 2. Filter Logic
     $startDate = $_GET['start_date'] ?? date('Y-m-01');
+    $targetUserId = ($isAdmin) ? ($_GET['user_filter'] ?? 'all') : $_SESSION['user_id'];
+
+    // If 'all', fetch all staff; otherwise, just fetch the specific user
+    if ($targetUserId === 'all' && $isAdmin) {
+        $staffList = $userModel->getAllActive(); // or getAllStaff()
+    } else {
+        $singleUser = $userModel->findUserById($targetUserId);
+        $staffList = $singleUser ? [$singleUser] : [];
+    }
+
+    // 3. Date Context
     $monthStart = date('Y-m-01', strtotime($startDate));
     $monthEnd = date('Y-m-t', strtotime($startDate));
     $monthLabel = date('F Y', strtotime($monthStart));
     $lastDay = (int)date('t', strtotime($monthStart));
 
-    // 2. Fetch and Process Data
-    $allStaff = $userModel->getAllStaff();
-    $rawRecords = $attModel->getRecords(['start_date' => $monthStart, 'end_date' => $monthEnd]);
+    // 4. Fetch and Process Data
+    // Ensure getRecords filters by user if targetUserId isn't 'all'
+    $rawRecords = $attModel->getRecords([
+        'start_date' => $monthStart, 
+        'end_date' => $monthEnd,
+        'user_id' => ($targetUserId === 'all') ? null : $targetUserId
+    ]);
     
     $processed = [];
     foreach ($rawRecords as $rec) {
         $uid = $rec['user_id'];
         $day = (int)date('d', strtotime($rec['date']));
+        // Use your existing log extraction logic
         $ins = array_filter(array_column($rec['logs'], 'time_in'));
         $outs = array_filter(array_column($rec['logs'], 'time_out'));
         if (!empty($ins)) {
@@ -200,30 +230,21 @@ public function exportHistoryExcel() {
         }
     }
 
-    // 3. Style Definitions (Hyper-Specific Order)
-    // Emerald Green Title
+    // 5. Build Excel Data (Preserving your Styles)
     $titleStyle  = '<style bgcolor="#148038" color="#FFFFFF" align="center" valign="center"><b>';
-    // Gray Column Headers
     $columnStyle = '<style bgcolor="#D3D3D3" align="center" valign="center"><b>';
-    // Center-Aligned Data
     $centerStyle = '<style align="center" valign="center">';
 
     $data = [];
-
-    // ROW 1: TITLE (The cell A1 MUST have the style for the merge to center)
+    // ROW 1-3: TITLE
     $row1 = [$titleStyle . "ATTENDANCE HISTORY (" . strtoupper($monthLabel) . ")</b></style>"];
     for ($i = 1; $i < $lastDay + 2; $i++) { $row1[] = ""; }
     $data[] = $row1;
-
-    // ROW 2 & 3: Empty placeholders for the vertical title merge
     $data[] = array_fill(0, $lastDay + 2, "");
     $data[] = array_fill(0, $lastDay + 2, "");
 
-    // ROW 4: DATES
-    $row4 = [
-        $columnStyle . "ID</b></style>", 
-        $columnStyle . "NAME</b></style>"
-    ];
+    // ROW 4: HEADERS
+    $row4 = [$columnStyle . "ID</b></style>", $columnStyle . "NAME</b></style>"];
     for ($d = 1; $d <= $lastDay; $d++) {
         $currentDate = date('M d', strtotime("$monthStart + " . ($d - 1) . " days"));
         $row4[] = $columnStyle . strtoupper($currentDate) . "</b></style>";
@@ -232,16 +253,14 @@ public function exportHistoryExcel() {
 
     // ROW 5: SUB-HEADERS
     $row5 = ["", ""];
-    for ($i = 1; $i <= $lastDay; $i++) { 
-        $row5[] = $columnStyle . "TIME IN - TIME OUT</b></style>"; 
-    }
+    for ($i = 1; $i <= $lastDay; $i++) { $row5[] = $columnStyle . "TIME IN - TIME OUT</b></style>"; }
     $data[] = $row5;
 
     // ROW 6+: PERSONNEL DATA
-    foreach ($allStaff as $staff) {
+    foreach ($staffList as $staff) {
         $rowData = [
             $centerStyle . $staff['faculty_id'] . "</style>",
-            $centerStyle . strtoupper($staff['last_name'] . ', ' . $staff['first_name']) . "</style>"
+            $centerStyle . strtoupper(($staff['last_name'] ?? '') . ', ' . ($staff['first_name'] ?? '')) . "</style>"
         ];
         for ($d = 1; $d <= $lastDay; $d++) {
             $rowData[] = $centerStyle . ($processed[$staff['id']][$d] ?? '---') . "</style>";
@@ -249,10 +268,11 @@ public function exportHistoryExcel() {
         $data[] = $rowData;
     }
 
-    // 4. Generate XLSX
-    $xlsx = SimpleXLSXGen::fromArray($data);
+    // 6. Generate and Download
+    $xlsx = Shuchkin\SimpleXLSXGen::fromArray($data);
+    $xlsx->downloadAs("BPC_Attendance_Report_" . date('Ym') . ".xlsx");
     
-    // Calculate last column letter
+    // Auto-calculate last column for merging (e.g., AH)
     $totalCols = $lastDay + 2;
     $idx = $totalCols - 1;
     $lastCol = "";
@@ -261,31 +281,33 @@ public function exportHistoryExcel() {
         $idx = floor($idx / 26) - 1;
     }
 
-    // Apply Merges
-    $xlsx->mergeCells('A1:' . $lastCol . '3'); // Title
-    $xlsx->mergeCells('A4:A5');                // ID
-    $xlsx->mergeCells('B4:B5');                // Name
+    $xlsx->mergeCells('A1:' . $lastCol . '3'); 
+    $xlsx->mergeCells('A4:A5');
+    $xlsx->mergeCells('B4:B5');
 
-    // Set Column Widths (Required for centering to look correct)
-    $xlsx->setColWidth(1, 12); // ID width
-    $xlsx->setColWidth(2, 35); // Name width
-    for ($c = 3; $c <= $totalCols; $c++) {
-        $xlsx->setColWidth($c, 22); // Date columns width
-    }
+    $xlsx->setColWidth(1, 12); 
+    $xlsx->setColWidth(2, 35); 
+    for ($c = 3; $c <= $totalCols; $c++) { $xlsx->setColWidth($c, 22); }
 
-    $xlsx->downloadAs("Attendance_History.xlsx");
+    // Custom filename for personal vs admin
+    $fileLabel = ($targetUserId === 'all') ? "Institutional" : ($_SESSION['last_name'] ?? "Personal");
+    $xlsx->downloadAs("BPC_Attendance_{$fileLabel}_" . date('Ym') . ".xlsx");
     exit();
 }
 
     public function printDtr() {
     $this->requireLogin();
     $userId = $_GET['user_id'] ?? $_SESSION['user_id'];
-    if (!Helper::isAdmin() && $userId != $_SESSION['user_id']) { die('Access Denied'); }
+    
+    // Security check: Only admins can view others' DTRs
+    if (!Helper::isAdmin() && $userId != $_SESSION['user_id']) { 
+        die('Access Denied'); 
+    }
 
     $userModel = $this->model('User');
     $attModel = $this->model('Attendance');
     $holidayModel = $this->model('Holiday');
-    $scheduleModel = $this->model('Schedule'); // Ensure you have this model
+    $scheduleModel = $this->model('Schedule');
     
     $baseDate = $_GET['start_date'] ?? date('Y-m-01');
     $fullMonthStart = date('Y-m-01', strtotime($baseDate));
@@ -321,44 +343,47 @@ public function exportHistoryExcel() {
         ];
 
         if (!empty($dayLogs)) {
-            // Plotting Logic: Absolute First In and Last Out
-            $ins = array_filter(array_column($dayLogs, 'time_in'));
-            $outs = array_filter(array_column($dayLogs, 'time_out'));
+            // --- PLOTTING LOGIC: Visual Display (Real-Time Extremities) ---
+            
+            // Separate logs into AM and PM sessions based on 12:00 PM threshold
+            $amLogs = array_filter($dayLogs, function($l) {
+                return !empty($l['time_in']) && strtotime($l['time_in']) < strtotime('12:00:00');
+            });
 
-            if (!empty($ins)) {
-                $firstIn = min($ins);
-                $lastIn = max($ins);
+            $pmLogs = array_filter($dayLogs, function($l) {
+                return !empty($l['time_in']) && strtotime($l['time_in']) >= strtotime('12:00:00');
+            });
+
+            // AM Plotting: First log in the morning to last log in the morning
+            if (!empty($amLogs)) {
+                $amIns = array_filter(array_column($amLogs, 'time_in'));
+                $amOuts = array_filter(array_column($amLogs, 'time_out'));
                 
-                // Plot AM In (First of day)
-                if (strtotime($firstIn) < strtotime('12:00:00')) {
-                    $dtrRecords[$day]['am_in'] = $firstIn;
-                } else {
-                    $dtrRecords[$day]['pm_in'] = $firstIn;
-                }
+                if (!empty($amIns)) $dtrRecords[$day]['am_in'] = min($amIns);
+                if (!empty($amOuts)) $dtrRecords[$day]['am_out'] = max($amOuts);
             }
 
-            if (!empty($outs)) {
-                $lastOut = max($outs);
-                // Plot PM Out (Last of day)
-                if (strtotime($lastOut) >= strtotime('12:00:00')) {
-                    $dtrRecords[$day]['pm_out'] = $lastOut;
-                } else {
-                    $dtrRecords[$day]['am_out'] = $lastOut;
-                }
+            // PM Plotting: First log in the afternoon to last log in the afternoon
+            if (!empty($pmLogs)) {
+                $pmIns = array_filter(array_column($pmLogs, 'time_in'));
+                $pmOuts = array_filter(array_column($pmLogs, 'time_out'));
+                
+                if (!empty($pmIns)) $dtrRecords[$day]['pm_in'] = min($pmIns);
+                if (!empty($pmOuts)) $dtrRecords[$day]['pm_out'] = max($pmOuts);
             }
 
-            // CALCULATION LOGIC: The "Presence Mask"
+            // --- CALCULATION LOGIC: The "Presence Mask" (Schedule-Based) ---
+            
             // Find approved schedule blocks for this day of the week
             $todaySchedules = array_filter($approvedSchedules, function($s) use ($dayOfWeek) {
                 return $s['day_of_week'] === $dayOfWeek;
             });
 
-            // If there is no schedule, credited_seconds remains 0 (as per analysis)
             foreach ($todaySchedules as $sched) {
                 $schedStart = strtotime($sched['start_time']);
                 $schedEnd = strtotime($sched['end_time']);
 
-                // For each physical log window, calculate overlap with this schedule block
+                // Calculate overlap with every physical log window for the day
                 foreach ($dayLogs as $log) {
                     if (empty($log['time_in']) || empty($log['time_out'])) continue;
 
@@ -389,5 +414,5 @@ public function exportHistoryExcel() {
     extract($data);
     require_once __DIR__ . '/../views/print_dtr_view.php';
     exit();
-    }
+}
 }

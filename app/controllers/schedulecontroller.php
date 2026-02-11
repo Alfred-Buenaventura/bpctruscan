@@ -103,7 +103,7 @@ class ScheduleController extends Controller {
 
         try {
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                
+                $this->verifyCsrfToken();
                 if (isset($_POST['approve_schedule']) || isset($_POST['decline_schedule']) || isset($_POST['bulk_action_type'])) {
                     $this->requireAdmin();
                     $itemsToProcess = [];

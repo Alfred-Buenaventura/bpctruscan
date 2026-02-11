@@ -6,7 +6,20 @@ class ApiController extends Controller {
     public function __construct() {
     }
 
+    private function verifyApiKey() {
+        // We look for the key in the 'X-API-KEY' header
+        $providedKey = $_SERVER['HTTP_X_API_KEY'] ?? '';
+
+        if (empty(API_SECRET_KEY) || !hash_equals(API_SECRET_KEY, $providedKey)) {
+            header('Content-Type: application/json');
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Unauthorized: Invalid API Key.']);
+            exit;
+        }
+    }
+
     public function recordAttendance() {
+        $this->verifyApiKey(); // SECURED
         header('Content-Type: application/json');
         
         $data = json_decode(file_get_contents('php://input'));
@@ -89,6 +102,7 @@ class ApiController extends Controller {
 
     // this function is the one that fetches the fingerprint templates from the database to be used for the bridge app
     public function getFingerprintTemplates() {
+        $this->verifyApiKey(); // SECURED
         header('Content-Type: application/json');
         $db = Database::getInstance();
         
@@ -112,6 +126,7 @@ class ApiController extends Controller {
     }
     //handles the notification reading for a single notif
     public function markNotificationRead() {
+        $this->requireLogin();
         header('Content-Type: application/json');
         
         if (session_status() === PHP_SESSION_NONE) session_start();

@@ -29,6 +29,7 @@ class PageController extends Controller {
         ];
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->verifyCsrfToken();
             $subject = clean($_POST['subject']);
             $message = clean($_POST['message']);
             
