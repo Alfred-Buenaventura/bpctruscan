@@ -1,7 +1,6 @@
 <?php
 class Helper {
     
-    
     public static function loadEnv($path) {
         if (!file_exists($path)) {
             return;
@@ -11,6 +10,7 @@ class Helper {
             $_ENV = [];
         }
 
+        // read the .env file line by line to pull in configuration settings
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         
         foreach ($lines as $line) {
@@ -24,17 +24,16 @@ class Helper {
                 continue;
             }
 
-            
             list($name, $value) = explode('=', $line, 2);
             $name = trim($name);
             $value = trim($value);
             
+            // strip out any quotes that might be surrounding the values in the file
             if ((strpos($value, '"') === 0 && strrpos($value, '"') === strlen($value) - 1) ||
                 (strpos($value, "'") === 0 && strrpos($value, "'") === strlen($value) - 1)) {
                 $value = substr($value, 1, -1);
             }
 
-            // Populate Environment Variables
             if (function_exists('putenv')) {
                 putenv(sprintf('%s=%s', $name, $value));
             }
@@ -44,6 +43,7 @@ class Helper {
     }
 
     public static function clean($data) {
+        // strip whitespace and convert special characters to stop xss attacks
         return htmlspecialchars(trim($data), ENT_QUOTES, 'UTF-8');
     }
 
@@ -56,6 +56,7 @@ class Helper {
     }
 
     public static function jsonResponse($success, $message, $data = null) {
+        // format the data into a standard json structure for ajax calls
         header('Content-Type: application/json');
         $response = ['success' => $success, 'message' => $message];
         if ($data) $response['data'] = $data;

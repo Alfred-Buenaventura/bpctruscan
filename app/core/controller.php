@@ -59,15 +59,16 @@ class Controller {
     }
 
     public function setFlash($message, $type = 'success', $redirect = null) {
-        if (session_status() === PHP_SESSION_NONE) session_start();
-        $_SESSION['flash_message'] = $message;
-        $_SESSION['flash_type'] = $type;
-        
-        if ($redirect) {
-            header("Location: " . BASE_URL . "/" . ltrim($redirect, '/'));
-            exit;
-        }
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    $_SESSION['flash_message'] = $message;
+    $_SESSION['flash_type'] = $type;
+    
+    if ($redirect) {
+        // Use BASE_URL to ensure the path is always absolute
+        header("Location: " . BASE_URL . "/" . ltrim($redirect, '/'));
+        exit;
     }
+}
 
     public function requireAdmin() {
         $this->requireLogin();
