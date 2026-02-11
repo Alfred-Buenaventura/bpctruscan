@@ -133,6 +133,22 @@ document.addEventListener('DOMContentLoaded', function() {
     if (scannerWidget) { initScannerSocket(scannerWidget); }
 });
 
+function markAllAsRead() {
+    const badge = document.getElementById('notif-badge');
+    if (!badge) return; // Nothing to clear
+
+    fetch('create_account.php?action=mark_read_all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `csrf_token=${csrfToken}` // verifyCsrfToken() needs this
+    })
+    .then(response => {
+        // Remove the badge immediately for a "fast" feel
+        badge.style.display = 'none';
+    })
+    .catch(err => console.error('Notification update failed:', err));
+}
+
 /* =========================================
    4. SCANNER WEBSOCKET LOGIC
    ========================================= */
