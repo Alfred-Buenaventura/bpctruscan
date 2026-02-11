@@ -83,18 +83,10 @@ class User {
         return $this->db->query($sql, [$imagePath, $id], "si");
     }
 
-    public function update($id, $firstName, $lastName, $middleName, $email, $phone) {
-        $sql = "UPDATE users SET first_name=?, last_name=?, middle_name=?, email=?, phone=? WHERE id=?";
-        $this->db->query($sql, [$firstName, $lastName, $middleName, $email, $phone, $id], "sssssi");
-        return true;
-    }
-
-    public function setStatus($id, $status) {
-        // toggle between active and archived statuses to control system access
-        $sql = "UPDATE users SET status=? WHERE id=?";
-        $this->db->query($sql, [$status, $id], "si");
-        return true;
-    }
+    public function update($id, $fname, $lname, $mname, $email, $phone) {
+    $sql = "UPDATE users SET first_name=?, last_name=?, middle_name=?, email=?, phone=? WHERE id=?";
+    return $this->db->query($sql, [$fname, $lname, $mname, $email, $phone, $id], "sssssi");
+}
 
     public function exists($facultyId) {
         $sql = "SELECT id FROM users WHERE faculty_id = ?";
@@ -117,19 +109,6 @@ class User {
             $data['role']
         ], "sssssssss");
         return $this->db->conn->insert_id;
-    }
-
-    public function delete($id) {
-        // deep deletion that clears all related logs and schedules before removing the user
-        $this->db->query("DELETE FROM class_schedules WHERE user_id=?", [$id], "i");
-        $this->db->query("DELETE FROM attendance_records WHERE user_id=?", [$id], "i");
-        $this->db->query("DELETE FROM notifications WHERE user_id=?", [$id], "i");
-        $this->db->query("DELETE FROM activity_logs WHERE user_id=?", [$id], "i");
-        $this->db->query("DELETE FROM user_fingerprints WHERE user_id=?", [$id], "i");
-        
-        $sql = "DELETE FROM users WHERE id=?";
-        $this->db->query($sql, [$id], "i");
-        return true;
     }
 
     public function getAllActive() {
@@ -166,6 +145,24 @@ class User {
         FROM users WHERE status = 'active'";
         return $this->db->conn->query($sql)->fetch_assoc();
     }
+
+    public function updateStatus($userId, $status) {
+    $sql = "UPDATE users SET status = ? WHERE id = ?";
+    return $this->db->query($sql, [$status, $userId], "si");
+}
+
+public function delete($userId) {
+    // 1. Clear related tables first to avoid Foreign Key errors
+    $this->db->query("DELETE FROM class_schedules WHERE user_id=?", [$userId], "i");
+    $this->db->query("DELETE FROM attendance_records WHERE user_id=?", [$userId], "i");
+    $this->db->query("DELETE FROM notifications WHERE user_id=?", [$userId], "i");
+    $this->db->query("DELETE FROM activity_logs WHERE user_id=?", [$userId], "i");
+    $this->db->query("DELETE FROM user_fingerprints WHERE user_id=?", [$userId], "i");
+    
+    // 2. Delete the user
+    $sql = "DELETE FROM users WHERE id = ?";
+    return $this->db->query($sql, [$userId], "i");
+}
 
     public function countActive() {
         $res = $this->db->conn->query("SELECT COUNT(*) as c FROM users WHERE status='active'");
