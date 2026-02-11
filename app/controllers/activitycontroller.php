@@ -6,7 +6,7 @@ class ActivityController extends Controller {
 public function index() {
     $this->requireLogin();
 
-    $logModel = $this->model('ActivityLog');
+    $logModel = $this->model('activitylog');
     $isAdmin = ($_SESSION['role'] === 'Admin');
     $userId = $isAdmin ? null : $_SESSION['user_id'];
     $limit = 15;
